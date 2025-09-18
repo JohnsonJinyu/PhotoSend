@@ -4,6 +4,7 @@ import { common } from "@kit.AbilityKit";
 @Component
 export struct PhonePage{
 
+
   build() {
 
   }

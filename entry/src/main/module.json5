@@ -55,6 +55,14 @@
         "name": "ohos.permission.INTERNET",
         "reason": "$string:INTERNET_PERMISSION_REASON",
 
+      },
+      {
+        "name": "ohos.permission.GET_WIFI_INFO",
+        "reason": "$string:GET_WIFI_INFO_REASON",
+      },
+      {
+        "name": "ohos.permission.SET_WIFI_INFO",
+        "reason": "$string:SET_WIFI_INFO"
       }
     ]
   }

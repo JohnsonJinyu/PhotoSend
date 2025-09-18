@@ -15,6 +15,18 @@
     {
       "name": "INTERNET_PERMISSION_REASON",
       "value": "创建FTP服务"
+    },
+    {
+      "name": "GET_WIFI_INFO_REASON",
+      "value": "扫描相机WIFI热点"
+    },
+    {
+      "name": "SET_WIFI_INFO",
+      "value": "连接指定WiFi网络"
+    },
+    {
+      "name": "MANAGE_WIFI_INFO_REASON",
+      "value": "管理WiFi连接"
     }
   ]
 }
