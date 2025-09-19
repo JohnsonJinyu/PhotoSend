@@ -269,7 +269,7 @@ export struct CameraPage {
     context.startAbility(want)
       .catch((err: Error) => {
 
-        console.error(`跳转失败: 错误码 ${err.code}, 信息: ${err.message}`);
+        console.error(`跳转失败: 信息: ${err.message}`);
       });
   }
 }
