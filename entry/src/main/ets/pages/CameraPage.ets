@@ -115,7 +115,7 @@ export struct CameraPage {
         Blank(30)
 
         // 连接/断开连接按钮
-        Button({ type: ButtonType.Capsule, stateEffect: true }) {
+        Button({ type: ButtonType.Normal, stateEffect: true }) {
           Text(this.isConnected ? '断开连接' : '连接相机')
             .fontSize(18)
             .fontWeight(FontWeight.Medium)
@@ -129,7 +129,7 @@ export struct CameraPage {
         Blank(15)
 
         // 连接模式设定按钮
-        Button({ type: ButtonType.Capsule, stateEffect: true }) {
+        Button({ type: ButtonType.Normal, stateEffect: true }) {
           Text('连接模式设定')
             .fontSize(18)
             .fontWeight(FontWeight.Medium)
@@ -143,7 +143,7 @@ export struct CameraPage {
         Blank(15)
 
         // 下载照片按钮
-        Button({ type: ButtonType.Capsule, stateEffect: true }) {
+        Button({ type: ButtonType.Normal, stateEffect: true }) {
           Text('下载照片')
             .fontSize(18)
             .fontWeight(FontWeight.Medium)
@@ -286,17 +286,20 @@ export struct CameraPage {
    * 打开系统WiFi设置
    */
   private openSystemWifiSettings(): void {
-    const context = getContext(this) as common.UIAbilityContext;
-    const want: SystemSettingsWant = {
-      bundleName: 'com.huawei.hmos.settings',
-      abilityName: 'com.huawei.hmos.settings.MainAbility',
-      uri: 'wifi_entry'
-    };
+  try {
+      // 创建Want对象
+      const want: Want = {
+        bundleName: 'com.huawei.hmos.settings',
+        abilityName: 'com.huawei.hmos.settings.MainAbility',
+        uri: 'wifi_entry' // WiFi设置页面的URI
+      };
 
-    context.startAbility(want)
-      .catch((err: Error) => {
-        console.error(`跳转失败: 信息: ${err.message}`);
-        promptAction.showToast({ message: '无法打开WiFi设置' })
-      });
+      // 获取上下文并启动Ability
+      const context = getContext(this) as common.UIAbilityContext;
+      context.startAbility(want);
+      console.info('启动系统WiFi设置成功');
+    } catch (error) {
+      console.error('启动系统WiFi设置失败:', error);
+    }
   }
 }
