@@ -1,7 +1,5 @@
 import { promptAction } from "@kit.ArkUI"
 import { common, Want } from '@kit.AbilityKit'
-import { BUNDLE_NAME } from "BuildProfile";
-
 
 
 // 定义SheetInfo接口，用于ActionSheet
@@ -21,13 +19,6 @@ interface SettingItem {
 
 // 定义具体的连接模式类型（枚举所有可能的值）
 type ConnectionMode = '蓝牙' | 'WiFi-AP' | 'WiFi-STA';
-
-//为每种连接模式定义明确的配置结构（不是用索引签名）
-interface SettingsConfig {
-  蓝牙: SettingItem;
-  WiFix2dAP: SettingItem;
-  WiFix2dSTA: SettingItem;
-}
 
 
 @Preview
@@ -49,24 +40,6 @@ export struct CameraPage {
     'WiFi STA模式连接',
     '下载位置数据'
   ]
-  // 系统设置页面配置 -集中管理不同模式对应的跳转参数
-  private settingsConfig: SettingsConfig = {
-    蓝牙: {
-      bundleName: 'com.huawei.hmos.settings',
-      abilityName: 'com.android.settings.bluetooth.BluetoothSettings',
-      action: 'action.settings.BLUETOOTH_SETTINGS'
-    },
-    WiFix2dAP: {
-      bundleName: 'com.huawei.hmos.settings',
-      abilityName: 'com.huawei.hmos.settings.MainAbility',
-      uri: 'wifi_entry'
-    },
-    WiFix2dSTA: {
-      bundleName: 'com.huawei.hmos.settings',
-      abilityName: 'com.huawei.hmos.settings.MainAbility',
-      uri: 'wifi_entry'
-    }
-  }
 
   build() {
     Column() {
@@ -232,9 +205,13 @@ export struct CameraPage {
         const selectedIndex = Array.isArray(result.index) ? result.index[0] : result.index;
         this.selectedModeIndex = selectedIndex;
         this.currentConnectionMode = this.connectionModes[selectedIndex];
-        promptAction.showToast({
-          message: `已选择${this.currentConnectionMode}模式`
-        })
+        try {
+          promptAction.showToast({
+            message: `已选择${this.currentConnectionMode}模式`
+          })
+        } catch (error) {
+          // TODO: Implement error handling.
+        }
       },
       onCancel: () => {
         console.log('取消选择连接模式')
@@ -272,7 +249,11 @@ export struct CameraPage {
       this.navigateWithOldApi()
     } else {
       this.isConnected = false;
-      promptAction.showToast({ message: '已断开连接' });
+      try {
+        promptAction.showToast({ message: '已断开连接' });
+      } catch (error) {
+        // TODO: Implement error handling.
+      }
     }
   }
 
@@ -280,7 +261,11 @@ export struct CameraPage {
    * 处理连接模式选项点击
    */
   private handleConnectionOption(option: string): void {
-    promptAction.showToast({ message: `已选择: ${option}` })
+    try {
+      promptAction.showToast({ message: `已选择: ${option}` })
+    } catch (error) {
+      // TODO: Implement error handling.
+    }
 
     switch (option) {
       case '添加照相机':
@@ -311,7 +296,11 @@ export struct CameraPage {
    */
   private handleDownloadPhotos() {
     if (this.isConnected) {
-      promptAction.showToast({ message: '开始下载照片' })
+      try {
+        promptAction.showToast({ message: '开始下载照片' })
+      } catch (error) {
+        // TODO: Implement error handling.
+      }
       // 实现下载逻辑
     }
   }
@@ -321,29 +310,12 @@ export struct CameraPage {
    */
   private handleRemoteShoot() {
     if (this.isConnected) {
-      promptAction.showToast({ message: '正在进行遥控拍摄' })
+      try {
+        promptAction.showToast({ message: '正在进行遥控拍摄' })
+      } catch (error) {
+        // TODO: Implement error handling.
+      }
       // 实现遥控拍摄逻辑
-    }
-  }
-
-  /**
-   * 打开系统WiFi设置
-   */
-  private openSystemWifiSettings(): void {
-    try {
-      // 创建Want对象
-      const want: Want = {
-        bundleName: 'com.huawei.hmos.settings',
-        abilityName: 'com.huawei.hmos.settings.MainAbility',
-        uri: 'wifi_entry' // WiFi设置页面的URI
-      };
-
-      // 获取上下文并启动Ability
-      const context = getContext(this) as common.UIAbilityContext;
-      context.startAbility(want);
-      console.info('启动系统WiFi设置成功');
-    } catch (error) {
-      console.error('启动系统WiFi设置失败:', error);
     }
   }
 
@@ -390,7 +362,11 @@ export struct CameraPage {
 
     // 2. 检查配置是否存在
     if (!config) {
-      promptAction.showToast({ message: '未找到对应的设置页面' });
+      try {
+        promptAction.showToast({ message: '未找到对应的设置页面' });
+      } catch (error) {
+        // TODO: Implement error handling.
+      }
       return;
     }
 
@@ -412,14 +388,26 @@ export struct CameraPage {
       context.startAbility(want)
         .then(() => {
           console.info(`成功跳转至${this.currentConnectionMode}设置页面`);
-          promptAction.showToast({ message: `正在打开${this.currentConnectionMode}设置...` });
+          try {
+            promptAction.showToast({ message: `正在打开${this.currentConnectionMode}设置...` });
+          } catch (error) {
+            // TODO: Implement error handling.
+          }
         })
         .catch((err: Error) => {
           console.error(`跳转失败: ${err.message}`);
-          promptAction.showToast({ message: `打开${this.currentConnectionMode}设置失败` });
+          try {
+            promptAction.showToast({ message: `打开${this.currentConnectionMode}设置失败` });
+          } catch (error) {
+            // TODO: Implement error handling.
+          }
         });
     } else {
-      promptAction.showToast({ message: '无法获取应用上下文' });
+      try {
+        promptAction.showToast({ message: '无法获取应用上下文' });
+      } catch (error) {
+        // TODO: Implement error handling.
+      }
     }
   }
 }
