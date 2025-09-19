@@ -1,5 +1,6 @@
 import { promptAction } from "@kit.ArkUI"
 import { common, Want } from '@kit.AbilityKit'
+import { BUNDLE_NAME } from "BuildProfile";
 
 
 // 定义SheetInfo接口，用于ActionSheet
@@ -8,23 +9,37 @@ interface SheetInfo {
   action: () => void;
 }
 
-// 系统设置跳转参数接口
-interface SystemSettingsWant {
-  bundleName: string;
-  abilityName: string;
-  uri: string;
+
+// 定义系统设置配置接口
+interface SettingItem {
+  bundleName:string;
+  abilityName:string;
+  uri?:string;
+  action?:string;
 }
+
+// 定义具体的连接模式类型（枚举所有可能的值）
+type ConnectionMode = '蓝牙' | 'WiFi-AP' | 'WiFi-STA';
+
+//为每种连接模式定义明确的配置结构（不是用索引签名）
+interface SettingsConfig {
+  蓝牙: SettingItem;
+  WiFix2dAP: SettingItem;
+  WiFix2dSTA: SettingItem;
+}
+
+
 @Preview
 @Component
 export struct CameraPage {
   // 状态控制
   @State isConnected: boolean = false
   @State cameraImage: Resource = $r('app.media.camera_pre_zf')
-  @State currentConnectionMode: string = 'WiFi-AP' // 默认选择WiFi-AP
+  @State currentConnectionMode: ConnectionMode = 'WiFi-AP' // 默认选择WiFi-AP
   @State selectedModeIndex: number = 1 // 对应'WiFi-AP'的索引位置
 
   // 连接模式选项
-  private connectionModes: string[] = ['蓝牙', 'WiFi-AP', 'WiFi-STA']
+  private connectionModes: ConnectionMode[] = ['蓝牙', 'WiFi-AP', 'WiFi-STA']
 
   // 连接模式操作选项列表
   private connectionOptions: string[] = [
@@ -35,6 +50,25 @@ export struct CameraPage {
     'WiFi STA模式连接',
     '下载位置数据'
   ]
+
+  // 系统设置页面配置 -集中管理不同模式对应的跳转参数
+  private settingsConfig :SettingsConfig = {
+    蓝牙: {
+      bundleName: 'com.huawei.hmos.settings',
+      abilityName: 'com.android.settings.bluetooth.BluetoothSettings',
+      action: 'action.settings.BLUETOOTH_SETTINGS'
+    },
+    WiFix2dAP: {
+      bundleName: 'com.huawei.hmos.settings',
+      abilityName: 'com.huawei.hmos.settings.MainAbility',
+      uri: 'wifi_entry'
+    },
+    WiFix2dSTA: {
+      bundleName: 'com.huawei.hmos.settings',
+      abilityName: 'com.huawei.hmos.settings.MainAbility',
+      uri: 'wifi_entry'
+    }
+  }
 
   build() {
     Column() {
@@ -225,10 +259,11 @@ export struct CameraPage {
    */
   private handleConnectionButtonClick() {
     if (!this.isConnected) {
-      this.openSystemWifiSettings()
+      // 关键修复：根据当前选择的模式跳转对应的设置页面
+      this.navigateToSettingsByMode();
     } else {
-      this.isConnected = false
-      promptAction.showToast({ message: '已断开连接' })
+      this.isConnected = false;
+      promptAction.showToast({ message: '已断开连接' });
     }
   }
 
@@ -300,6 +335,137 @@ export struct CameraPage {
       console.info('启动系统WiFi设置成功');
     } catch (error) {
       console.error('启动系统WiFi设置失败:', error);
+    }
+  }
+
+
+
+  /**
+   * 根据当前模式跳转对应的系统设置页面（全版本兼容）
+   */
+  private navigateToSettingsByMode() {
+    try {
+      // 获取当前设备的API版本号
+      const apiVersion = parseInt(systemParameter.getSync('hw_sc.build.os.apiversion', '0'));
+
+      // 根据API版本选择不同的跳转方式
+      if (apiVersion >= 20) {
+        // API 20及以上：使用标准化接口
+        this.navigateWithNewApi();
+      } else {
+        // API 19及以下：使用传统Want方式
+        this.navigateWithOldApi();
+      }
+    } catch (error) {
+      console.error('操作失败:', error);
+      promptAction.showToast({ message: '操作失败，请重试' });
+    }
+  }
+
+  /**
+   * API 20及以上使用的标准化跳转方式
+   */
+  private navigateWithNewApi() {
+    if (this.currentConnectionMode === '蓝牙') {
+      // 跳转蓝牙设置（标准化接口）
+      startSettingPage({ settingType: SettingType.SETTING_BLUETOOTH })
+        .then(() => {
+          console.info('跳转蓝牙设置成功');
+          try {
+            promptAction.showToast({ message: '正在打开蓝牙设置...' });
+          } catch (error) {
+            // TODO: Implement error handling.
+          }
+        })
+        .catch((err: Error) => {
+          console.error(`蓝牙设置跳转失败: ${err.message}`);
+          try {
+            promptAction.showToast({ message: '打开蓝牙设置失败' });
+          } catch (error) {
+            // TODO: Implement error handling.
+          }
+        });
+    } else {
+      // 跳转WiFi设置（标准化接口）
+      startSettingPage({ settingType: SettingType.SETTING_WIFI })
+        .then(() => {
+          console.info('跳转WiFi设置成功');
+          try {
+            promptAction.showToast({ message: '正在打开WiFi设置...' });
+          } catch (error) {
+            // TODO: Implement error handling.
+          }
+        })
+        .catch((err: Error) => {
+          console.error(`WiFi设置跳转失败: ${err.message}`);
+          try {
+            promptAction.showToast({ message: '打开WiFi设置失败' });
+          } catch (error) {
+            // TODO: Implement error handling.
+          }
+        });
+    }
+  }
+
+  /**
+   * API 19及以下使用的传统跳转方式
+   */
+  private navigateWithOldApi() {
+    // 1. 根据当前模式获取对应配置
+    let config: SettingItem | undefined;
+    switch (this.currentConnectionMode) {
+      case '蓝牙':
+        config = {
+          bundleName: 'com.huawei.hmos.settings',
+          abilityName: 'com.huawei.hmos.settings.MainAbility',
+          action: 'action.settings.bluetooth'
+        };
+        break;
+      case 'WiFi-AP':
+      case 'WiFi-STA':
+        config = {
+          bundleName: 'com.huawei.hmos.settings',
+          abilityName: 'com.huawei.hmos.settings.MainAbility',
+          uri: 'wifi_entry'
+        };
+        break;
+      default:
+        config = undefined;
+        break;
+    }
+
+    // 2. 检查配置是否存在
+    if (!config) {
+      promptAction.showToast({ message: '未找到对应的设置页面' });
+      return;
+    }
+
+    // 3. 创建Want对象
+    const want: Want = {
+      bundleName: config.bundleName,
+      abilityName: config.abilityName
+    };
+    if (config.uri) {
+      want.uri = config.uri;
+    }
+    if (config.action) {
+      want.action = config.action;
+    }
+
+    // 4. 获取上下文并启动Ability
+    const context = getContext(this) as common.UIAbilityContext;
+    if (context && context.startAbility) {
+      context.startAbility(want)
+        .then(() => {
+          console.info(`成功跳转至${this.currentConnectionMode}设置页面`);
+          promptAction.showToast({ message: `正在打开${this.currentConnectionMode}设置...` });
+        })
+        .catch((err: Error) => {
+          console.error(`跳转失败: ${err.message}`);
+          promptAction.showToast({ message: `打开${this.currentConnectionMode}设置失败` });
+        });
+    } else {
+      promptAction.showToast({ message: '无法获取应用上下文' });
     }
   }
 }
