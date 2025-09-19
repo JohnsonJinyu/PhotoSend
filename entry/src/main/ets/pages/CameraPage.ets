@@ -3,6 +3,7 @@ import { common, Want } from '@kit.AbilityKit'
 import { BUNDLE_NAME } from "BuildProfile";
 
 
+
 // 定义SheetInfo接口，用于ActionSheet
 interface SheetInfo {
   title: string;
@@ -12,10 +13,10 @@ interface SheetInfo {
 
 // 定义系统设置配置接口
 interface SettingItem {
-  bundleName:string;
-  abilityName:string;
-  uri?:string;
-  action?:string;
+  bundleName: string;
+  abilityName: string;
+  uri?: string;
+  action?: string;
 }
 
 // 定义具体的连接模式类型（枚举所有可能的值）
@@ -37,10 +38,8 @@ export struct CameraPage {
   @State cameraImage: Resource = $r('app.media.camera_pre_zf')
   @State currentConnectionMode: ConnectionMode = 'WiFi-AP' // 默认选择WiFi-AP
   @State selectedModeIndex: number = 1 // 对应'WiFi-AP'的索引位置
-
   // 连接模式选项
   private connectionModes: ConnectionMode[] = ['蓝牙', 'WiFi-AP', 'WiFi-STA']
-
   // 连接模式操作选项列表
   private connectionOptions: string[] = [
     '添加照相机',
@@ -50,9 +49,8 @@ export struct CameraPage {
     'WiFi STA模式连接',
     '下载位置数据'
   ]
-
   // 系统设置页面配置 -集中管理不同模式对应的跳转参数
-  private settingsConfig :SettingsConfig = {
+  private settingsConfig: SettingsConfig = {
     蓝牙: {
       bundleName: 'com.huawei.hmos.settings',
       abilityName: 'com.android.settings.bluetooth.BluetoothSettings',
@@ -122,7 +120,12 @@ export struct CameraPage {
       }
       .backgroundColor('#E0E0E0')
       .borderRadius(12)
-      .padding({ left: 10, right: 10, top: 4, bottom: 4 })
+      .padding({
+        left: 10,
+        right: 10,
+        top: 4,
+        bottom: 4
+      })
       .onClick(() => {
         this.showModePickerDialog()
       })
@@ -133,7 +136,12 @@ export struct CameraPage {
           this.isConnected = isOn
         })
     }
-    .padding({ left: 16, right: 16, top: 8, bottom: 8 })
+    .padding({
+      left: 16,
+      right: 16,
+      top: 8,
+      bottom: 8
+    })
     .width('100%')
     .justifyContent(FlexAlign.SpaceBetween)
     .backgroundColor('#F5F5F5')
@@ -219,11 +227,11 @@ export struct CameraPage {
     TextPickerDialog.show({
       range: this.connectionModes,
       selected: this.selectedModeIndex as number,
-        onAccept: (result : TextPickerResult) => {
-          // 确保获取的是单个索引值
-          const selectedIndex = Array.isArray(result.index) ? result.index[0] : result.index;
-          this.selectedModeIndex = selectedIndex;
-          this.currentConnectionMode = this.connectionModes[selectedIndex];
+      onAccept: (result: TextPickerResult) => {
+        // 确保获取的是单个索引值
+        const selectedIndex = Array.isArray(result.index) ? result.index[0] : result.index;
+        this.selectedModeIndex = selectedIndex;
+        this.currentConnectionMode = this.connectionModes[selectedIndex];
         promptAction.showToast({
           message: `已选择${this.currentConnectionMode}模式`
         })
@@ -260,7 +268,8 @@ export struct CameraPage {
   private handleConnectionButtonClick() {
     if (!this.isConnected) {
       // 关键修复：根据当前选择的模式跳转对应的设置页面
-      this.navigateToSettingsByMode();
+      //this.navigateToSettingsByMode();
+      this.navigateWithOldApi()
     } else {
       this.isConnected = false;
       promptAction.showToast({ message: '已断开连接' });
@@ -321,7 +330,7 @@ export struct CameraPage {
    * 打开系统WiFi设置
    */
   private openSystemWifiSettings(): void {
-  try {
+    try {
       // 创建Want对象
       const want: Want = {
         bundleName: 'com.huawei.hmos.settings',
@@ -338,78 +347,23 @@ export struct CameraPage {
     }
   }
 
-
-
   /**
    * 根据当前模式跳转对应的系统设置页面（全版本兼容）
+   * 获取当前设备的API version
+   * 根据API版本选择不同的跳转方式,API 20及以上：使用标准化接口;API 19及以下：使用传统Want方式
    */
-  private navigateToSettingsByMode() {
-    try {
-      // 获取当前设备的API版本号
-      const apiVersion = parseInt(systemParameter.getSync('hw_sc.build.os.apiversion', '0'));
+/*  private navigateToSettingsByMode() {
 
-      // 根据API版本选择不同的跳转方式
-      if (apiVersion >= 20) {
-        // API 20及以上：使用标准化接口
-        this.navigateWithNewApi();
-      } else {
-        // API 19及以下：使用传统Want方式
-        this.navigateWithOldApi();
-      }
-    } catch (error) {
-      console.error('操作失败:', error);
-      promptAction.showToast({ message: '操作失败，请重试' });
-    }
-  }
+      // 获取当前设备的API version
+      const apiVersion = canIUse('SystemCapability.Ability.StartSettings');
 
-  /**
-   * API 20及以上使用的标准化跳转方式
-   */
-  private navigateWithNewApi() {
-    if (this.currentConnectionMode === '蓝牙') {
-      // 跳转蓝牙设置（标准化接口）
-      startSettingPage({ settingType: SettingType.SETTING_BLUETOOTH })
-        .then(() => {
-          console.info('跳转蓝牙设置成功');
-          try {
-            promptAction.showToast({ message: '正在打开蓝牙设置...' });
-          } catch (error) {
-            // TODO: Implement error handling.
-          }
-        })
-        .catch((err: Error) => {
-          console.error(`蓝牙设置跳转失败: ${err.message}`);
-          try {
-            promptAction.showToast({ message: '打开蓝牙设置失败' });
-          } catch (error) {
-            // TODO: Implement error handling.
-          }
-        });
-    } else {
-      // 跳转WiFi设置（标准化接口）
-      startSettingPage({ settingType: SettingType.SETTING_WIFI })
-        .then(() => {
-          console.info('跳转WiFi设置成功');
-          try {
-            promptAction.showToast({ message: '正在打开WiFi设置...' });
-          } catch (error) {
-            // TODO: Implement error handling.
-          }
-        })
-        .catch((err: Error) => {
-          console.error(`WiFi设置跳转失败: ${err.message}`);
-          try {
-            promptAction.showToast({ message: '打开WiFi设置失败' });
-          } catch (error) {
-            // TODO: Implement error handling.
-          }
-        });
-    }
-  }
+      // 根据API版本选择不同的跳转方式,API 20及以上：使用标准化接口;API 19及以下：使用传统Want方式
+      apiVersion ? this.navigateWithNewApi() : this.navigateWithOldApi();
 
-  /**
-   * API 19及以下使用的传统跳转方式
-   */
+
+  }*/
+
+
   private navigateWithOldApi() {
     // 1. 根据当前模式获取对应配置
     let config: SettingItem | undefined;
