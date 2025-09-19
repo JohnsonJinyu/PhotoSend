@@ -7,6 +7,8 @@ interface GeneratedObjectLiteralInterface_1 {
   uri: string;
 }
 
+// test git
+
 @Component
 export struct CameraPage {
   // status control
