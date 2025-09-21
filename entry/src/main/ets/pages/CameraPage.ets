@@ -47,8 +47,6 @@ export struct CameraPage {
     '添加照相机',
     '切换照相机',
     '忽略照相机',
-    'WiFi AP模式连接',
-    'WiFi STA模式连接',
     '下载位置数据'
   ]
 
