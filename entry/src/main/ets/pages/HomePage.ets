@@ -25,6 +25,7 @@ struct HomePage{
 
       TabContent(){
         FilePage()
+
       }.tabBar('文件')
 
       TabContent(){

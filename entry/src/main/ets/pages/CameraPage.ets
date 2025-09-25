@@ -1,5 +1,7 @@
 import { promptAction } from "@kit.ArkUI"
-import { common, Want } from '@kit.AbilityKit'
+import { UIAbility,common ,Want } from '@kit.AbilityKit'
+
+
 import { BusinessError } from '@ohos.base'
 
 
@@ -44,6 +46,7 @@ export struct CameraPage {
   // 连接模式选项
   private modeOptions: ConnectionMode[] = ['蓝牙', 'WiFi-AP', 'WiFi-STA']
 
+
   // 连接模式操作选项列表
 
 
@@ -67,12 +70,71 @@ export struct CameraPage {
         .padding(10)
 
       Row() {
-        Button(`链接相机`)
+
+        // 跳转WiFi或蓝牙设置页面，让用户手动选择连接
+        Button(`连接相机`)
           .buttonStyle(ButtonStyleMode.EMPHASIZED)
           .fontSize(22)
           .height(50)
           .width(140)
           .margin({ right: 10 })
+          .onClick(async ()=>{ //异步回调，因为startAbility可能需要等待结果
+            try{
+              //1、更具当前选中的连接模式，构造对应系统页面的want(跳转参数)
+              let targetWant:Want;// Want 是ArkUI中用于跨能力跳转的参数对象
+
+              switch (this.currentConnectionMode){
+                // case 1:wifi
+                case `WiFi-AP`:
+                case `WiFi-STA`:
+                  targetWant={
+                    action: "android.intent.action.MAIN",
+                    bundleName: "com.android.settings",
+                    abilityName: "com.android.settings.wifi.WifiSettings"
+
+                  };
+                  break
+
+                //case 2:bluetooth
+                case `蓝牙`:{
+                  targetWant={
+                    bundleName:`com.huawei.hmos.settings`,//系统设置应用的bundleName
+                    // uri：系统蓝牙设置页面额固定标识（鸿蒙系统通用配置）
+                    uri:`bluetooth_entry`,
+                    type:`application/vnd.hap.settings`
+                  };
+                  break;
+                }
+                // 默认情况，理论不会触发，因为模式已经被类型限定死
+                default:
+                  promptAction.showToast({message:`请选择有效的连接模式`});
+                  return; //终止后续逻辑
+              }
+
+              // 2、调用系统能力，发起跳转（需要传入组件上下文）
+              const uiAbilityContext = getContext(this) as common.UIAbilityContext
+
+              if (!uiAbilityContext) {
+                throw new Error("获取应用上下文失败（华为设备）");
+              }
+
+              // 关键调整：移除内层catch，统一用外层try-catch处理错误
+              await uiAbilityContext.startAbility(targetWant);
+
+              // 跳转成功提示（华为设备适配的吐司样式，用户体验更统一）
+              promptAction.showToast({
+                message: `已跳转至${this.currentConnectionMode}设置`,
+                duration: 2000 // 华为设备吐司默认显示1.5秒，这里延长至2秒确保阅读
+              });
+
+
+            }catch (error) {
+              const err = error as BusinessError;
+              promptAction.showToast({ message: `跳转失败：${err.message || '未知错误'}` });
+              console.error(`跳转系统设置失败：${JSON.stringify(err)}`);
+            }
+          })
+
 
         Button(`模式:${this.currentConnectionMode}`)
           .fontSize(12)
