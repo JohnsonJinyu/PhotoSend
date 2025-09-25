@@ -91,9 +91,9 @@ export struct CameraPage {
                 case `WiFi-AP`:
                 case `WiFi-STA`:
                   targetWant={
-                    action: "action.settings.wifi",
-                    bundleName: "com.huawei.hmos.settings",
-                    abilityName: "com.huawei.hmos.settings.MainAbility"
+                    bundleName: 'com.huawei.hmos.settings',
+                    abilityName: 'com.huawei.hmos.settings.MainAbility',
+                    uri: 'wifi_entry',
 
                   };
                   break
