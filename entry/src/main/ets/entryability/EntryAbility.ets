@@ -24,6 +24,21 @@ export default class EntryAbility extends UIAbility {
         return;
       }
       hilog.info(DOMAIN, 'testTag', 'Succeeded in loading the content.');
+
+      // 获取窗口实例并设置沉浸式
+      window.getLastWindow(this.context).then((win)=>{
+        // 设置全屏模式
+        win.setWindowLayoutFullScreen(true).then(()=>{
+          // 设置系统栏属性
+          win.setWindowSystemBarProperties({
+            statusBarColor: '#00000000', // 透明状态栏
+            navigationBarColor: '#00000000', // 透明导航栏
+            statusBarContentColor: '#FF000000', // 黑色状态栏图标
+            navigationBarContentColor: '#FF000000' // 黑色导航栏图标
+          })
+        })
+      })
+
     });
   }
 

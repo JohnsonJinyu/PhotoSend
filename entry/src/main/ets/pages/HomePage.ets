@@ -31,6 +31,6 @@ struct HomePage{
       TabContent(){
         MinePage()
       }.tabBar('我的')
-    }
+    }.height(`100%`)
   }
 }
