@@ -31,6 +31,16 @@ export struct CameraPage {
   // 状态控制
   @State currentConnectionMode: ConnectionMode = 'WiFi-AP'
   @State selectedModeIndex: number = 1
+  // 定义响应式变量(@state 确保UI能够实时更新
+  @State isDeviceConnected: boolean = false
+
+
+  // 4. 状态更新示例（比如连接成功/失败时更新状态） 在下面用
+  // 连接成功时
+  //this.isDeviceConnected = true;
+  // 连接失败/断开时
+ // this.isDeviceConnected = false;
+
   // 连接模式选项
   private modeOptions: ConnectionMode[] = ['蓝牙', 'WiFi-AP', 'WiFi-STA']
 
@@ -47,9 +57,14 @@ export struct CameraPage {
 
 
       // 型号显示区域
-      Text(`nikon zf`)
+      Text(`Nikon ZF`)
         .fontSize(24)
         .padding(20)
+
+      // 显示设备连接状态
+      Text(`设备状态:${this.isDeviceConnected?`已连接`:`未连接`}`)
+        .fontSize(16)
+        .padding(10)
 
       Row() {
         Button(`链接相机`)
@@ -73,8 +88,7 @@ export struct CameraPage {
               selected: this.selectedModeIndex,
               onAccept: (value: TextPickerResult) => {
                 //1、确保索引有效（单选项选选择器的index是number类型）
-                if(typeof value.index == `number`)
-                {
+                if (typeof value.index == `number`) {
                   //2、更新选中索引的状态变量（下次打开选择其实默认选中当前项）
                   this.selectedModeIndex = value.index
                   //3、根据索引更新当前模式的状态变量（直接影响UI显示）
@@ -102,8 +116,8 @@ export struct CameraPage {
               // onChange：用户在弹窗中切换选项时（未点击确定前）实时触发的回调
               // 作用：实时获取用户的选择过程（比如用户从"蓝牙"滑到"WiFi-AP"时触发）
               // 当前仅用于打印日志，方便调试时观察选择变化过程
-              onChange:(value:TextPickerResult) =>{
-                console.info("TextPickerDialog:onChange()"+JSON.stringify(value))
+              onChange: (value: TextPickerResult) => {
+                console.info("TextPickerDialog:onChange()" + JSON.stringify(value))
               }
 
             })
