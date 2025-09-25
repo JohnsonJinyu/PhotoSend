@@ -82,15 +82,18 @@ export struct CameraPage {
             try{
               //1、更具当前选中的连接模式，构造对应系统页面的want(跳转参数)
               let targetWant:Want;// Want 是ArkUI中用于跨能力跳转的参数对象
+              // 2、调用系统能力，发起跳转（需要传入组件上下文）
+              let context =getContext(this) as  common.UIAbilityContext
+             // const uiAbilityContext = getContext(this) as common.UIAbilityContext
 
               switch (this.currentConnectionMode){
                 // case 1:wifi
                 case `WiFi-AP`:
                 case `WiFi-STA`:
                   targetWant={
-                    action: "android.intent.action.MAIN",
-                    bundleName: "com.android.settings",
-                    abilityName: "com.android.settings.wifi.WifiSettings"
+                    action: "action.settings.wifi",
+                    bundleName: "com.huawei.hmos.settings",
+                    abilityName: "com.huawei.hmos.settings.MainAbility"
 
                   };
                   break
@@ -98,10 +101,9 @@ export struct CameraPage {
                 //case 2:bluetooth
                 case `蓝牙`:{
                   targetWant={
-                    bundleName:`com.huawei.hmos.settings`,//系统设置应用的bundleName
-                    // uri：系统蓝牙设置页面额固定标识（鸿蒙系统通用配置）
-                    uri:`bluetooth_entry`,
-                    type:`application/vnd.hap.settings`
+                    bundleName: 'com.huawei.hmos.settings',
+                    abilityName: 'com.huawei.hmos.settings.MainAbility',
+                    uri: 'bluetooth_entry',
                   };
                   break;
                 }
@@ -111,15 +113,14 @@ export struct CameraPage {
                   return; //终止后续逻辑
               }
 
-              // 2、调用系统能力，发起跳转（需要传入组件上下文）
-              const uiAbilityContext = getContext(this) as common.UIAbilityContext
 
-              if (!uiAbilityContext) {
+
+              if (!context) {
                 throw new Error("获取应用上下文失败（华为设备）");
               }
 
               // 关键调整：移除内层catch，统一用外层try-catch处理错误
-              await uiAbilityContext.startAbility(targetWant);
+              await context.startAbility(targetWant);
 
               // 跳转成功提示（华为设备适配的吐司样式，用户体验更统一）
               promptAction.showToast({
