@@ -21,16 +21,20 @@ struct HomePage{
 
       TabContent(){
         PhonePage()
-      }.tabBar('手机')
+      }.tabBar('手机图')
 
       TabContent(){
         FilePage()
 
-      }.tabBar('文件')
+      }.tabBar('相机图')
 
       TabContent(){
         MinePage()
       }.tabBar('我的')
-    }.height(`100%`)
+
+    }
+    .height(`100%`)
+    .margin({top:20})
+
   }
 }
