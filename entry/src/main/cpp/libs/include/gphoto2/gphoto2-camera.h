@@ -48,7 +48,7 @@ typedef struct _Camera Camera;
 
 
 #include <gphoto2/gphoto2-abilities-list.h>
-#include <libgphoto2_port/gphoto2/gphoto2-port.h>
+#include <gphoto2/gphoto2-port.h>
 
 #include <gphoto2/gphoto2-widget.h>
 #include <gphoto2/gphoto2-filesys.h>

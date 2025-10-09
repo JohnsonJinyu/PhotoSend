@@ -24,7 +24,7 @@
 #ifndef LIBGPHOTO2_GPHOTO2_VERSION_H
 #define LIBGPHOTO2_GPHOTO2_VERSION_H
 
-#include <libgphoto2_port/gphoto2/gphoto2-port-version.h>
+#include <gphoto2/gphoto2-port-version.h>
 
 #ifdef __cplusplus
 extern "C" {

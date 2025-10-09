@@ -35,9 +35,9 @@ extern "C" {
 #endif
 #endif
 
-#include <libgphoto2_port/gphoto2//gphoto2-port.h>
-#include <libgphoto2_port/gphoto2/gphoto2-port-log.h>
-#include <libgphoto2_port/gphoto2/gphoto2-port-result.h>
+#include <gphoto2/gphoto2-port.h>
+#include <gphoto2/gphoto2-port-log.h>
+#include <gphoto2/gphoto2-port-result.h>
 
 #include <gphoto2/gphoto2-file.h>
 #include <gphoto2/gphoto2-library.h>

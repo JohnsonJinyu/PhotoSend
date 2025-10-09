@@ -24,10 +24,10 @@
 #ifndef LIBGPHOTO2_GPHOTO2_PORT_H
 #define LIBGPHOTO2_GPHOTO2_PORT_H
 
-#include <libgphoto2_port/gphoto2/gphoto2-port-info-list.h>
+#include <gphoto2/gphoto2-port-info-list.h>
 
 /* For portability */
-#include <libgphoto2_port/gphoto2/gphoto2-port-portability.h>
+#include <gphoto2/gphoto2-port-portability.h>
 
 #ifdef __cplusplus
 extern "C" {

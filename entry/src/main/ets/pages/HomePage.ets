@@ -19,6 +19,7 @@ struct HomePage{
         CameraPage()
       }.tabBar('相机')
 
+
       TabContent(){
         PhonePage()
       }.tabBar('手机图')

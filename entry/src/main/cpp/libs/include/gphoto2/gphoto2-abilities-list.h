@@ -27,9 +27,9 @@
 
 #include <gphoto2/gphoto2-context.h>
 #include <gphoto2/gphoto2-list.h>
-#include <libgphoto2_port/gphoto2/gphoto2-port-info-list.h>
+#include <gphoto2/gphoto2-port-info-list.h>
 
-#include <libgphoto2_port/gphoto2/gphoto2-port-log.h>
+#include <gphoto2/gphoto2-port-log.h>
 
 #ifdef __cplusplus
 extern "C" {

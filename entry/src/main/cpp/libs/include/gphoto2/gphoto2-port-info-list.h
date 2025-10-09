@@ -54,7 +54,7 @@ typedef enum {
 struct _GPPortInfo;
 typedef struct _GPPortInfo *GPPortInfo;
 
-#include <libgphoto2_port/gphoto2/gphoto2-port.h>
+#include <gphoto2/gphoto2-port.h>
 
 #ifdef __cplusplus
 extern "C" {
