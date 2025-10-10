@@ -4,73 +4,54 @@ cmake_minimum_required(VERSION 3.5.0)
 # 2. 工程名
 project("PhotoSendNative")
 
-# 3. 定义路径变量
+# 3. 定义路径变量（保持你的路径逻辑，修正注释）
 set(CPP_DIR ${CMAKE_CURRENT_SOURCE_DIR})
-set(INCLUDE_DIR ${CPP_DIR}/libs/include)
+set(INCLUDE_DIR ${CPP_DIR}/libs/include)  # 你的头文件目录（正确）
+set(LIBS_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../../../libs/arm64-v8a)  # 动态库目录（正确）
 
-#
-set(LIBS_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../../../libs/arm64-v8a)
-
-# 调试输出路径
+# 调试输出路径（保留，方便确认路径是否正确）
 message(STATUS "CPP_DIR = ${CPP_DIR}")
 message(STATUS "INCLUDE_DIR = ${INCLUDE_DIR}")
 message(STATUS "LIBS_DIR = ${LIBS_DIR}")
 
-# 4. 头文件搜索路径
+# 4. 头文件搜索路径（保持不变，正确）
 include_directories(
     ${INCLUDE_DIR}
     ${CPP_DIR}
 )
 
-# 5. 静态库搜索路径
+# 5. 动态库搜索路径（修正：移除系统库路径，鸿蒙系统库由 NDK 自动处理）
 link_directories(
-    ${LIBS_DIR}  # 你的项目私有库路径（libusb、libgphoto2 等）
-    # ✅ 新增：SDK 系统库路径（arm64-v8a 架构的系统库，如 hilog）
-    ${CMAKE_SYSROOT}/usr/lib/arm64-v8a
+    ${LIBS_DIR}  # 仅保留你的动态库路径
 )
 
+# 6. 移除静态库导入（因为你复制的是动态库 .so，无需导入静态库）
+# （删除原来的 add_library(libusb-1.0 STATIC IMPORTED) 等所有静态库导入代码）
 
-# 6. 导入静态库
-add_library(libusb-1.0 STATIC IMPORTED)
-set_target_properties(libusb-1.0 PROPERTIES IMPORTED_LOCATION
-    ${LIBS_DIR}/libusb-1.0.a
-)
 
-add_library(libexif STATIC IMPORTED)
-set_target_properties(libexif PROPERTIES IMPORTED_LOCATION
-    ${LIBS_DIR}/libexif.a
-)
-
-add_library(libltdl STATIC IMPORTED)
-set_target_properties(libltdl PROPERTIES IMPORTED_LOCATION
-    ${LIBS_DIR}/libltdl.a
-)
-
-add_library(libgphoto2 STATIC IMPORTED)
-set_target_properties(libgphoto2 PROPERTIES IMPORTED_LOCATION
-    ${LIBS_DIR}/libgphoto2.a
-)
-
-add_library(libgphoto2_port STATIC IMPORTED)
-set_target_properties(libgphoto2_port PROPERTIES IMPORTED_LOCATION
-    ${LIBS_DIR}/libgphoto2_port.a
-)
-
-# 7. 业务 Native 库
+# 7. 业务 Native 库（保持不变）
 add_library(entry SHARED native_camera.cpp)
 
-# 8. 链接所有库
+# 8. 链接所有库（关键修改：链接动态库，补充缺失的依赖）
 target_link_libraries(entry PUBLIC
-    libusb-1.0
-    libexif
-    libltdl
-    libgphoto2
-    libgphoto2_port
-    hilog_ndk.z  # 对应实际存在的 libhilog_ndk.z.so
+    # 核心库：动态库无需加 lib 前缀，直接写库名（对应 libgphoto2.so 等）
+    gphoto2          # 对应 libgphoto2.so
+    gphoto2_port     # 对应 libgphoto2_port.so
+    exif             # 对应 libexif.so（替换原来的 libexif 静态库）
+    usb-1.0          # 对应 libusb-1.0.so（替换原来的 libusb-1.0 静态库）
+    ltdl             # 对应 libltdl.so（替换原来的 libltdl 静态库）
+    # 补充缺失的依赖库（之前编译的其他库）
+    curl             # 对应 libcurl.so
+    xml2             # 对应 libxml2.so
+    gd               # 对应 libgd.so
+    png16            # 对应 libpng16.so
+    jpeg             # 对应 libjpeg.so
+    # 鸿蒙系统库（保持不变）
+    hilog_ndk.z
     ace_napi.z
 )
 
-# 9. 保留 NativeRender 配置
+# 9. 保留 NativeRender 配置（不变）
 set(NATIVERENDER_ROOT_PATH ${CMAKE_CURRENT_SOURCE_DIR})
 if(DEFINED PACKAGE_FIND_FILE)
     include(${PACKAGE_FIND_FILE})
