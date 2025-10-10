@@ -28,6 +28,8 @@ link_directories(
     # ✅ 新增：SDK 系统库路径（arm64-v8a 架构的系统库，如 hilog）
     ${CMAKE_SYSROOT}/usr/lib/arm64-v8a
 )
+
+
 # 6. 导入静态库
 add_library(libusb-1.0 STATIC IMPORTED)
 set_target_properties(libusb-1.0 PROPERTIES IMPORTED_LOCATION
@@ -64,8 +66,8 @@ target_link_libraries(entry PUBLIC
     libltdl
     libgphoto2
     libgphoto2_port
-    hilog
-    libace_napi.z.so
+    hilog_ndk.z  # 对应实际存在的 libhilog_ndk.z.so
+    ace_napi.z
 )
 
 # 9. 保留 NativeRender 配置
