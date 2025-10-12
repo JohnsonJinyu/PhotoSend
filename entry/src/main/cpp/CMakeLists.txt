@@ -2,7 +2,7 @@
 cmake_minimum_required(VERSION 3.5.0)
 
 # 2. 工程名
-project("PhotoSendNative")
+project("PhotoSend")
 
 # 3. 定义路径变量（保持你的路径逻辑，修正注释）
 set(CPP_DIR ${CMAKE_CURRENT_SOURCE_DIR})
@@ -25,8 +25,7 @@ link_directories(
     ${LIBS_DIR}  # 仅保留你的动态库路径
 )
 
-# 6. 移除静态库导入（因为你复制的是动态库 .so，无需导入静态库）
-# （删除原来的 add_library(libusb-1.0 STATIC IMPORTED) 等所有静态库导入代码）
+
 
 
 # 7. 业务 Native 库（保持不变）
@@ -38,8 +37,8 @@ target_link_libraries(entry PUBLIC
     gphoto2          # 对应 libgphoto2.so
     gphoto2_port     # 对应 libgphoto2_port.so
     exif             # 对应 libexif.so（替换原来的 libexif 静态库）
-    usb-1.0          # 对应 libusb-1.0.so（替换原来的 libusb-1.0 静态库）
-    ltdl             # 对应 libltdl.so（替换原来的 libltdl 静态库）
+    #usb-1.0          # 对应 libusb-1.0.so（替换原来的 libusb-1.0 静态库）
+    #ltdl             # 对应 libltdl.so（替换原来的 libltdl 静态库）
     # 补充缺失的依赖库（之前编译的其他库）
     curl             # 对应 libcurl.so
     xml2             # 对应 libxml2.so

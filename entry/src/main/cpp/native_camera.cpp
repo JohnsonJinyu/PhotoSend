@@ -117,6 +117,8 @@ static bool CreateGpFile(CameraFile** file) {
 }
 
 
+
+
 // ###########################################################################
 // 核心功能函数：对应ArkTS侧可调用的接口（按功能分类）
 // ###########################################################################
@@ -691,6 +693,7 @@ EXTERN_C_START
  * @return napi_value 导出对象（包含所有可调用接口）
  */
 static napi_value InitModule(napi_env env, napi_value exports) {
+    OH_LOG_PrintMsg(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "InitModule: 开始注册接口");
     // 定义接口映射表：每个元素对应一个ArkTS可调用的函数
     napi_property_descriptor api_list[] = {
         // 格式：{ArkTS侧函数名, 无, C++侧函数名, 无, 无, 无, 默认行为, 无}
@@ -724,5 +727,19 @@ static napi_value InitModule(napi_env env, napi_value exports) {
 
 EXTERN_C_END
 
-// 注册NAPI模块：模块名"entry"必须与oh-package.json5中的"name"字段一致
-NAPI_MODULE(entry, InitModule)
+    
+// 模块定义（对齐官方模板）
+static napi_module nativeCameraModule = {
+    .nm_version = 1,
+    .nm_flags = 0,
+    .nm_filename = nullptr,
+    .nm_register_func = InitModule,  // 关联初始化函数（你的代码中是InitModule）
+    .nm_modname = "entry",           // 模块名：必须与导入时使用的名称一致
+    .nm_priv = ((void*)0),
+    .reserved = { 0 },
+};
+
+// 注册模块（官方模板标准写法）
+extern "C" __attribute__((constructor)) void RegisterNativeCameraModule(void) {
+    napi_module_register(&nativeCameraModule);
+}
