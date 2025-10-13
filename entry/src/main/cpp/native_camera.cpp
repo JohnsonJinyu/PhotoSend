@@ -130,6 +130,7 @@ static bool CreateGpFile(CameraFile** file) {
 static napi_value GetCameraList(napi_env env,napi_callback_info info){
     OH_LOG_PrintMsg(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "GetCameraList: 开始获取相机列表");
     
+    
     // 步骤1：创建临时上下文（仅用于检测相机，不予后续连接共享）
     GPContext* temp_context = gp_context_new();
     if (temp_context == nullptr) {
@@ -204,93 +205,94 @@ static napi_value GetCameraList(napi_env env,napi_callback_info info){
 
 
 /**
- * @brief 功能2：连接指定相机（ArkTS侧需传入相机路径，路径来自GetCameraList的返回值）
+ * @brief 功能2：连接指定相机（修改后：需传入相机型号名 + 路径）
  * @param env NAPI环境上下文
- * @param info 回调信息：包含1个参数（相机路径，如"usb:001,005"）
+ * @param info 回调信息：包含2个参数（相机型号名 + 相机路径）
  * @return napi_value ArkTS布尔值：true=连接成功，false=连接失败
  */
-static napi_value ConnectCamera(napi_env env,napi_callback_info info){
+static napi_value ConnectCamera(napi_env env, napi_callback_info info) {
     OH_LOG_PrintMsg(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "ConnectCamera: 开始连接相机");
     
-    // 步骤1：先断开已有链接（避免重复连接导致内存泄漏）
+    // 步骤1：先断开已有连接
     ReleaseCameraResources();
     
-    // 步骤2：从ArkTS侧获取传入的参数（必须传入一个相机路径）
-    size_t argc = 1; //期望接收到1个参数
-    napi_value args[1] = {nullptr}; // 存储传入的参数
+    // 步骤2：从ArkTS侧获取2个参数（型号名 + 路径，关键修改）
+    size_t argc = 2; // 改为接收2个参数
+    napi_value args[2] = {nullptr};
     
-    // NAPI接口：获取ArkTS侧传入的参数列表
     napi_status status = napi_get_cb_info(env, info, &argc, args, nullptr, nullptr);
-    if (status != napi_ok || argc <1) {
-        OH_LOG_PrintMsg(LOG_APP, LOG_ERROR, LOG_DOMAIN, LOG_TAG, "ConnectCamera: 未传入相机路径参数");
+    if (status != napi_ok || argc < 2) { // 检查是否传入2个参数
+        OH_LOG_PrintMsg(LOG_APP, LOG_ERROR, LOG_DOMAIN, LOG_TAG, "ConnectCamera: 需传入2个参数（型号名+路径）");
         return nullptr;
     }
     
-    // 步骤3：将ArkTS子串串参数（相机路径）转为C语言字符串
-    char camera_path[256] = {0}; // 存储相机路径
-    size_t path_len = 0; // 存储路径长度
+    // 步骤3：解析参数（分别获取型号名和路径，关键修改）
+    char camera_name[256] = {0};  // 存储相机型号名（如"Canon EOS R5"）
+    char camera_path[256] = {0};  // 存储相机路径（如"usb:001,005"）
+    size_t name_len = 0, path_len = 0;
     
-    status = napi_get_value_string_utf8(
-        env,            // NAPI环境
-        args[0],        // ArkTS侧传入的参数（相机路径）
-        camera_path,    // 输出：C语言字符串
-        sizeof(camera_path) - 1, // 最大长度（留1位存字符串结束符'\0'）
-        &path_len       // 输出：实际路径长度
-    );
+    // 解析第一个参数：相机型号名
+    status = napi_get_value_string_utf8(env, args[0], camera_name, sizeof(camera_name)-1, &name_len);
+    if (status != napi_ok || name_len == 0) {
+        OH_LOG_PrintMsg(LOG_APP, LOG_ERROR, LOG_DOMAIN, LOG_TAG, "ConnectCamera: 相机型号名无效");
+        return nullptr;
+    }
+    
+    // 解析第二个参数：相机路径
+    status = napi_get_value_string_utf8(env, args[1], camera_path, sizeof(camera_path)-1, &path_len);
     if (status != napi_ok || path_len == 0) {
-        OH_LOG_PrintMsg(LOG_APP, LOG_ERROR, LOG_DOMAIN, LOG_TAG, "ConnectCamera: 相机路径参数无效");
+        OH_LOG_PrintMsg(LOG_APP, LOG_ERROR, LOG_DOMAIN, LOG_TAG, "ConnectCamera: 相机路径无效");
         return nullptr;
     }
+    
     OH_LOG_Print(
         LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG,
-        "ConnectCamera: 待连接的相机路径：{public}%s", camera_path
+        "ConnectCamera: 型号名：%s，路径：%s", camera_name, camera_path
     );
     
-    // 步骤4：创建相机上下文（全局变量g_context）
+    // 步骤4：创建上下文（不变）
     g_context = gp_context_new();
     if (g_context == nullptr) {
-        OH_LOG_PrintMsg(LOG_APP, LOG_ERROR, LOG_DOMAIN, LOG_TAG, "ConnectCamera: 创建相机上下文失败");
+        OH_LOG_PrintMsg(LOG_APP, LOG_ERROR, LOG_DOMAIN, LOG_TAG, "ConnectCamera: 创建上下文失败");
         return nullptr;
     }
     
-    // 步骤5：创建相机对象（全局变量g_camera,适配新版本libgphoto2）
-    int ret = gp_camera_new(&g_camera); // 关键：传入&g_camera（指针的指针），返回错误码
+    // 步骤5：创建相机对象（不变）
+    int ret = gp_camera_new(&g_camera);
     if (!CheckGpError("gp_camera_new", ret) || g_camera == nullptr) {
-        ReleaseCameraResources(); // 失败时释放已创建的上下文
+        ReleaseCameraResources();
         return nullptr;
     }
     
-    // 步骤6：加载相机能力列表（识别相机信号、支持的功能）
+    // 步骤6：加载能力列表（不变）
     CameraAbilitiesList* abilities_list = nullptr;
     ret = gp_abilities_list_new(&abilities_list);
-    if (!CheckGpError("gp_abilities_list_load", ret)) {
+    if (!CheckGpError("gp_abilities_list_new", ret)) { // 注意：原代码这里误写为gp_abilities_list_load
         ReleaseCameraResources();
         return nullptr;
     }
     
-    // 加载系统中支持的相机能力（如Nikon D850的参数范围）
     ret = gp_abilities_list_load(abilities_list, g_context);
-     if (!CheckGpError("gp_abilities_list_load", ret)) {
-        gp_abilities_list_free(abilities_list); // 释放能力列表
+    if (!CheckGpError("gp_abilities_list_load", ret)) {
+        gp_abilities_list_free(abilities_list);
         ReleaseCameraResources();
         return nullptr;
     }
     
-    // 步骤7：根据相机路径查找对应的能力索引（匹配具体相机型号）
-    // gp_abilities_list_lookup_model这个方法要确认下对不对
-    int ability_index = gp_abilities_list_lookup_model(abilities_list, camera_path);
+    // 步骤7：查找能力索引（关键修改：传入型号名而非路径）
+    int ability_index = gp_abilities_list_lookup_model(abilities_list, camera_name); // 这里传入camera_name
     if (ability_index < 0) {
         OH_LOG_Print(
             LOG_APP, LOG_ERROR, LOG_DOMAIN, LOG_TAG,
-            "ConnectCamera: 未找到相机能力，路径：{public}%s，索引：{public}%d",
-            camera_path, ability_index
+            "ConnectCamera: 未找到相机能力，型号名：%s，索引：%d", // 日志也改为型号名
+            camera_name, ability_index
         );
         gp_abilities_list_free(abilities_list);
         ReleaseCameraResources();
         return nullptr;
     }
     
-    // 步骤8：设置相机能力（告诉相机对象当前连接的相机型号）
+    // 步骤8：设置相机能力（不变）
     CameraAbilities camera_abilities;
     ret = gp_abilities_list_get_abilities(abilities_list, ability_index, &camera_abilities);
     if (!CheckGpError("gp_abilities_list_get_abilities", ret)) {
@@ -305,8 +307,7 @@ static napi_value ConnectCamera(napi_env env,napi_callback_info info){
         return nullptr;
     }
     
-    
-     // 步骤9：设置相机端口（USB/WiFi等连接方式）
+    // 步骤9：设置相机端口（不变，路径在这里用）
     GPPortInfoList* port_list = nullptr;
     ret = gp_port_info_list_new(&port_list);
     if (!CheckGpError("gp_port_info_list_new", ret)) {
@@ -315,7 +316,6 @@ static napi_value ConnectCamera(napi_env env,napi_callback_info info){
         return nullptr;
     }
     
-     // 加载系统中支持的端口（如USB端口、网络端口）
     ret = gp_port_info_list_load(port_list);
     if (!CheckGpError("gp_port_info_list_load", ret)) {
         gp_port_info_list_free(port_list);
@@ -324,13 +324,12 @@ static napi_value ConnectCamera(napi_env env,napi_callback_info info){
         return nullptr;
     }
     
-    
-    // 根据相机路径查找对应的端口索引
+    // 端口查找用路径（正确，无需修改）
     int port_index = gp_port_info_list_lookup_path(port_list, camera_path);
     if (port_index < 0) {
         OH_LOG_Print(
             LOG_APP, LOG_ERROR, LOG_DOMAIN, LOG_TAG,
-            "ConnectCamera: 未找到相机端口，路径：{public}%s，索引：{public}%d",
+            "ConnectCamera: 未找到相机端口，路径：%s，索引：%d",
             camera_path, port_index
         );
         gp_port_info_list_free(port_list);
@@ -339,7 +338,7 @@ static napi_value ConnectCamera(napi_env env,napi_callback_info info){
         return nullptr;
     }
     
-    // 设置相机端口信息（告诉相机对象用哪种方式连接）
+    // 步骤10：初始化相机连接（不变）
     GPPortInfo port_info;
     ret = gp_port_info_list_get_info(port_list, port_index, &port_info);
     if (!CheckGpError("gp_port_info_list_get_info", ret)) {
@@ -356,7 +355,6 @@ static napi_value ConnectCamera(napi_env env,napi_callback_info info){
         return nullptr;
     }
     
-    // 步骤10：最终初始化相机连接（建立与相机的实际通信）
     ret = gp_camera_init(g_camera, g_context);
     if (!CheckGpError("gp_camera_init", ret)) {
         gp_port_info_list_free(port_list);
@@ -365,18 +363,17 @@ static napi_value ConnectCamera(napi_env env,napi_callback_info info){
         return nullptr;
     }
 
-    // 步骤11：释放临时资源（能力列表、端口列表不再需要）
+    // 步骤11：释放资源（不变）
     gp_abilities_list_free(abilities_list);
     gp_port_info_list_free(port_list);
 
-    // 步骤12：返回连接成功的布尔值给ArkTS侧
+    // 步骤12：返回结果（不变）
     OH_LOG_PrintMsg(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "ConnectCamera: 相机连接成功");
     napi_value result;
-    napi_get_boolean(env, true, &result); // 创建ArkTS布尔值true
+    napi_get_boolean(env, true, &result);
     return result;
-    
-    
 }
+
 
 /**
  * @brief 功能3：设置相机参数（光圈、快门、ISO等，需知道相机支持的参数名）
@@ -723,6 +720,34 @@ static napi_value InitModule(napi_env env, napi_value exports) {
 }
 
 EXTERN_C_END
+    
+    
+    //这里定义了一个 napi_module 结构体，描述了这个原生模块的基本信息。
+//关键点是 .nm_modname = "entry"，它决定了 ArkTS 导入时的模块名。
+
+static napi_module demoModule = {
+    .nm_version = 1,              // 模块版本
+    .nm_flags = 0,                // 标志位（一般为 0）
+    .nm_filename = nullptr,       // 文件名（可选）
+    .nm_register_func = InitModule,     // 模块初始化函数
+    .nm_modname = "entry",        // 模块名，必须和 oh-package.json5 的 name 一致
+    .nm_priv = ((void*)0),        // 私有数据（一般不用）
+    .reserved = { 0 },            // 保留字段
+};
 
 // 注册NAPI模块：模块名"entry"必须与oh-package.json5中的"name"字段一致
-NAPI_MODULE(entry, InitModule)
+// NAPI_MODULE(entry, InitModule)
+
+
+/**
+ * 
+ * 这是一个构造函数属性（__attribute__((constructor))），意思是：
+- 当 so 库被加载时，这个函数会自动执行。
+- 它调用 napi_module_register，把上面定义的 demoModule 注册到 NAPI 框架里。
+- 这样 ArkTS 才能通过 import native from 'libentry.so'; 找到并使用这个模块。
+
+ * */
+extern "C" __attribute__((constructor)) void RegisterEntryModule(void)
+{
+    napi_module_register(&demoModule);
+}
