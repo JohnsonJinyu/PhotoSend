@@ -668,15 +668,16 @@ static napi_value Init(napi_env env, napi_value exports) {
         {"DisconnectCamera", nullptr, DisconnectCamera, nullptr, nullptr, nullptr, napi_default, nullptr}};
 
     // 将接口映射表挂载到导出对象（exports）上
-    napi_status status = napi_define_properties(env,                                    // NAPI环境
-                                                exports,                                // 导出对象
-                                                sizeof(api_list) / sizeof(api_list[0]), // 接口数量（自动计算）
-                                                api_list                                // 接口映射表
+    napi_define_properties(env,                                    // NAPI环境
+                           exports,                                // 导出对象
+                           sizeof(api_list) / sizeof(api_list[0]), // 接口数量（自动计算）
+                           api_list                                // 接口映射表
     );
-    if (status != napi_ok) {
+
+    /*if (status != napi_ok) {
         OH_LOG_Print(LOG_APP, LOG_ERROR, LOG_DOMAIN, LOG_TAG, "InitModule: 注册接口失败，错误码：{public}%d", status);
-        return nullptr;
-    }
+        //return nullptr;   不能添加这句，不然就不会返回exports了
+    }*/
 
     OH_LOG_PrintMsg(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "InitModule: NativeCamera模块初始化成功");
     return exports; // 返回导出对象给NAPI框架
