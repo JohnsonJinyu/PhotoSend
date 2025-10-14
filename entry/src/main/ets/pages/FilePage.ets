@@ -187,7 +187,7 @@ export struct FilePage {
         // 检测相机按钮
         Button("检测已连接相机")
           .width(200)
-          .height(44)
+          .height(35)
           .backgroundColor('#2196F3')
           .fontColor(Color.White)
           .onClick((): void => this.fetchCameraList());
@@ -410,35 +410,7 @@ export struct FilePage {
             .borderRadius(8);
         }
 
-        // 6. 操作日志区域（API20 兼容 + 语法正确）
-        Column() {
-          // 日志标题
-          Text("操作日志")
-            .fontSize(18)
-            .fontWeight(FontWeight.Medium)
-            .width('100%');
 
-          // 核心滚动区域：List 替代 ScrollView（语法+API20 双正确）
-          /*List() {
-            ListItem() {
-              ForEach(this.operationLogs, (log: string): void => {
-                Text(log)
-                  .fontSize(12)
-                  .fontColor('#333')
-                  .width('100%')
-                  .textAlign(TextAlign.Start);
-              });
-            }
-
-          }*/
-        }
-        .width('100%')
-        .height('100%')
-        .backgroundColor('#fafafa')
-        .borderRadius(8)
-        .padding(12)
-
-        //.alignItems(ItemAlign.Start)
       }
       .width('100%')
       .padding(20)
