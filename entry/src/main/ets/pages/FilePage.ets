@@ -171,7 +171,6 @@ export struct FilePage {
   build() {
     Column() {
 
-
       // 模拟模式开关
       Row() {
         Text("模拟测试模式：")
@@ -253,7 +252,6 @@ export struct FilePage {
 
           //.alignListItem(ItemAlign.Center)
 
-
           Button("连接选中设备")
             .width(150)
             .height(40)
@@ -282,21 +280,16 @@ export struct FilePage {
         }
       }
       .width('100%')
-      .padding(20)
+
 
       // 参数设置+核心操作
-      Column({ space: 16 }) {
-        Text("相机参数设置")
-          .fontSize(18)
-          .fontWeight(FontWeight.Medium)
-          .width('100%');
 
-        // 光圈设置：7. 修复：TextField onChange显式参数类型
-        Row({ space: 12 }) {
+      Row() {
+        // 光圈设置：
+        Column() {
           Text("光圈：")
             .width(60)
             .fontSize(14)
-            .textAlign(TextAlign.End);
           TextInput({ placeholder: "f/5.6", text: this.apertureValue })
             .width('flex-grow')
             .height(40)
@@ -311,9 +304,10 @@ export struct FilePage {
             .fontColor(Color.White)
             .onClick((): void => this.setCameraParam('aperture', this.apertureValue));
         }
+        .margin(10)
 
         // 快门设置
-        Row({ space: 12 }) {
+        Column() {
           Text("快门：")
             .width(60)
             .fontSize(14)
@@ -321,7 +315,7 @@ export struct FilePage {
           TextInput({ placeholder: "1/100", text: this.shutterValue })
             .width('flex-grow')
             .height(40)
-            .padding(20)
+            .padding(12)
             .backgroundColor('#fff')
             .border({ width: 1, color: '#eee', radius: 4 })
           //.onChange((v: string): void => this.shutterValue = v); // 显式类型
@@ -332,9 +326,10 @@ export struct FilePage {
             .fontColor(Color.White)
             .onClick((): void => this.setCameraParam('shutter-speed', this.shutterValue));
         }
+        .margin(10)
 
         // ISO设置
-        Row({ space: 12 }) {
+        Column() {
           Text("ISO：")
             .width(60)
             .fontSize(14)
@@ -353,42 +348,45 @@ export struct FilePage {
             .fontColor(Color.White)
             .onClick((): void => this.setCameraParam('iso', this.isoValue));
         }
+        .margin(10)
 
-        // 核心操作按钮
-        Row({ space: 16 }) { // 替换marginTop
-          Button("拍照")
-            .width(120)
-            .height(48)
-            .backgroundColor('#FF9800')
-            .fontColor(Color.White)
-            .onClick((): void => this.takePhoto());
-
-          Button("获取预览")
-            .width(120)
-            .height(48)
-            .backgroundColor('#2196F3')
-            .fontColor(Color.White)
-            .onClick((): void => this.getCameraPreview());
-
-          Button("下载照片")
-            .width(120)
-            .height(48)
-            .backgroundColor('#4CAF50')
-            .fontColor(Color.White)
-            .onClick((): void => this.downloadPhoto())
-            .enabled(this.currentPhotoPath !== null);
-        }
-        .width('100%')
-        .justifyContent(FlexAlign.Center)
-        .margin({ top: 8 })
       }
+
       .width('100%')
-      .padding(20)
       .enabled(this.isConnected)
       .opacity(this.isConnected ? 1 : 0.6)
 
+      // 核心操作按钮 拍照、获取预览、下载照片
+      Column() { // 替换marginTop
+        Button("拍照")
+          .width(120)
+          .height(40)
+          .backgroundColor('#FF9800')
+          .fontColor(Color.White)
+          .margin(10)
+          .onClick((): void => this.takePhoto());
+
+        Button("获取预览")
+          .width(120)
+          .height(40)
+          .backgroundColor('#2196F3')
+          .fontColor(Color.White)
+          .margin(10)
+          .onClick((): void => this.getCameraPreview());
+
+        Button("下载照片")
+          .width(120)
+          .height(40)
+          .backgroundColor('#4CAF50')
+          .fontColor(Color.White)
+          .margin(10)
+          .onClick((): void => this.downloadPhoto())
+          .enabled(this.currentPhotoPath !== null);
+      }
+      .margin(10)
+
       // 预览+日志
-      Column({ space: 16 }) {
+      Column() {
         Text("实时预览")
           .fontSize(18)
           .fontWeight(FontWeight.Medium)
@@ -413,7 +411,7 @@ export struct FilePage {
         }
 
         // 6. 操作日志区域（API20 兼容 + 语法正确）
-        Column({ space: 8 }) {
+        Column() {
           // 日志标题
           Text("操作日志")
             .fontSize(18)
@@ -450,5 +448,4 @@ export struct FilePage {
     .padding(20)
     .flexGrow(1)
   }
-
 }
