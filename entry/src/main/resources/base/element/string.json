@@ -27,6 +27,10 @@
     {
       "name": "MANAGE_WIFI_INFO_REASON",
       "value": "管理WiFi连接"
+    },
+    {
+      "name": "reason_request_permission_vibrate",
+      "value": "触感反馈所需"
     }
   ]
 }
