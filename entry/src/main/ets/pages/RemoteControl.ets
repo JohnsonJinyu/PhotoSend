@@ -1,5 +1,6 @@
 import { ArcSliderValueOptions } from '@kit.ArkUI'
 import {CameraIsoDialog} from 'ets/component/CameraIsoDialog'
+import { ShutterSpeedDialog } from 'ets/component/ShutterSpeedDialog'
 @Preview
 @Component
 
@@ -8,13 +9,19 @@ export struct RemoteControl {
   // 当前ISO值，与浮窗双向绑定
   @State ISOValue:number=100
   // record current aperture value
-  @State apertureValue:number=200
+  @State apertureValue:number=2.8
   // record current shutter value
-  @State shutterValue:number=2.8
+  @State shutterValue:string="1/200"
 
-  // 弹窗控制器：正确传递双向绑定参数
-  dialogController : CustomDialogController = new CustomDialogController({
+  // ISO弹窗控制器：正确传递双向绑定参数
+  isoDialogController : CustomDialogController = new CustomDialogController({
     builder:CameraIsoDialog({iso:this.ISOValue}), // bind dialog component
+    customStyle:true,
+    alignment:DialogAlignment.Center
+  })
+  // shutter 弹窗控制器
+  shutterDialogController : CustomDialogController = new CustomDialogController({
+    builder:ShutterSpeedDialog({SelectedShutter:this.shutterValue}), // bind dialog component
     customStyle:true,
     alignment:DialogAlignment.Center
   })
@@ -42,7 +49,7 @@ export struct RemoteControl {
             .fontSize(12)
             .height(18)
             .width(80)
-            .onClick(()=>this.dialogController.open())
+            .onClick(()=>this.isoDialogController.open())
 
         }
 
@@ -58,10 +65,11 @@ export struct RemoteControl {
         Column() {
           Text("Shutter")
             .fontSize(12)
-          Button("1/200")
+          Button(this.shutterValue.toString())
             .fontSize(12)
             .height(18)
             .width(80)
+            .onClick(()=>{this.shutterDialogController.open()})
         }
 
       }
