@@ -2,6 +2,7 @@ import { CameraPage } from './CameraPage'
 import { FilePage } from './FilePage'
 import { MinePage } from './MinePage'
 import { PhonePage } from './PhonePage'
+import { RemoteControl } from './RemoteControl'
 
 
 @Entry
@@ -32,6 +33,10 @@ struct HomePage{
       TabContent(){
         MinePage()
       }.tabBar('我的')
+
+      TabContent(){
+        RemoteControl()
+      }.tabBar('遥控')
 
     }
     .height(`100%`)

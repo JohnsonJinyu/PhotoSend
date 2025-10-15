@@ -63,7 +63,12 @@
       {
         "name": "ohos.permission.SET_WIFI_INFO",
         "reason": "$string:SET_WIFI_INFO"
+      },
+      {
+        "name": "ohos.permission.VIBRATE",
+        "reason": "$string:reason_request_permission_vibrate"
       }
+
     ]
   }
 }
