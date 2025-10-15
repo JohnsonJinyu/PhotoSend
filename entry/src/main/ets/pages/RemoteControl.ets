@@ -1,13 +1,13 @@
 import { ArcSliderValueOptions } from '@kit.ArkUI'
-import {CameraIsoDialog} from 'ets/component/CameraIsoDialog'
-import { ShutterSpeedDialog } from 'ets/component/ShutterSpeedDialog'
+import {IsoDialog} from 'ets/component/CameraControlDialog/IsoDialog'
+import { ShutterSpeedDialog } from 'ets/component/CameraControlDialog/ShutterSpeedDialog'
 @Preview
 @Component
 
 export struct RemoteControl {
 
   // 当前ISO值，与浮窗双向绑定
-  @State ISOValue:number=100
+  @State ISOValue:string="100"
   // record current aperture value
   @State apertureValue:number=2.8
   // record current shutter value
@@ -15,7 +15,7 @@ export struct RemoteControl {
 
   // ISO弹窗控制器：正确传递双向绑定参数
   isoDialogController : CustomDialogController = new CustomDialogController({
-    builder:CameraIsoDialog({iso:this.ISOValue}), // bind dialog component
+    builder:IsoDialog({selectedISO:this.ISOValue}), // bind dialog component
     customStyle:true,
     alignment:DialogAlignment.Center
   })
