@@ -37,11 +37,11 @@ target_link_libraries(entry PUBLIC
     gphoto2          # 对应 libgphoto2.so
     gphoto2_port     # 对应 libgphoto2_port.so
     exif             # 对应 libexif.so（替换原来的 libexif 静态库）
-    #usb-1.0          # 对应 libusb-1.0.so（替换原来的 libusb-1.0 静态库）
-    #ltdl             # 对应 libltdl.so（替换原来的 libltdl 静态库）
+    usb-1.0          # 对应 libusb-1.0.so（替换原来的 libusb-1.0 静态库）
+    ltdl             # 对应 libltdl.so（替换原来的 libltdl 静态库）
     # 补充缺失的依赖库（之前编译的其他库）
+    z
     curl             # 对应 libcurl.so
-    xml2             # 对应 libxml2.so
     gd               # 对应 libgd.so
     png16            # 对应 libpng16.so
     jpeg             # 对应 libjpeg.so
