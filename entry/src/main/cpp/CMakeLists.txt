@@ -41,8 +41,10 @@ target_link_libraries(entry PUBLIC
     ltdl             # 对应 libltdl.so（替换原来的 libltdl 静态库）
     # 补充缺失的依赖库（之前编译的其他库）
     z
+    xml2
+    ssl
     curl             # 对应 libcurl.so
-    gd               # 对应 libgd.so
+    #gd               # 对应 libgd.so
     png16            # 对应 libpng16.so
     jpeg             # 对应 libjpeg.so
     # 鸿蒙系统库（保持不变）
