@@ -28,10 +28,10 @@ link_directories(
 
 
 
-# 7. 业务 Native 库（保持不变）
+# 6. 业务 Native 库（保持不变）
 add_library(entry SHARED native_camera.cpp)
 
-# 8. 链接所有库（关键修改：链接动态库，补充缺失的依赖）
+# 7. 链接所有库（关键修改：链接动态库，补充缺失的依赖）
 target_link_libraries(entry PUBLIC
     # 核心库：动态库无需加 lib 前缀，直接写库名（对应 libgphoto2.so 等）
     gphoto2          # 对应 libgphoto2.so
@@ -52,7 +52,7 @@ target_link_libraries(entry PUBLIC
     ace_napi.z
 )
 
-# 9. 保留 NativeRender 配置（不变）
+# 8. 保留 NativeRender 配置（不变）
 set(NATIVERENDER_ROOT_PATH ${CMAKE_CURRENT_SOURCE_DIR})
 if(DEFINED PACKAGE_FIND_FILE)
     include(${PACKAGE_FIND_FILE})

@@ -1,14 +1,14 @@
-import {
-  GetCameraList,
-  ConnectCamera,
-  SetCameraParameter,
-  TakePhoto,
-  GetPreview,
-  DownloadPhoto,
-  DisconnectCamera,
-  CameraDevice,
-  PhotoPathInfo
-} from 'libentry.so';
+  import {
+    GetCameraList,
+    ConnectCamera,
+    SetCameraParameter,
+    TakePhoto,
+    GetPreview,
+    DownloadPhoto,
+    DisconnectCamera,
+    CameraDevice,
+    PhotoPathInfo
+  } from 'libentry.so';
 
 @Preview
 @Component

@@ -135,7 +135,9 @@ static napi_value GetCameraList(napi_env env, napi_callback_info info) {
 
     // 步骤2：初始化相机列表对象（存储检测到的相机）
     CameraList *camera_list = nullptr;
+    OH_LOG_PrintMsg(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "Step 1: Context created");
     int ret = gp_list_new(&camera_list); // 新版本libgphoto2：传入&camera_list（指针的指针）
+    OH_LOG_PrintMsg(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "Step 2: List created");
     if (!CheckGpError("gp_list_new", ret) || camera_list == nullptr) {
         gp_context_unref(temp_context); // 失败时释放临时上下文
         return nullptr;
@@ -143,6 +145,7 @@ static napi_value GetCameraList(napi_env env, napi_callback_info info) {
 
     // 步骤3：自动检测已经连接的相机（如USB/WiFi连接的Nikon相机）
     ret = gp_camera_autodetect(camera_list, temp_context);
+    OH_LOG_PrintMsg(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "Step 3: Autodetect done");
     if (!CheckGpError("gp_camera_autodetect", ret)) {
         gp_list_free(camera_list);      // 失败时释放相机列表
         gp_context_unref(temp_context); // 释放临时放下问
