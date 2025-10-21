@@ -68,8 +68,10 @@ static bool CheckGpError(const char *func_name, int ret) {
     }
 
     // 失败时打印日志：包含函数名和错误码（方便定位问题）
+    /*OH_LOG_Print(LOG_APP, LOG_ERROR, LOG_DOMAIN, LOG_TAG,
+                 "CheckGpError: libgphoto2函数调用失败！函数名：{public}%s，错误码：{public}%d", func_name, ret);*/
     OH_LOG_Print(LOG_APP, LOG_ERROR, LOG_DOMAIN, LOG_TAG,
-                 "CheckGpError: libgphoto2函数调用失败！函数名：{public}%s，错误码：{public}%d", func_name, ret);
+                 "CheckGpError: libgphoto2函数调用失败！函数名：{public}%s，错误码：%d", func_name, ret);
     return false;
 }
 
@@ -127,13 +129,16 @@ static napi_value GetCameraList(napi_env env, napi_callback_info info) {
 
 
     // 步骤1：创建临时上下文（仅用于检测相机，不予后续连接共享）
+    OH_LOG_PrintMsg(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "GetCameraList: 准备创建临时上下文");
     GPContext *temp_context = gp_context_new();
     if (temp_context == nullptr) {
         OH_LOG_PrintMsg(LOG_APP, LOG_ERROR, LOG_DOMAIN, LOG_TAG, "GetCameraList: 创建临时上下文失败");
         return nullptr; // 返回空给ArkTS侧
     }
+    OH_LOG_PrintMsg(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "GetCameraList: 临时上下文创建成功");
 
     // 步骤2：初始化相机列表对象（存储检测到的相机）
+     OH_LOG_PrintMsg(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "GetCameraList: 准备创建相机列表");
     CameraList *camera_list = nullptr;
     OH_LOG_PrintMsg(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "Step 1: Context created");
     int ret = gp_list_new(&camera_list); // 新版本libgphoto2：传入&camera_list（指针的指针）

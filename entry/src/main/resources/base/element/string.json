@@ -31,6 +31,10 @@
     {
       "name": "reason_request_permission_vibrate",
       "value": "触感反馈所需"
+    },
+    {
+      "name": "reason_request_SYSTEM_FLOAT_WINDOW",
+      "value": "请求Window权限"
     }
   ]
 }

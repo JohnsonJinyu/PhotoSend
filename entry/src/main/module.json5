@@ -69,6 +69,7 @@
         "reason": "$string:reason_request_permission_vibrate"
       }
 
+
     ]
   }
 }
