@@ -24,16 +24,16 @@ export struct FilePage {
   @State currentPreviewInterval: number = 0;
   @State statusMessage: string = '请连接相机';
   @State isoValue: string = '100';
-
-
-
-
   // 当前ISO值，与浮窗双向绑定
   @State ISOValue:string="100"
   // record current aperture value
   @State apertureValue:number=2.8
   // record current shutter value
   @State shutterValue:string="1/200"
+
+
+
+  private xComponentController:XComponentController = new XComponentController()
 
   // ISO弹窗控制器：正确传递双向绑定参数
   isoDialogController : CustomDialogController = new CustomDialogController({
@@ -58,6 +58,14 @@ export struct FilePage {
       }
       .margin({top:10})
 
+      XComponent({
+        id:'CameraPreview',//唯一标识
+        type:'surface',
+        controller:this.xComponentController
+      })
+        .width('100%')
+        .height(250)
+
 
 
 
@@ -70,7 +78,7 @@ export struct FilePage {
             .fontSize(12)
           Button("AF_C")
             .fontSize(12)
-            .width(80)
+            .width(70)
             .height(18)
         }
 
@@ -81,7 +89,7 @@ export struct FilePage {
           Button(this.ISOValue.toString())
             .fontSize(12)
             .height(18)
-            .width(80)
+            .width(70)
             .onClick(()=>this.isoDialogController.open())
 
         }
@@ -91,7 +99,7 @@ export struct FilePage {
             .fontSize(12)
           Button("2.8")
             .fontSize(12)
-            .width(80)
+            .width(70)
             .height(18)
         }
 
@@ -101,12 +109,13 @@ export struct FilePage {
           Button(this.shutterValue.toString())
             .fontSize(12)
             .height(18)
-            .width(80)
+            .width(70)
             .onClick(()=>{this.shutterDialogController.open()})
         }
 
       }
       .width("100%")
+      .padding(20)
 
 
       //拍照 图库栏
