@@ -125,9 +125,8 @@ static bool CreateGpFile(CameraFile **file) {
  * @return napi_value ArkTS数组：每个元素是相机对象（含name=相机名，path=相机路径）
  */
 static napi_value GetCameraList(napi_env env, napi_callback_info info) {
-    OH_LOG_PrintMsg(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "GetCameraList: 开始获取相机列表");
-
-
+    OH_LOG_PrintMsg(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "GetCameraList: 开始调用GetCameraList");
+    
     // 步骤1：创建临时上下文（仅用于检测相机，不予后续连接共享）
     OH_LOG_PrintMsg(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "GetCameraList: 准备创建临时上下文");
     GPContext *temp_context = gp_context_new();
@@ -136,9 +135,11 @@ static napi_value GetCameraList(napi_env env, napi_callback_info info) {
         return nullptr; // 返回空给ArkTS侧
     }
     OH_LOG_PrintMsg(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "GetCameraList: 临时上下文创建成功");
+    
+    
 
     // 步骤2：初始化相机列表对象（存储检测到的相机）
-     OH_LOG_PrintMsg(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "GetCameraList: 准备创建相机列表");
+    OH_LOG_PrintMsg(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "GetCameraList: 准备创建相机列表");
     CameraList *camera_list = nullptr;
     OH_LOG_PrintMsg(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "Step 1: Context created");
     int ret = gp_list_new(&camera_list); // 新版本libgphoto2：传入&camera_list（指针的指针）
@@ -157,47 +158,36 @@ static napi_value GetCameraList(napi_env env, napi_callback_info info) {
         return nullptr;
     }
 
-    // 步骤4：获取相机数量（用于遍历）
+    // 步骤4：处理当前相机设备
     int camera_count = gp_list_count(camera_list);
     OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "GetCameraList: 检测到相机数量：{public}%d", camera_count);
-
-    // 步骤5：创建ArkTS数组（用于存储相机信息，返回给ArkTS侧）
-    napi_value result_array = nullptr;
-    napi_status status = napi_create_array(env, &result_array);
-    if (status != napi_ok) {
-        OH_LOG_Print(LOG_APP, LOG_ERROR, LOG_DOMAIN, LOG_TAG, "GetCameraList: 创建ArkTS数组失败，错误码：{public}%d",
-                     status);
-        gp_list_free(camera_list);
-        gp_context_unref(temp_context);
-        return nullptr;
-    }
-
-    // 步骤6：遍历相机里表，填充相机信息到ArkTS数组
-    for (int i = 0; i < camera_count; i++) {
-        // 获取相机名（如“Nikon D850”），和相机路径（如“usb:001,005”，连接相机需要此路径）
+    napi_value result = nullptr;// 最终返回值（单个相机对象）
+    
+    if (camera_count > 0) {
+        // 仅获取第一台相机的信息（索引0）
         const char *camera_name = nullptr;
         const char *camera_path = nullptr;
-        gp_list_get_name(camera_list, i, &camera_name);  // 获取相机名称
-        gp_list_get_value(camera_list, i, &camera_path); // 获取相机路径
+        gp_list_get_name(camera_list, 0, &camera_name);  // 第一台相机名
+        gp_list_get_value(camera_list, 0, &camera_path); // 第一台相机路径
 
-        // 创建ArkTS对象：存储单个相机的name和path
-        napi_value camera_obj = nullptr;
-        napi_create_object(env, &camera_obj);
+        // 创建ArkTS对象存储单台相机信息
+        napi_create_object(env, &result);
+        napi_set_named_property(env, result, "name", CreateNapiString(env, camera_name));
+        napi_set_named_property(env, result, "path", CreateNapiString(env, camera_path));
 
-        // 给ArkTS对象设置属性：“name”=相机名."path"=相机路径
-        napi_set_named_property(env, camera_obj, "name", CreateNapiString(env, camera_name));
-        napi_set_named_property(env, camera_obj, "path", CreateNapiString(env, camera_path));
-
-        // 将相机对象添加到ArkTS数组的第1个位置
-        napi_set_element(env, result_array, i, camera_obj);
+        OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "GetCameraList: 找到第一台相机：%s（路径：%s）", 
+                     camera_name, camera_path);
+    }else{
+        // 未检测到相机，返回null
+        OH_LOG_PrintMsg(LOG_APP, LOG_WARN, LOG_DOMAIN, LOG_TAG, "GetCameraList: 未检测到任何相机");
     }
 
-    // 步骤7：释放临时资源（检测完成，不再需要）
+    // 步骤5：释放临时资源（检测完成，不再需要）
     gp_list_free(camera_list);      // 释放相机列表
     gp_context_unref(temp_context); // 释放临时上下文
 
-    OH_LOG_PrintMsg(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "GetCameraList: 获取相机列表完成");
-    return result_array; // 返回ArkTS数组给ArkTS侧
+    OH_LOG_PrintMsg(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "GetCameraList: GetCameraList执行结束");
+    return result; // 返回ArkTS数组给ArkTS侧
 }
 
 
