@@ -60,7 +60,7 @@ export struct FilePage {
    * */
   manualConnect() {
     // 这里假设型号和路径是固定的
-    let success = ConnectCamera('PTP/IP Camera', 'ptpip:192.168.1.1')
+    let success = ConnectCamera("", "ptpip:192.168.1.1")
     if (success) {
       this.isConnected = true
       this.connectStatus = '相机已连接'
@@ -76,6 +76,7 @@ export struct FilePage {
   checkConnection() {
     let connected = IsCameraConnected() //等待执行完，把结果复制给connected
     this.isConnected = connected
+    console.info(this.connectStatus)
     this.connectStatus = connected ? '相机已连接' : '未连接，请检查是否连接相机WiFi'
   }
 
@@ -190,7 +191,12 @@ export struct FilePage {
 
         Button('检测相机')
           .onClick(() => {
-            this
+            this.checkConnection()
+          })
+
+        Button('手动连接相机')
+          .onClick(() => {
+            this.manualConnect()
           })
 
         Text(this.connectStatus)

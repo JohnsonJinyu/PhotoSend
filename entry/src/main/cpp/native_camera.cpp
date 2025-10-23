@@ -37,49 +37,73 @@ static napi_value CreateNapiString(napi_env env, const char *str) {
  * 
  * */
 static bool InternalConnectCamera(const char *model, const char *path) {
-    // 如果之前已经有相机或上下文对象，先释放掉，避免重复初始化或内存泄漏
+    OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "开始连接相机: model=%{public}s, path=%{public}s", model, path);
+
     if (g_camera || g_context) {
-        if (g_camera)
-            gp_camera_exit(g_camera, g_context);    // 通知相机退出当前会话
-        if (g_camera)
-            gp_camera_unref(g_camera);              // 释放相机对象引用
-        if (g_context)
-            gp_context_unref(g_context);            // 释放上下文对象引用
-        g_camera = nullptr;                         // 指针指控，避免悬挂指针
+        OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "释放已有连接资源");
+        if (g_camera) gp_camera_exit(g_camera, g_context);
+        if (g_camera) gp_camera_unref(g_camera);
+        if (g_context) gp_context_unref(g_context);
+        g_camera = nullptr;
         g_context = nullptr;
     }
 
-    // 创建一个新的上下文对象（libgphoto2 所有操作都需要上下文）
     g_context = gp_context_new();
-    // 创建一个新的相机对象（空壳，还没绑定具体型号和窗口）
+    OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "创建上下文成功");
+
     gp_camera_new(&g_camera);
+    OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "创建相机对象成功");
 
-    //------------------设置相机能力（Abilities）--------------------------
     CameraAbilitiesList *abilities_list = nullptr;
-    gp_abilities_list_new(&abilities_list);                                 // 创建能力列表对象
-    gp_abilities_list_load(abilities_list, g_context);                      // 加载系统支持的所有相机能力
-    int model_index = gp_abilities_list_lookup_model(abilities_list, model);// 根据型号名查找索引
+    gp_abilities_list_new(&abilities_list);
+    gp_abilities_list_load(abilities_list, g_context);
+    OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "加载相机能力列表成功");
+
+    int model_index = gp_abilities_list_lookup_model(abilities_list, model);
+    OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "查找型号索引: %{public}d", model_index);
+    if (model_index < 0) {
+        OH_LOG_Print(LOG_APP, LOG_ERROR, LOG_DOMAIN, LOG_TAG, "找不到相机型号: %{public}s", model);
+        gp_abilities_list_free(abilities_list);
+        return false;
+    }
+
     CameraAbilities abilities;
-    gp_abilities_list_get_abilities(abilities_list, model_index, &abilities);// 获取该型号的能力描述
-    gp_camera_set_abilities(g_camera, abilities);                           // 将能力应用到当前相机对象
-    gp_abilities_list_free(abilities_list);                                 // 释放能力列表对象
+    gp_abilities_list_get_abilities(abilities_list, model_index, &abilities);
+    gp_camera_set_abilities(g_camera, abilities);
+    OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "设置相机能力成功");
+    gp_abilities_list_free(abilities_list);
 
-    //------------------设置相机端口（Port Info）--------------------------
     GPPortInfoList *port_list = nullptr;
-    gp_port_info_list_new(&port_list);                                  // 创建端口信息列表
-    gp_port_info_list_load(port_list);                                  // 加载系统支持的端口信息
-    int port_index = gp_port_info_list_lookup_path(port_list, path);    // 根据路径（如 ptpip:192.168.1.1）查找端口索引
-    GPPortInfo port_info;                       
-    gp_port_info_list_get_info(port_list, port_index, &port_info);      // 获取该端口的详细信息
-    gp_camera_set_port_info(g_camera, port_info);                       // 将端口信息应用到相机对象
-    gp_port_info_list_free(port_list);                                  // 释放端口列表对象
+    gp_port_info_list_new(&port_list);
+    gp_port_info_list_load(port_list);
+    OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "加载端口列表成功");
 
-    //------------------初始化相机连接--------------------------
-    int ret = gp_camera_init(g_camera, g_context);                      // 尝试与相机建立连接
-    g_connected = (ret == GP_OK);                                       // 根据返回值判断是否成功
-    return g_connected;                                                 // 返回连接状态
+    int port_index = gp_port_info_list_lookup_path(port_list, path);
+    OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "查找端口索引: %{public}d", port_index);
+    if (port_index < 0) {
+        OH_LOG_Print(LOG_APP, LOG_ERROR, LOG_DOMAIN, LOG_TAG, "找不到端口路径: %{public}s", path);
+        gp_port_info_list_free(port_list);
+        return false;
+    }
+
+    GPPortInfo port_info;
+    gp_port_info_list_get_info(port_list, port_index, &port_info);
+    gp_camera_set_port_info(g_camera, port_info);
+    OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "设置端口信息成功");
+    gp_port_info_list_free(port_list);
+
+    int ret = gp_camera_init(g_camera, g_context);
+    OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "初始化相机返回值: %{public}d", ret);
+    if (ret != GP_OK) {
+        OH_LOG_Print(LOG_APP, LOG_ERROR, LOG_DOMAIN, LOG_TAG, "相机初始化失败，错误码: %{public}d", ret);
+        g_connected = false;
+        return false;
+    }
+
+    OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "相机连接成功");
+    g_connected = true;
+    return true;
 }
-
 // 触发拍照，返回照片路径（folder + name）
 static bool InternalCapture(char *outFolder, char *outFilename) {
     // 如果当前没有简历相机连接（全局状态g_connected 为false），直接返回失败
