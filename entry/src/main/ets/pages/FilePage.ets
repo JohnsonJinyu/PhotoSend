@@ -1,5 +1,5 @@
 import {
-
+  IsCameraConnected,
   ConnectCamera,
   SetCameraParameter,
   TakePhoto,
@@ -16,7 +16,9 @@ import { ShutterSpeedDialog } from 'ets/component/CameraControlDialog/ShutterSpe
 @Component
 export struct FilePage {
   // 状态管理
+  // 连接状态
   @State isConnected: boolean = false;
+  @State connectStatus:string = '未连接相机';
   @State cameraList: CameraDevice[] = [];
   @State selectedCamera: CameraDevice | null = null;
   @State previewImage: string = '';
@@ -48,13 +50,47 @@ export struct FilePage {
     alignment:DialogAlignment.Center
   })
 
+
+
+  aboutToAppear(): void {
+    this.checkConnection()
+  }
+
+
+
+/**
+ * @function 手动连接相机
+ * */
+   manualConnect(){
+    // 这里假设型号和路径是固定的
+    let success =  ConnectCamera('PTP/IP Camera','ptpip:192.168.1.1')
+    if (success) {
+      this.isConnected = true
+      this.connectStatus = '相机已连接'
+    }else {
+      this.isConnected=false
+      this.connectStatus='连接失败，请检查WiFi'
+    }
+  }
+
+  checkConnection(){
+    let connected =   IsCameraConnected()  //等待执行完，把结果复制给connected
+    this.isConnected = connected
+    this.connectStatus = connected ? '相机已连接':'未连接，请检查是否连接相机WiFi'
+  }
+
   build() {
     Column(){
       // 状态栏
-      Row({space:10}){
-        Text('camera disconnect')
+      Column({space:10}){
 
         Button('检测相机')
+          .onClick(()=>{
+            this
+          })
+
+        Text(this.connectStatus)
+          .fontSize(18)
       }
       .margin({top:10})
 

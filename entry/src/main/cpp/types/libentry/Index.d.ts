@@ -61,3 +61,6 @@ export const DownloadPhoto: (folder: string, name: string) => string;
  * @returns 断开成功返回true
  */
 export const Disconnect: () => boolean;
+
+
+export const IsCameraConnected:()=>boolean
