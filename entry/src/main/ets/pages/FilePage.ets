@@ -154,21 +154,24 @@ export struct FilePage {
       }
       .margin({top:10})
 
-
-      if (this.previewPixelMap) {
-        Image(this.previewPixelMap)
-          .width('100%')
-          .height(250)
-          .objectFit(ImageFit.Contain)
-      } else {
-        Text(this.previewRunning ? '正在加载预览...' : '未启动预览')
-          .width('100%')
-          .height(250)
-          .backgroundColor(Color.Black)
-          .fontColor(Color.White)
-          .fontSize(16)
-          .textAlign(TextAlign.Center)
+      Column(){
+        if (this.previewPixelMap) {
+          Image(this.previewPixelMap)
+            .width('100%')
+            .height(250)
+            .objectFit(ImageFit.Contain)
+        } else {
+          Text(this.previewRunning ? '正在加载预览...' : '未启动预览')
+            .width('100%')
+            .height(250)
+            .backgroundColor(Color.Black)
+            .fontColor(Color.White)
+            .fontSize(16)
+            .textAlign(TextAlign.Center)
+        }
       }
+      .margin({top:10})
+
 
 
 
