@@ -52,9 +52,10 @@ export const GetPreview: () => Uint8Array;
  * 从相机下载照片
  * @param folder 照片所在文件夹路径
  * @param name 照片文件名
- * @returns Base64编码的照片数据字符串
+ * @returns 照片的二进制数据（ArrayBuffer）
  */
-export const DownloadPhoto: (folder: string, name: string) => string;
+
+export const DownloadPhoto: (folder: string, name: string) => ArrayBuffer;
 
 /**
  * 断开与相机的连接
