@@ -1,11 +1,11 @@
 import {
-  GetCameraList,
+
   ConnectCamera,
   SetCameraParameter,
   TakePhoto,
   GetPreview,
   DownloadPhoto,
-  DisconnectCamera,
+  Disconnect,
   CameraDevice,
   PhotoPathInfo
 } from 'libentry.so';

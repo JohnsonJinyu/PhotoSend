@@ -18,11 +18,7 @@ interface PhotoPathInfo {
   name: string;
 }
 
-/**
- * 获取已连接的相机列表
- * @returns 相机设备数组，每个元素包含相机名称和路径
- */
-export const GetCameraList: () => CameraDevice[];
+
 
 /**
  * 连接指定相机
@@ -64,4 +60,4 @@ export const DownloadPhoto: (folder: string, name: string) => string;
  * 断开与相机的连接
  * @returns 断开成功返回true
  */
-export const DisconnectCamera: () => boolean;
+export const Disconnect: () => boolean;
