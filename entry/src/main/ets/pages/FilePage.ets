@@ -11,6 +11,7 @@ import {
 } from 'libentry.so';
 import {IsoDialog} from 'ets/component/CameraControlDialog/IsoDialog'
 import { ShutterSpeedDialog } from 'ets/component/CameraControlDialog/ShutterSpeedDialog'
+import {image} from '@kit.ImageKit';
 
 @Preview
 @Component
@@ -19,8 +20,14 @@ export struct FilePage {
   // 连接状态
   @State isConnected: boolean = false;
   @State connectStatus:string = '未连接相机';
-  @State cameraList: CameraDevice[] = [];
-  @State selectedCamera: CameraDevice | null = null;
+
+  // 用来存放预览视频帧
+  @State previewPixelMap :PixelMap | null = null
+
+  @State previewRunning: boolean = false; // 当前是否在预览
+  private timerId: number = -1;   // 定时器ID
+
+
   @State previewImage: string = '';
   @State photoList: PhotoPathInfo[] = [];
   @State currentPreviewInterval: number = 0;
@@ -51,7 +58,6 @@ export struct FilePage {
   })
 
 
-
   aboutToAppear(): void {
     this.checkConnection()
   }
@@ -73,11 +79,65 @@ export struct FilePage {
     }
   }
 
+  /**
+   * @function 检查连接状态
+   * */
   checkConnection(){
     let connected =   IsCameraConnected()  //等待执行完，把结果复制给connected
     this.isConnected = connected
     this.connectStatus = connected ? '相机已连接':'未连接，请检查是否连接相机WiFi'
   }
+
+
+  /**
+   *@function 启动预览
+   * */
+  startPreview(){
+    if (this.previewRunning) {
+      return
+    }
+    this.previewRunning = true
+    this.timerId = setInterval(()=>{
+      this.updatePreview();
+    },300) // 每300ms拉1帧
+  }
+
+  /**
+   * @function 停止预览
+   * */
+  stopPreview(){
+    if (this.timerId !== -1) {
+      clearInterval(this.timerId)
+      this.timerId = -1
+    }
+    this.previewRunning = false
+    this.previewPixelMap = null // 清空画面
+  }
+
+
+  /**
+   * @function 拉取一帧预览
+   * */
+  async updatePreview(){
+    // 从native获取Uint8Array
+    const buffer:Uint8Array = GetPreview()
+    if(!buffer) return
+
+    // 解码选项可留空或按需填写（如密度、期望尺寸）
+    const srcOps:image.SourceOptions= {
+      sourceDensity: 0
+    }
+
+    // 创建ImageSource（传入压缩图片你的ArrayBuffer）
+    const imgSrc:image.ImageSource=image.createImageSource(buffer.buffer as ArrayBuffer,srcOps)
+
+    // 从ImageSource 生成PixelMap
+    const pixelMap:image.PixelMap = await imgSrc.createPixelMap()
+
+    // 更新到UI
+    this.previewPixelMap = pixelMap
+  }
+  
 
   build() {
     Column(){
@@ -94,20 +154,30 @@ export struct FilePage {
       }
       .margin({top:10})
 
-      XComponent({
-        id:'CameraPreview',//唯一标识
-        type:'surface',
-        controller:this.xComponentController
-      })
-        .width('100%')
-        .height(250)
+
+      if (this.previewPixelMap) {
+        Image(this.previewPixelMap)
+          .width('100%')
+          .height(250)
+          .objectFit(ImageFit.Contain)
+      } else {
+        Text(this.previewRunning ? '正在加载预览...' : '未启动预览')
+          .width('100%')
+          .height(250)
+          .backgroundColor(Color.Black)
+          .fontColor(Color.White)
+          .fontSize(16)
+          .textAlign(TextAlign.Center)
+      }
 
 
 
 
 
 
-      // 参数控制蓝
+      /**
+       * 参数控制栏
+       * */
       Row({ space: 10 }) {
         Column() {
           Text("AF_MODE")
@@ -154,7 +224,26 @@ export struct FilePage {
       .padding(20)
 
 
-      //拍照 图库栏
+
+      /**
+       * 预览控制栏（调试用）
+       * */
+
+      Row({ space: 10 }) {
+        Button('启动预览')
+          .enabled(!this.previewRunning)
+          .onClick(() => this.startPreview())
+
+        Button('停止预览')
+          .enabled(this.previewRunning)
+          .onClick(() => this.stopPreview())
+      }
+      .margin({ top: 10 })
+
+
+      /**
+       * 底部控制栏
+       * */
       Row({space:10}){
         Button('图库')
 
