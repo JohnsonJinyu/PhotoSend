@@ -77,7 +77,8 @@ static bool InternalConnectCamera(const char *model, const char *path) {
     gp_port_info_list_new(&port_list);
     gp_port_info_list_load(port_list);
     OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "加载端口列表成功");
-
+    OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "加载端口列表成功，共发现 %d 个端口", gp_port_info_list_count(port_list));
+    
     int port_index = gp_port_info_list_lookup_path(port_list, path);
     OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "查找端口索引: %{public}d", port_index);
     if (port_index < 0) {
