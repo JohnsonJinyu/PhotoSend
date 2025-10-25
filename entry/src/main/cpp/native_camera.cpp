@@ -61,6 +61,9 @@ static bool InternalConnectCamera(const char *model, const char *path) {
     CameraAbilitiesList *abilities_list = nullptr;
     gp_abilities_list_new(&abilities_list);
     
+    // 设置驱动目录路径（只设置一次即可）
+    setenv("CAMLIBDIR", "/data/data/com.lingyu.photosend/libs/arm64-v8a", 1);
+
     //gp_abilities_list_load(abilities_list, g_context);
     OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "加载相机能力列表成功");
 

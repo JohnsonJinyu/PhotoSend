@@ -38,7 +38,7 @@ target_link_libraries(entry PUBLIC
     gphoto2_port     # 对应 libgphoto2_port.so
     exif             # 对应 libexif.so（替换原来的 libexif 静态库）
     usb-1.0          # 对应 libusb-1.0.so（替换原来的 libusb-1.0 静态库）
-    ltdl             # 对应 libltdl.so（替换原来的 libltdl 静态库）
+    ltdl             # 对应 libltdl.so（替换原来的 libltdl 静态库） # 关键点：libgphoto2 通过它加载 ptp2.so
     # 补充缺失的依赖库（之前编译的其他库）
     z
     xml2
