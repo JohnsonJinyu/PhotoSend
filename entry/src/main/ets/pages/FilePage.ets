@@ -60,7 +60,7 @@ export struct FilePage {
    * */
   manualConnect() {
     // 这里假设型号和路径是固定的
-    let success = ConnectCamera("", "ptpip:192.168.1.1")
+    let success = ConnectCamera("nikon-zf", "ptpip:192.168.1.1")
     if (success) {
       this.isConnected = true
       this.connectStatus = '相机已连接'

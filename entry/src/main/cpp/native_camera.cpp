@@ -34,16 +34,20 @@ static napi_value CreateNapiString(napi_env env, const char *str) {
 
 /**
  * @brief 用 libgphoto2 初始化相机连接（设置能力、端口、上下文）
- * 
+ *
  * */
 static bool InternalConnectCamera(const char *model, const char *path) {
-    OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "开始连接相机: model=%{public}s, path=%{public}s", model, path);
+    OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "开始连接相机: model=%{public}s, path=%{public}s", model,
+                 path);
 
     if (g_camera || g_context) {
         OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "释放已有连接资源");
-        if (g_camera) gp_camera_exit(g_camera, g_context);
-        if (g_camera) gp_camera_unref(g_camera);
-        if (g_context) gp_context_unref(g_context);
+        if (g_camera)
+            gp_camera_exit(g_camera, g_context);
+        if (g_camera)
+            gp_camera_unref(g_camera);
+        if (g_context)
+            gp_context_unref(g_context);
         g_camera = nullptr;
         g_context = nullptr;
     }
@@ -56,8 +60,41 @@ static bool InternalConnectCamera(const char *model, const char *path) {
 
     CameraAbilitiesList *abilities_list = nullptr;
     gp_abilities_list_new(&abilities_list);
-    gp_abilities_list_load(abilities_list, g_context);
+    
+    //gp_abilities_list_load(abilities_list, g_context);
     OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "加载相机能力列表成功");
+
+    //***************************************************************************************
+    int load_ret = gp_abilities_list_load(abilities_list, g_context);
+    if (load_ret != GP_OK) {
+        // 用 gp_result_as_string 解析错误原因
+        OH_LOG_Print(LOG_APP, LOG_ERROR, LOG_DOMAIN, LOG_TAG, "能力列表加载失败！错误码：%d，原因：%s", load_ret,
+                     gp_result_as_string(load_ret));
+        gp_abilities_list_free(abilities_list);
+        return false;
+    }
+    OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "加载相机能力列表成功（真实返回值：%{public}d）", load_ret);
+
+    //********************************************************************************
+    // 新增：打印所有支持的相机型号
+    int abilities_count = gp_abilities_list_count(abilities_list);
+    OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "支持的相机型号总数: %{public}d", abilities_count);
+
+    for (int i = 0; i < abilities_count; i++) {
+        CameraAbilities abilities;
+        int ret = gp_abilities_list_get_abilities(abilities_list, i, &abilities);
+        if (ret == GP_OK) {
+            OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "支持的型号 %{public}d: %{public}s", i, abilities.model);
+        } else {
+            OH_LOG_Print(LOG_APP, LOG_WARN, LOG_DOMAIN, LOG_TAG, "获取型号 %{public}d 失败，错误码: %{public}d", i, ret);
+        }
+    }
+    
+    // debug:从日志来看，当前能力列表加载成功，但是没有任何驱动被加载  ，继续分析原因
+
+
+    //*************************************************************************************************
+
 
     int model_index = gp_abilities_list_lookup_model(abilities_list, model);
     OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "查找型号索引: %{public}d", model_index);
@@ -77,8 +114,9 @@ static bool InternalConnectCamera(const char *model, const char *path) {
     gp_port_info_list_new(&port_list);
     gp_port_info_list_load(port_list);
     OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "加载端口列表成功");
-    OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "加载端口列表成功，共发现 %d 个端口", gp_port_info_list_count(port_list));
-    
+    OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "加载端口列表成功，共发现 %d 个端口",
+                 gp_port_info_list_count(port_list));
+
     int port_index = gp_port_info_list_lookup_path(port_list, path);
     OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "查找端口索引: %{public}d", port_index);
     if (port_index < 0) {
@@ -105,16 +143,23 @@ static bool InternalConnectCamera(const char *model, const char *path) {
     g_connected = true;
     return true;
 }
+
+
+
+
+
+
+
 // 触发拍照，返回照片路径（folder + name）
 static bool InternalCapture(char *outFolder, char *outFilename) {
     // 如果当前没有简历相机连接（全局状态g_connected 为false），直接返回失败
     if (!g_connected)
         return false;
-    
+
     // 定义一个 CameraFilePath 结构体，用于存储拍照后相机返回的文件路径信息
     // 定义包含两个字点：folder（文件夹路径）和name（文件名）
     CameraFilePath path;
-    
+
     // 调用libgphoto2 的拍照函数
     // 参数说明：
     //   g_camera     : 已连接的相机对象
@@ -122,11 +167,11 @@ static bool InternalCapture(char *outFolder, char *outFilename) {
     //   &path        : 输出参数，拍照成功后相机会返回照片存储的路径和文件名
     //   g_context    : 上下文对象
     int ret = gp_camera_capture(g_camera, GP_CAPTURE_IMAGE, &path, g_context);
-    
+
     // 如果返回值不是 GP_OK，说明拍照失败，直接返回 false
     if (ret != GP_OK)
         return false;
-    
+
     // 将相机返回的文件夹路径拷贝到 outFolder（调用者提供的缓冲区）
     strcpy(outFolder, path.folder);
     // 将相机返回的文件名拷贝到 outFilename（调用者提供的缓冲区）
@@ -142,13 +187,13 @@ static bool InternalDownloadFile(const char *folder, const char *filename, uint8
     // 如果当前没有建立相机连接，直接返回失败
     if (!g_connected)
         return false;
-    
+
     // 定义一个 CameraFile 指针，用于存储下载的文件数据
     CameraFile *file = nullptr;
-    
+
     // 创建一个新的 CameraFile 对象（libgphoto2 用来存放文件内容的容器）
     gp_file_new(&file);
-    
+
     // 调用 libgphoto2 的文件获取函数，从相机中读取指定路径和文件名的文件
     // 参数说明：
     //   g_camera     : 已连接的相机对象
@@ -194,18 +239,18 @@ static bool InternalDownloadFile(const char *folder, const char *filename, uint8
 static napi_value Disconnect(napi_env env, napi_callback_info info) {
     // 如果全局相机对象存在，索命之前已经连接过相机
     if (g_camera) {
-        gp_camera_exit(g_camera, g_context);    // 通知相机退出当前会话，做善后处理
-        gp_camera_unref(g_camera);              // 释放相机对象引用计数
-        g_camera = nullptr;                     // 指针置空，避免悬挂指针
+        gp_camera_exit(g_camera, g_context); // 通知相机退出当前会话，做善后处理
+        gp_camera_unref(g_camera);           // 释放相机对象引用计数
+        g_camera = nullptr;                  // 指针置空，避免悬挂指针
     }
     // 如果上下文对象存在，也需要释放
     if (g_context) {
-        gp_context_unref(g_context);            // 释放上下文对象引用计数
-        g_context = nullptr;                    // 指针置空
+        gp_context_unref(g_context); // 释放上下文对象引用计数
+        g_context = nullptr;         // 指针置空
     }
     // 更新全局状态，标记为未连接
     g_connected = false;
-    
+
     // 返回 ArkTS 层一个布尔值 true，表示断开操作执行完成
     napi_value result;
     napi_get_boolean(env, true, &result);
@@ -228,11 +273,11 @@ static bool IsCameraConnected() {
 static napi_value IsCameraConnectedNapi(napi_env env, napi_callback_info info) {
     // 调用内部逻辑函数，获取布尔值（true=已连接，false=未连接）
     bool connected = IsCameraConnected();
-    
+
     // 将布尔值转换为 ArkTS 可识别的 napi_value
     napi_value result;
     napi_get_boolean(env, connected, &result);
-    
+
     // 返回给 ArkTS 层
     return result;
 }
@@ -241,30 +286,30 @@ static napi_value IsCameraConnectedNapi(napi_env env, napi_callback_info info) {
  * @brief 连接相机（固定 IP）
  * */
 static napi_value ConnectCamera(napi_env env, napi_callback_info info) {
-    
+
     // 定义参数个数，这里期望接收 2 个参数（型号名 + 路径）
     size_t argc = 2;
     napi_value args[2];
-    
+
     // 从 ArkTS 层获取传入的参数，存放到 args 数组中
     napi_get_cb_info(env, info, &argc, args, nullptr, nullptr);
 
     // 定义两个缓冲区，用于存放解析后的字符串参数
     char model[128] = {0};
     char path[128] = {0};
-    
+
     // 将 ArkTS 传入的第一个参数（型号名）转换为 C 字符串
     napi_get_value_string_utf8(env, args[0], model, sizeof(model) - 1, nullptr);
     // 将 ArkTS 传入的第二个参数（路径，如 "ptpip:192.168.1.1"）转换为 C 字符串
     napi_get_value_string_utf8(env, args[1], path, sizeof(path) - 1, nullptr);
 
     // 调用内部逻辑函数，尝试连接相机
-    bool success = InternalConnectCamera(model, path); 
-    
+    bool success = InternalConnectCamera(model, path);
+
     // 将布尔结果转换为 ArkTS 可识别的 napi_value
     napi_value result;
     napi_get_boolean(env, success, &result);
-    
+
     // 返回结果给 ArkTS 层
     return result;
 }
@@ -277,20 +322,20 @@ static napi_value TakePhoto(napi_env env, napi_callback_info info) {
     // 定义两个缓冲区，用于存放拍照后返回的文件夹路径和文件名
     char folder[128] = {0};
     char name[128] = {0};
-    
+
     // 调用内部逻辑函数，触发拍照，并将结果写入 folder 和 name
     bool success = InternalCapture(folder, name); // 你之前写的核心逻辑
 
     // 创建一个 ArkTS 对象，用于返回照片信息
     napi_value result;
     napi_create_object(env, &result);
-    
+
     napi_set_named_property(env, result, "success", CreateNapiString(env, success ? "true" : "false"));
     // 将文件夹路径作为属性 "folder" 添加到返回对象中
     napi_set_named_property(env, result, "folder", CreateNapiString(env, folder));
     // 将文件名作为属性 "name" 添加到返回对象中
     napi_set_named_property(env, result, "name", CreateNapiString(env, name));
-    
+
     // 返回包含 folder 和 name 的对象给 ArkTS 层
     return result;
 }
@@ -304,27 +349,27 @@ static napi_value DownloadPhoto(napi_env env, napi_callback_info info) {
     // 定义参数个数，这里期望接收 2 个参数（文件夹路径 + 文件名）
     size_t argc = 2;
     napi_value args[2];
-    
+
     // 从 ArkTS 层获取传入的参数
     napi_get_cb_info(env, info, &argc, args, nullptr, nullptr);
 
     // 定义缓冲区，用于存放解析后的文件夹路径和文件名
     char folder[128] = {0};
     char name[128] = {0};
-    
+
     // 将 ArkTS 传入的第一个参数（文件夹路径）转换为 C 字符串
     napi_get_value_string_utf8(env, args[0], folder, sizeof(folder) - 1, nullptr);
-    
+
     // 将 ArkTS 传入的第二个参数（文件名）转换为 C 字符串
     napi_get_value_string_utf8(env, args[1], name, sizeof(name) - 1, nullptr);
 
     // 定义指针和长度，用于接收下载的文件数据
     uint8_t *data = nullptr;
     size_t length = 0;
-    
+
     // 调用内部逻辑函数，从相机下载指定文件
     bool success = InternalDownloadFile(folder, name, &data, &length);
-    
+
     // 如果下载失败或数据为空，返回 null 给 ArkTS 层
     if (!success || data == nullptr || length == 0) {
         return nullptr;
@@ -333,10 +378,10 @@ static napi_value DownloadPhoto(napi_env env, napi_callback_info info) {
     // 创建一个 ArkTS Buffer，并将下载的数据拷贝进去
     napi_value buffer;
     napi_create_buffer_copy(env, length, data, nullptr, &buffer);
-    
+
     // 释放在 C 层分配的内存，避免内存泄漏
     free(data);
-    
+
     // 返回 Buffer 给 ArkTS 层，ArkTS 可以直接拿到二进制数据
     return buffer;
 }
@@ -345,24 +390,24 @@ static napi_value DownloadPhoto(napi_env env, napi_callback_info info) {
  * @brief 设置参数
  * */
 static bool SetConfig(const char *key, const char *value) {
-    
+
     // 如果相机未连接，直接返回失败
     if (!g_connected)
         return false;
-    
+
     // 定义一个根节点指针，用于存放相机的配置树
     CameraWidget *root = nullptr;
-    
+
     // 获取相机的配置树（所有可配置参数都在这个树里）
     gp_camera_get_config(g_camera, &root, g_context);
-    
+
     // 定义一个子节点指针，用于存放目标参数
     CameraWidget *child = nullptr;
-    
+
     // 在配置树中查找指定 key 对应的参数节点
     if (gp_widget_get_child_by_name(root, key, &child) != GP_OK) {
         gp_widget_free(root); // 如果没找到，释放配置树内存
-        return false;           // 返回失败
+        return false;         // 返回失败
     }
     // 设置该参数节点的新值
     gp_widget_set_value(child, value);
