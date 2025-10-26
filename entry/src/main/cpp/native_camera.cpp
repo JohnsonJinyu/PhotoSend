@@ -5,6 +5,7 @@
 #include <gphoto2/gphoto2-file.h>
 #include <gphoto2/gphoto2-widget.h>
 #include <cstring>
+#include <ltdl.h>
 
 
 #define LOG_DOMAIN 0x0001
@@ -60,11 +61,11 @@ static bool InternalConnectCamera(const char *model, const char *path) {
 
     CameraAbilitiesList *abilities_list = nullptr;
     gp_abilities_list_new(&abilities_list);
-    
+
     // 设置驱动目录路径（只设置一次即可）
     setenv("CAMLIBDIR", "/data/data/com.lingyu.photosend/libs/arm64-v8a", 1);
 
-    //gp_abilities_list_load(abilities_list, g_context);
+    // gp_abilities_list_load(abilities_list, g_context);
     OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "加载相机能力列表成功");
 
     //***************************************************************************************
@@ -78,21 +79,29 @@ static bool InternalConnectCamera(const char *model, const char *path) {
     }
     OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "加载相机能力列表成功（真实返回值：%{public}d）", load_ret);
 
+    
     //********************************************************************************
     // 新增：打印所有支持的相机型号
     int abilities_count = gp_abilities_list_count(abilities_list);
     OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "支持的相机型号总数: %{public}d", abilities_count);
 
+    
+    // check drivers
+
+
+
     for (int i = 0; i < abilities_count; i++) {
         CameraAbilities abilities;
         int ret = gp_abilities_list_get_abilities(abilities_list, i, &abilities);
         if (ret == GP_OK) {
-            OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "支持的型号 %{public}d: %{public}s", i, abilities.model);
+            OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "支持的型号 %{public}d: %{public}s", i,
+                         abilities.model);
         } else {
-            OH_LOG_Print(LOG_APP, LOG_WARN, LOG_DOMAIN, LOG_TAG, "获取型号 %{public}d 失败，错误码: %{public}d", i, ret);
+            OH_LOG_Print(LOG_APP, LOG_WARN, LOG_DOMAIN, LOG_TAG, "获取型号 %{public}d 失败，错误码: %{public}d", i,
+                         ret);
         }
     }
-    
+
     // debug:从日志来看，当前能力列表加载成功，但是没有任何驱动被加载  ，继续分析原因
 
 
