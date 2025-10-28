@@ -1,3 +1,4 @@
+#include <cstddef>
 #include <cstdlib>
 #include <napi/native_api.h>
 #include <gphoto2/gphoto2.h> // 包含 libgphoto2 核心定义
@@ -6,6 +7,9 @@
 #include <gphoto2/gphoto2-widget.h>
 #include <cstring>
 #include <ltdl.h>
+#include <stdlib.h>
+#include <string>
+#include "napi/native_api.h"
 
 
 #define LOG_DOMAIN 0x0001
@@ -23,6 +27,9 @@ static GPContext *g_context = nullptr;
 static bool g_connected = false;
 
 // napi_value 是 NAPI 定义的一种 通用类型，用于在 C/C++ 代码中表示 ArkTS/JS 中的任何值（包括数字、字符串、对象、数组、函数等
+
+
+
 
 
 // 将 C 字符串转换为 ArkTS 可识别的 napi_value 字符串
@@ -61,10 +68,17 @@ static bool InternalConnectCamera(const char *model, const char *path) {
 
     CameraAbilitiesList *abilities_list = nullptr;
     gp_abilities_list_new(&abilities_list);
+    
+    
+    // harmonyOS native库目录是沙箱内的动态路径，硬编码无法匹配
+    // 需要通过harmonyOS 的API 动态获取 Native库的路径
+
 
     // 设置驱动目录路径（只设置一次即可）
-    setenv("CAMLIBDIR", "/data/data/com.lingyu.photosend/libs/arm64-v8a", 1);
-
+    // setenv("CAMLIBDIR", "/data/data/com.lingyu.photosend/libs/arm64-v8a", 1);
+    
+    
+    
     // gp_abilities_list_load(abilities_list, g_context);
     OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "加载相机能力列表成功");
 
@@ -72,7 +86,7 @@ static bool InternalConnectCamera(const char *model, const char *path) {
     int load_ret = gp_abilities_list_load(abilities_list, g_context);
     if (load_ret != GP_OK) {
         // 用 gp_result_as_string 解析错误原因
-        OH_LOG_Print(LOG_APP, LOG_ERROR, LOG_DOMAIN, LOG_TAG, "能力列表加载失败！错误码：%d，原因：%s", load_ret,
+        OH_LOG_Print(LOG_APP, LOG_ERROR, LOG_DOMAIN, LOG_TAG, "能力列表加载失败！错误码：%{public}d，原因：%{public}s", load_ret,
                      gp_result_as_string(load_ret));
         gp_abilities_list_free(abilities_list);
         return false;
@@ -126,7 +140,7 @@ static bool InternalConnectCamera(const char *model, const char *path) {
     gp_port_info_list_new(&port_list);
     gp_port_info_list_load(port_list);
     OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "加载端口列表成功");
-    OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "加载端口列表成功，共发现 %d 个端口",
+    OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "加载端口列表成功，共发现 %{public}d 个端口",
                  gp_port_info_list_count(port_list));
 
     int port_index = gp_port_info_list_lookup_path(port_list, path);

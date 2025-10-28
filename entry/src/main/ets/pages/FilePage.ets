@@ -14,6 +14,8 @@ import { ShutterSpeedDialog } from 'ets/component/CameraControlDialog/ShutterSpe
 import { image } from '@kit.ImageKit';
 import { fileIo } from '@kit.CoreFileKit'
 import { common } from '@kit.AbilityKit';
+import deviceInfo from '@ohos.deviceInfo';
+import { AbilityConstant, UIAbility ,Context } from '@kit.AbilityKit';
 
 @Preview
 @Component
@@ -37,7 +39,12 @@ export struct FilePage {
   @State apertureValue: number = 2.8
   // record current shutter value
   @State shutterValue: string = "1/200"
-  private xComponentController: XComponentController = new XComponentController()
+
+
+  private nativeLibDir: string = '';
+
+
+
   // ISO弹窗控制器：正确传递双向绑定参数
   isoDialogController: CustomDialogController = new CustomDialogController({
     builder: IsoDialog({ selectedISO: this.ISOValue }), // bind dialog component
@@ -51,9 +58,21 @@ export struct FilePage {
     alignment: DialogAlignment.Center
   })
 
+
+
+
   aboutToAppear(): void {
     this.checkConnection()
+
+
   }
+
+
+
+
+
+
+
 
   /**
    * @function 手动连接相机
@@ -201,6 +220,8 @@ export struct FilePage {
 
         Text(this.connectStatus)
           .fontSize(18)
+
+        Text(`驱动库路径: ${this.nativeLibDir}`)
       }
       .margin({ top: 10 })
 
