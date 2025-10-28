@@ -21,6 +21,16 @@ interface PhotoPathInfo {
 
 
 /**
+ * 设置 gphoto2 插件目录（相机驱动和端口驱动）
+ * @param camlibDir 相机驱动目录
+ * @param iolibDir 端口驱动目录
+ * @returns 设置成功返回 true
+ */
+export const SetGPhotoLibDirs: (camlibDir: string, iolibDir: string) => boolean;
+
+
+
+/**
  * 连接指定相机
  * @param cameraName 相机型号名称
  * @param cameraPath 相机连接路径

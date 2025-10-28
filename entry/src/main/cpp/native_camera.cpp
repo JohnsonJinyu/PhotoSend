@@ -26,8 +26,34 @@ static Camera *g_camera = nullptr;
 static GPContext *g_context = nullptr;
 static bool g_connected = false;
 
+
+static std::string g_camLibDir;
+static std::string g_iolLbDir;
+
+
+
 // napi_value 是 NAPI 定义的一种 通用类型，用于在 C/C++ 代码中表示 ArkTS/JS 中的任何值（包括数字、字符串、对象、数组、函数等
 
+extern napi_value SetGPhotoLibDirs(napi_env env, napi_callback_info info) {
+    size_t argc = 2;
+    napi_value args[2];
+    napi_get_cb_info(env, info, &argc, args, nullptr, nullptr);
+
+    char camDir[256];
+    char ioDir[256];
+    napi_get_value_string_utf8(env, args[0], camDir, sizeof(camDir) - 1, nullptr);
+    napi_get_value_string_utf8(env, args[1], ioDir, sizeof(ioDir) - 1, nullptr);
+
+    g_camLibDir = camDir;
+    g_iolLbDir = ioDir;
+    // 通过hilog打印上面两个变量的纸
+    OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "g_camLibDir的值为：%{public}s", g_camLibDir.c_str());
+    OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "g_iolLbDir的值为：%{public}s", g_iolLbDir.c_str());
+
+    napi_value result;
+    napi_get_boolean(env, true, &result);
+    return result;
+}
 
 
 
@@ -60,6 +86,7 @@ static bool InternalConnectCamera(const char *model, const char *path) {
         g_context = nullptr;
     }
 
+
     g_context = gp_context_new();
     OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "创建上下文成功");
 
@@ -68,40 +95,109 @@ static bool InternalConnectCamera(const char *model, const char *path) {
 
     CameraAbilitiesList *abilities_list = nullptr;
     gp_abilities_list_new(&abilities_list);
-    
-    
+
+    // 第一步：初始化ltdl（必须调用，否则驱动无法加载）
+    int ltdl_init_ret = lt_dlinit();
+
+    OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "ltdl初始化结果: %{public}d（0=成功）", ltdl_init_ret);
+    if (ltdl_init_ret != 0) {
+        OH_LOG_Print(LOG_APP, LOG_ERROR, LOG_DOMAIN, LOG_TAG, "ltdl初始化失败: %{public}s", lt_dlerror());
+        return false;
+    }
+
+
     // harmonyOS native库目录是沙箱内的动态路径，硬编码无法匹配
     // 需要通过harmonyOS 的API 动态获取 Native库的路径
 
 
     // 设置驱动目录路径（只设置一次即可）
     // setenv("CAMLIBDIR", "/data/data/com.lingyu.photosend/libs/arm64-v8a", 1);
-    
-    
-    
+    // 通过arkTs层返回的目录去加载
+
+
+    // 获取环境变量CAMLIBS的默认值
+    // 获取CAMLIBS环境变量的值
+
+    setenv("CAMLIBS", g_camLibDir.c_str(), 1);
+
+    const char *camlibs_value = getenv("CAMLIBS");
+    OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "CAMLIBS的默认值为: %{public}s", camlibs_value);
+
+
+    // int load_ret = gp_abilities_list_load_dir(abilities_list, g_camLibDir.c_str(), g_context);
+    int load_ret = gp_abilities_list_load(abilities_list, g_context);
+    // load_ret的返回值：如果是辅助，代表出错；如果是0|正数，代表成功， 表示 成功加载的驱动模块数量
+
+
+
+
+    std::string ptp2_fullpath = g_camLibDir + "/ptp2.so";   
+
+    lt_dlhandle handle = lt_dlopen(ptp2_fullpath.c_str());
+    if (handle) {
+    OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "手动加载ptp2.so成功，尝试调用camera_abilities");
+
+    // 定义函数指针（匹配camera_abilities的签名：向abilities_list添加能力）
+    typedef int (*CameraAbilitiesFunc)(CameraAbilitiesList*);
+    CameraAbilitiesFunc abilities_func = (CameraAbilitiesFunc)lt_dlsym(handle, "camera_abilities");
+
+    if (abilities_func) {
+        // 手动调用该函数，强制向abilities_list添加驱动
+        int ret = abilities_func(abilities_list);
+        OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, 
+                    "手动调用camera_abilities返回值: %{public}d（0=成功注册）", ret);
+
+        // 重新打印能力列表数量
+        int new_count = gp_abilities_list_count(abilities_list);
+        OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, 
+                    "手动注册后，支持的相机型号总数: %{public}d", new_count);
+    } else {
+        OH_LOG_Print(LOG_APP, LOG_ERROR, LOG_DOMAIN, LOG_TAG, 
+                    "未找到camera_abilities函数: %{public}s", lt_dlerror());
+    }
+    lt_dlclose(handle);
+} else {
+    OH_LOG_Print(LOG_APP, LOG_ERROR, LOG_DOMAIN, LOG_TAG, 
+                "手动加载ptp2.so失败: %{public}s", lt_dlerror());
+}
+
+
+
+
+
+
+    const char *err = lt_dlerror();
+    if (err) {
+        OH_LOG_Print(LOG_APP, LOG_ERROR, LOG_DOMAIN, LOG_TAG, "ltdl查找驱动时错误: %{public}s", err);
+    } else {
+        OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "ltdl查找驱动无错误");
+    }
+
+
     // gp_abilities_list_load(abilities_list, g_context);
     OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "加载相机能力列表成功");
 
     //***************************************************************************************
-    int load_ret = gp_abilities_list_load(abilities_list, g_context);
+    // int load_ret = gp_abilities_list_load(abilities_list, g_context);
+
+
     if (load_ret != GP_OK) {
         // 用 gp_result_as_string 解析错误原因
-        OH_LOG_Print(LOG_APP, LOG_ERROR, LOG_DOMAIN, LOG_TAG, "能力列表加载失败！错误码：%{public}d，原因：%{public}s", load_ret,
-                     gp_result_as_string(load_ret));
+        OH_LOG_Print(LOG_APP, LOG_ERROR, LOG_DOMAIN, LOG_TAG, "能力列表加载失败！错误码：%{public}d，原因：%{public}s",
+                     load_ret, gp_result_as_string(load_ret));
         gp_abilities_list_free(abilities_list);
         return false;
     }
     OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "加载相机能力列表成功（真实返回值：%{public}d）", load_ret);
 
-    
+
     //********************************************************************************
     // 新增：打印所有支持的相机型号
     int abilities_count = gp_abilities_list_count(abilities_list);
     OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "支持的相机型号总数: %{public}d", abilities_count);
 
-    
-    // check drivers
 
+    // check drivers
 
 
     for (int i = 0; i < abilities_count; i++) {
@@ -139,6 +235,8 @@ static bool InternalConnectCamera(const char *model, const char *path) {
     GPPortInfoList *port_list = nullptr;
     gp_port_info_list_new(&port_list);
     gp_port_info_list_load(port_list);
+    // gp_port_info_list_load(port_list, g_iolLbDir.c_str(), g_context);
+
     OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "加载端口列表成功");
     OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "加载端口列表成功，共发现 %{public}d 个端口",
                  gp_port_info_list_count(port_list));
@@ -568,6 +666,7 @@ static napi_value Init(napi_env env, napi_value exports) {
     // 定义接口映射表：每个元素对应一个ArkTS可调用的函数
     napi_property_descriptor api_list[] = {
         // 格式：{ArkTS侧函数名, 无, C++侧函数名, 无, 无, 无, 默认行为, 无}
+        {"SetGPhotoLibDirs", nullptr, SetGPhotoLibDirs, nullptr, nullptr, nullptr, napi_default, nullptr},
         {"ConnectCamera", nullptr, ConnectCamera, nullptr, nullptr, nullptr, napi_default, nullptr},
         {"Disconnect", nullptr, Disconnect, nullptr, nullptr, nullptr, napi_default, nullptr},
         {"IsCameraConnected", nullptr, IsCameraConnectedNapi, nullptr, nullptr, nullptr, napi_default, nullptr},
@@ -575,6 +674,7 @@ static napi_value Init(napi_env env, napi_value exports) {
         {"DownloadPhoto", nullptr, DownloadPhoto, nullptr, nullptr, nullptr, napi_default, nullptr},
         {"SetCameraParameter", nullptr, SetCameraParameter, nullptr, nullptr, nullptr, napi_default, nullptr},
         {"GetPreview", nullptr, GetPreviewNapi, nullptr, nullptr, nullptr, napi_default, nullptr},
+
 
     };
 

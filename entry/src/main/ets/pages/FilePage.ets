@@ -221,7 +221,7 @@ export struct FilePage {
         Text(this.connectStatus)
           .fontSize(18)
 
-        Text(`驱动库路径: ${this.nativeLibDir}`)
+        Text(`驱动库路径: ${this.nativeLibDir.toString()}`)
       }
       .margin({ top: 10 })
 

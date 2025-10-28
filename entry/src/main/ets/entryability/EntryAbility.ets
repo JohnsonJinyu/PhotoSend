@@ -2,12 +2,27 @@ import { AbilityConstant, ConfigurationConstant, UIAbility, Want } from '@kit.Ab
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { window } from '@kit.ArkUI';
 import { BusinessError } from '@kit.BasicServicesKit';
+import nativeEntry from 'libentry.so'
+import common from '@ohos.app.ability.common';
+
 
 const DOMAIN = 0x0000;
 
 export default class EntryAbility extends UIAbility {
   onCreate(want: Want, launchParam: AbilityConstant.LaunchParam): void {
     this.context.getApplicationContext().setColorMode(ConfigurationConstant.ColorMode.COLOR_MODE_NOT_SET);
+
+
+    let context: common.Context = this.context;
+    let camlibDir = `${context.bundleCodeDir}/libs/arm64-v8a/libgphoto2/2.5.33`;
+    let iolibDir  = `${context.bundleCodeDir}/libs/arm64-v8a/iolibs`;
+
+
+    // 初始化 gphoto2 插件目录
+    nativeEntry.SetGPhotoLibDirs(camlibDir, iolibDir);
+
+
+
     hilog.info(DOMAIN, 'testTag', '%{public}s', 'Ability onCreate');
   }
 
