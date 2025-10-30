@@ -27,28 +27,25 @@ static GPContext *g_context = nullptr;
 static bool g_connected = false;
 
 
-static std::string g_camLibDir;
-static std::string g_iolLbDir;
+static std::string g_camLibDir; // 定义设备上的nativeLibPath
 
 
 
 // napi_value 是 NAPI 定义的一种 通用类型，用于在 C/C++ 代码中表示 ArkTS/JS 中的任何值（包括数字、字符串、对象、数组、函数等
 
+/**
+ * @brief 在ArkTS层获取设备上nativeLibPath，然后通过此方法传给native层
+ * */
 extern napi_value SetGPhotoLibDirs(napi_env env, napi_callback_info info) {
-    size_t argc = 2;
-    napi_value args[2];
+    size_t argc = 1;
+    napi_value args[1];
     napi_get_cb_info(env, info, &argc, args, nullptr, nullptr);
-
     char camDir[256];
-    char ioDir[256];
     napi_get_value_string_utf8(env, args[0], camDir, sizeof(camDir) - 1, nullptr);
-    napi_get_value_string_utf8(env, args[1], ioDir, sizeof(ioDir) - 1, nullptr);
 
     g_camLibDir = camDir;
-    g_iolLbDir = ioDir;
-    // 通过hilog打印上面两个变量的纸
+    // 通过HiLog打印获取到的路径
     OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "g_camLibDir的值为：%{public}s", g_camLibDir.c_str());
-    OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "g_iolLbDir的值为：%{public}s", g_iolLbDir.c_str());
 
     napi_value result;
     napi_get_boolean(env, true, &result);
@@ -56,9 +53,9 @@ extern napi_value SetGPhotoLibDirs(napi_env env, napi_callback_info info) {
 }
 
 
-
-
-// 将 C 字符串转换为 ArkTS 可识别的 napi_value 字符串
+/**
+ * @brief 将 C 字符串转换为 ArkTS 可识别的 napi_value 字符串
+ * */
 static napi_value CreateNapiString(napi_env env, const char *str) {
     napi_value result;
     napi_create_string_utf8(env, str ? str : "", NAPI_AUTO_LENGTH, &result);
@@ -68,7 +65,6 @@ static napi_value CreateNapiString(napi_env env, const char *str) {
 
 /**
  * @brief 用 libgphoto2 初始化相机连接（设置能力、端口、上下文）
- *
  * */
 static bool InternalConnectCamera(const char *model, const char *path) {
     OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "开始连接相机: model=%{public}s, path=%{public}s", model,
@@ -106,64 +102,46 @@ static bool InternalConnectCamera(const char *model, const char *path) {
     }
 
 
-    // harmonyOS native库目录是沙箱内的动态路径，硬编码无法匹配
-    // 需要通过harmonyOS 的API 动态获取 Native库的路径
 
-
-    // 设置驱动目录路径（只设置一次即可）
-    // setenv("CAMLIBDIR", "/data/data/com.lingyu.photosend/libs/arm64-v8a", 1);
-    // 通过arkTs层返回的目录去加载
-
-
-    // 获取环境变量CAMLIBS的默认值
-    // 获取CAMLIBS环境变量的值
-
+    // 设置libgphoto2的专属环境变量“CAMLIBS”,将它的值设置为harmonyOS设备上的nativeLibPath
     setenv("CAMLIBS", g_camLibDir.c_str(), 1);
 
     const char *camlibs_value = getenv("CAMLIBS");
     OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "CAMLIBS的默认值为: %{public}s", camlibs_value);
 
-
-    // int load_ret = gp_abilities_list_load_dir(abilities_list, g_camLibDir.c_str(), g_context);
-    int load_ret = gp_abilities_list_load(abilities_list, g_context);
     // load_ret的返回值：如果是辅助，代表出错；如果是0|正数，代表成功， 表示 成功加载的驱动模块数量
+    int load_ret = gp_abilities_list_load(abilities_list, g_context);
+    
 
-
-
-
-    std::string ptp2_fullpath = g_camLibDir + "/ptp2.so";   
+    // 下面是手动调用的部分 先保留  后续删除
+    /*std::string ptp2_fullpath = g_camLibDir + "/ptp2.so";
 
     lt_dlhandle handle = lt_dlopen(ptp2_fullpath.c_str());
     if (handle) {
-    OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "手动加载ptp2.so成功，尝试调用camera_abilities");
+        OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "手动加载ptp2.so成功，尝试调用camera_abilities");
 
-    // 定义函数指针（匹配camera_abilities的签名：向abilities_list添加能力）
-    typedef int (*CameraAbilitiesFunc)(CameraAbilitiesList*);
-    CameraAbilitiesFunc abilities_func = (CameraAbilitiesFunc)lt_dlsym(handle, "camera_abilities");
+        // 定义函数指针（匹配camera_abilities的签名：向abilities_list添加能力）
+        typedef int (*CameraAbilitiesFunc)(CameraAbilitiesList *);
+        CameraAbilitiesFunc abilities_func = (CameraAbilitiesFunc)lt_dlsym(handle, "camera_abilities");
 
-    if (abilities_func) {
-        // 手动调用该函数，强制向abilities_list添加驱动
-        int ret = abilities_func(abilities_list);
-        OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, 
-                    "手动调用camera_abilities返回值: %{public}d（0=成功注册）", ret);
+        if (abilities_func) {
+            // 手动调用该函数，强制向abilities_list添加驱动
+            int ret = abilities_func(abilities_list);
+            OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG,
+                         "手动调用camera_abilities返回值: %{public}d（0=成功注册）", ret);
 
-        // 重新打印能力列表数量
-        int new_count = gp_abilities_list_count(abilities_list);
-        OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, 
-                    "手动注册后，支持的相机型号总数: %{public}d", new_count);
+            // 重新打印能力列表数量
+            int new_count = gp_abilities_list_count(abilities_list);
+            OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "手动注册后，支持的相机型号总数: %{public}d",
+                         new_count);
+        } else {
+            OH_LOG_Print(LOG_APP, LOG_ERROR, LOG_DOMAIN, LOG_TAG, "未找到camera_abilities函数: %{public}s",
+                         lt_dlerror());
+        }
+        lt_dlclose(handle);
     } else {
-        OH_LOG_Print(LOG_APP, LOG_ERROR, LOG_DOMAIN, LOG_TAG, 
-                    "未找到camera_abilities函数: %{public}s", lt_dlerror());
-    }
-    lt_dlclose(handle);
-} else {
-    OH_LOG_Print(LOG_APP, LOG_ERROR, LOG_DOMAIN, LOG_TAG, 
-                "手动加载ptp2.so失败: %{public}s", lt_dlerror());
-}
-
-
-
-
+        OH_LOG_Print(LOG_APP, LOG_ERROR, LOG_DOMAIN, LOG_TAG, "手动加载ptp2.so失败: %{public}s", lt_dlerror());
+    }*/
 
 
     const char *err = lt_dlerror();
@@ -199,8 +177,8 @@ static bool InternalConnectCamera(const char *model, const char *path) {
 
     // check drivers
 
-
-    for (int i = 0; i < abilities_count; i++) {
+    // 用于支持的相机型号列表，后续可以删除，当前可以初步屏蔽
+    /*for (int i = 0; i < abilities_count; i++) {
         CameraAbilities abilities;
         int ret = gp_abilities_list_get_abilities(abilities_list, i, &abilities);
         if (ret == GP_OK) {
@@ -210,9 +188,9 @@ static bool InternalConnectCamera(const char *model, const char *path) {
             OH_LOG_Print(LOG_APP, LOG_WARN, LOG_DOMAIN, LOG_TAG, "获取型号 %{public}d 失败，错误码: %{public}d", i,
                          ret);
         }
-    }
+    }*/
 
-    // debug:从日志来看，当前能力列表加载成功，但是没有任何驱动被加载  ，继续分析原因
+
 
 
     //*************************************************************************************************

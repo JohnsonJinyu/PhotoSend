@@ -26,7 +26,7 @@ interface PhotoPathInfo {
  * @param iolibDir 端口驱动目录
  * @returns 设置成功返回 true
  */
-export const SetGPhotoLibDirs: (camlibDir: string, iolibDir: string) => boolean;
+export const SetGPhotoLibDirs: (camlibDir: string) => boolean;
 
 
 

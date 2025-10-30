@@ -17,25 +17,17 @@ export default class EntryAbility extends UIAbility {
 
 
 
-
+    // 获取上下文
     let context: common.Context = this.context;
-
 
     // 直接通过context获取应用信息，直接方位nativeLibraryDir
     let appInfo = context.getApplicationContext().applicationInfo
     let nativeLibDir = appInfo.nativeLibraryPath.toString()
+
     hilog.info(DOMAIN, 'testTag', 'API 20获取的nativeLibraryDir: %{public}s', nativeLibDir);
 
-    hilog.info(DOMAIN, 'testTag', 'bundleCodeDir原始值: %{public}s', context.bundleCodeDir);
-    let camlibDir = `${context.bundleCodeDir}/libs/arm64-v8a`;
-    hilog.info(DOMAIN, 'testTag', '拼接后的camlibDir: %{public}s', camlibDir);
-    let iolibDir  = `${context.bundleCodeDir}/libs/arm64-v8a`;
-
-
-
     // 初始化 gphoto2 插件目录
-    //nativeEntry.SetGPhotoLibDirs(camlibDir, iolibDir);
-    nativeEntry.SetGPhotoLibDirs(nativeLibDir, iolibDir);
+    nativeEntry.SetGPhotoLibDirs(nativeLibDir);
 
 
     hilog.info(DOMAIN, 'testTag', '%{public}s', 'Ability onCreate');
