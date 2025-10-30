@@ -14,8 +14,6 @@ import { ShutterSpeedDialog } from 'ets/component/CameraControlDialog/ShutterSpe
 import { image } from '@kit.ImageKit';
 import { fileIo } from '@kit.CoreFileKit'
 import { common } from '@kit.AbilityKit';
-import deviceInfo from '@ohos.deviceInfo';
-import { AbilityConstant, UIAbility ,Context } from '@kit.AbilityKit';
 
 @Preview
 @Component
@@ -79,7 +77,7 @@ export struct FilePage {
    * */
   manualConnect() {
     // 这里假设型号和路径是固定的
-    let success = ConnectCamera("Nikon:Zf", "ptpip:192.168.1.1")
+    let success = ConnectCamera("Nikon Zf", "ptpip:192.168.1.1")
     if (success) {
       this.isConnected = true
       this.connectStatus = '相机已连接'
