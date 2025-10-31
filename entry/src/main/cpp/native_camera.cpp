@@ -33,6 +33,18 @@ static std::string g_camLibDir; // 定义设备上的nativeLibPath
 
 // napi_value 是 NAPI 定义的一种 通用类型，用于在 C/C++ 代码中表示 ArkTS/JS 中的任何值（包括数字、字符串、对象、数组、函数等
 
+
+/**
+ * @brief 将 C 字符串转换为 ArkTS 可识别的 napi_value 字符串
+ * */
+static napi_value CreateNapiString(napi_env env, const char *str) {
+    napi_value result;
+    napi_create_string_utf8(env, str ? str : "", NAPI_AUTO_LENGTH, &result);
+    return result;
+}
+
+
+
 /**
  * @brief 在ArkTS层获取设备上nativeLibPath，然后通过此方法传给native层
  * */
@@ -52,15 +64,20 @@ extern napi_value SetGPhotoLibDirs(napi_env env, napi_callback_info info) {
     return result;
 }
 
-
 /**
- * @brief 将 C 字符串转换为 ArkTS 可识别的 napi_value 字符串
+ * 
+ * @brief 从ArkTS层获取IP，传递给native层扫描端口
+ *
  * */
-static napi_value CreateNapiString(napi_env env, const char *str) {
-    napi_value result;
-    napi_create_string_utf8(env, str ? str : "", NAPI_AUTO_LENGTH, &result);
-    return result;
+
+static napi_value GetCameraIp(napi_env env,napi_callback_info info){
+    
+    
+    return nullptr;
 }
+
+
+
 
 
 /**
