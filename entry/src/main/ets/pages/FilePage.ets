@@ -5,7 +5,7 @@ import { ShutterSpeedDialog } from 'ets/component/CameraControlDialog/ShutterSpe
 import { image } from '@kit.ImageKit';
 import { fileIo } from '@kit.CoreFileKit'
 import { common } from '@kit.AbilityKit';
-import lanScanner from '../utils/LanScanner'
+import lanScanner from '../utils/GetCameraIp'
 
 
 
