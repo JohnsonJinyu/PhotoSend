@@ -4,7 +4,6 @@ import { window } from '@kit.ArkUI';
 import { BusinessError } from '@kit.BasicServicesKit';
 import nativeEntry from 'libentry.so'
 import common from '@ohos.app.ability.common';
-import { application } from '@kit.AbilityKit';
 
 
 const DOMAIN = 0x0000;

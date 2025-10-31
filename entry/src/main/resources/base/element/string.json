@@ -35,6 +35,10 @@
     {
       "name": "reason_request_SYSTEM_FLOAT_WINDOW",
       "value": "请求Window权限"
+    },
+    {
+      "name": "reason_request_get_network_info",
+      "value": "获取网络端口信息"
     }
   ]
 }

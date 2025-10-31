@@ -67,6 +67,10 @@
       {
         "name": "ohos.permission.VIBRATE",
         "reason": "$string:reason_request_permission_vibrate"
+      },
+      {
+        "name": "ohos.permission.GET_NETWORK_INFO",
+        "reason":"$string:reason_request_get_network_info"
       }
 
 

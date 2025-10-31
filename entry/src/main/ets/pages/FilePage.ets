@@ -1,19 +1,15 @@
-import {
-  IsCameraConnected,
-  ConnectCamera,
-  SetCameraParameter,
-  TakePhoto,
-  GetPreview,
-  DownloadPhoto,
-  Disconnect,
-  CameraDevice,
-  PhotoPathInfo
-} from 'libentry.so';
+
+import nativeLibGphoto from 'libentry.so'
 import { IsoDialog } from 'ets/component/CameraControlDialog/IsoDialog'
 import { ShutterSpeedDialog } from 'ets/component/CameraControlDialog/ShutterSpeedDialog'
 import { image } from '@kit.ImageKit';
 import { fileIo } from '@kit.CoreFileKit'
 import { common } from '@kit.AbilityKit';
+import lanScanner from '../utils/LanScanner'
+
+
+
+const scanner = new lanScanner();
 
 @Preview
 @Component
@@ -27,7 +23,7 @@ export struct FilePage {
   @State previewRunning: boolean = false; // 当前是否在预览
   private timerId: number = -1; // 定时器ID
   @State previewImage: string = '';
-  @State photoList: PhotoPathInfo[] = [];
+  @State photoList: nativeLibGphoto.PhotoPathInfo[] = [];
   @State currentPreviewInterval: number = 0;
   @State statusMessage: string = '请连接相机';
   @State isoValue: string = '100';
@@ -77,7 +73,7 @@ export struct FilePage {
    * */
   manualConnect() {
     // 这里假设型号和路径是固定的
-    let success = ConnectCamera("Nikon Zf", "ptpip:192.168.1.1")
+    let success = nativeLibGphoto.ConnectCamera("Nikon Zf", "ptpip:192.168.1.1")
     if (success) {
       this.isConnected = true
       this.connectStatus = '相机已连接'
@@ -91,7 +87,7 @@ export struct FilePage {
    * @function 检查连接状态
    * */
   checkConnection() {
-    let connected = IsCameraConnected() //等待执行完，把结果复制给connected
+    let connected = nativeLibGphoto.IsCameraConnected() //等待执行完，把结果复制给connected
     this.isConnected = connected
     console.info(this.connectStatus)
     this.connectStatus = connected ? '相机已连接' : '未连接，请检查是否连接相机WiFi'
@@ -127,7 +123,7 @@ export struct FilePage {
    * */
   async updatePreview() {
     // 从native获取Uint8Array
-    const buffer: Uint8Array = GetPreview()
+    const buffer: Uint8Array = nativeLibGphoto.GetPreview()
     if (!buffer) {
       return
     }
@@ -153,7 +149,7 @@ export struct FilePage {
    * */
   async takeAndDownloadKnown() {
     try {
-      const ok = TakePhoto();
+      const ok = nativeLibGphoto.TakePhoto();
       if (!ok) {
         this.statusMessage = '拍照失败';
         return;
@@ -163,7 +159,7 @@ export struct FilePage {
       const folder = "DCIM/100CANON";
       const filename = "IMG_0001.JPG";
 
-      const arrBuf: ArrayBuffer = DownloadPhoto(folder, filename);
+      const arrBuf: ArrayBuffer = nativeLibGphoto.DownloadPhoto(folder, filename);
       if (!arrBuf) {
         this.statusMessage = '下载失败';
         return;
@@ -211,10 +207,18 @@ export struct FilePage {
             this.checkConnection()
           })
 
-        Button('手动连接相机')
-          .onClick(() => {
-            this.manualConnect()
-          })
+        Row({space:10}){
+          Button('手动连接相机')
+            .onClick(() => {
+              this.manualConnect()
+            })
+
+          Button('IP测试')
+            .onClick(()=>{
+              scanner.getLocalSubnet()
+            })
+        }
+
 
         Text(this.connectStatus)
           .fontSize(18)
