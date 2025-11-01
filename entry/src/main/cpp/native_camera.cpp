@@ -82,6 +82,8 @@ static napi_value GetCameraIp(napi_env env,napi_callback_info info){
 
 /**
  * @brief 用 libgphoto2 初始化相机连接（设置能力、端口、上下文）
+ * @param model:camera_name
+ * @param path:camera_ip
  * */
 static bool InternalConnectCamera(const char *model, const char *path) {
     OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "开始连接相机: model=%{public}s, path=%{public}s", model,
@@ -122,6 +124,9 @@ static bool InternalConnectCamera(const char *model, const char *path) {
 
     // 设置libgphoto2的专属环境变量“CAMLIBS”,将它的值设置为harmonyOS设备上的nativeLibPath
     setenv("CAMLIBS", g_camLibDir.c_str(), 1);
+    
+    // 同步设置端口的环境变量为相同路径
+    setenv("IOLIBS", g_camLibDir.c_str(), 1);
 
     const char *camlibs_value = getenv("CAMLIBS");
     OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "CAMLIBS的默认值为: %{public}s", camlibs_value);
@@ -130,35 +135,7 @@ static bool InternalConnectCamera(const char *model, const char *path) {
     int load_ret = gp_abilities_list_load(abilities_list, g_context);
     
 
-    // 下面是手动调用的部分 先保留  后续删除
-    /*std::string ptp2_fullpath = g_camLibDir + "/ptp2.so";
 
-    lt_dlhandle handle = lt_dlopen(ptp2_fullpath.c_str());
-    if (handle) {
-        OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "手动加载ptp2.so成功，尝试调用camera_abilities");
-
-        // 定义函数指针（匹配camera_abilities的签名：向abilities_list添加能力）
-        typedef int (*CameraAbilitiesFunc)(CameraAbilitiesList *);
-        CameraAbilitiesFunc abilities_func = (CameraAbilitiesFunc)lt_dlsym(handle, "camera_abilities");
-
-        if (abilities_func) {
-            // 手动调用该函数，强制向abilities_list添加驱动
-            int ret = abilities_func(abilities_list);
-            OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG,
-                         "手动调用camera_abilities返回值: %{public}d（0=成功注册）", ret);
-
-            // 重新打印能力列表数量
-            int new_count = gp_abilities_list_count(abilities_list);
-            OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "手动注册后，支持的相机型号总数: %{public}d",
-                         new_count);
-        } else {
-            OH_LOG_Print(LOG_APP, LOG_ERROR, LOG_DOMAIN, LOG_TAG, "未找到camera_abilities函数: %{public}s",
-                         lt_dlerror());
-        }
-        lt_dlclose(handle);
-    } else {
-        OH_LOG_Print(LOG_APP, LOG_ERROR, LOG_DOMAIN, LOG_TAG, "手动加载ptp2.so失败: %{public}s", lt_dlerror());
-    }*/
 
 
     const char *err = lt_dlerror();
@@ -192,9 +169,9 @@ static bool InternalConnectCamera(const char *model, const char *path) {
     OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "支持的相机型号总数: %{public}d", abilities_count);
 
 
-    // check drivers
 
-    // 用于支持的相机型号列表，后续可以删除，当前可以初步屏蔽
+
+    //check drivers 用于支持的相机型号列表，后续可以删除，当前可以初步屏蔽
     /*for (int i = 0; i < abilities_count; i++) {
         CameraAbilities abilities;
         int ret = gp_abilities_list_get_abilities(abilities_list, i, &abilities);
@@ -230,11 +207,57 @@ static bool InternalConnectCamera(const char *model, const char *path) {
     GPPortInfoList *port_list = nullptr;
     gp_port_info_list_new(&port_list);
     gp_port_info_list_load(port_list);
-    // gp_port_info_list_load(port_list, g_iolLbDir.c_str(), g_context);
+
 
     OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "加载端口列表成功");
     OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "加载端口列表成功，共发现 %{public}d 个端口",
                  gp_port_info_list_count(port_list));
+    
+    
+    
+    // 插入强制指定GP_PORT_IP的逻辑
+    // 1. 遍历端口列表，找到类型为GP_PORT_IP的端口（PTP/IP必须依赖此类型）
+    GPPortInfo temp_port_info;
+    int ip_port_index = -1; // 存储IP类型端口的索引
+    int port_count = gp_port_info_list_count(port_list);
+    
+    for (int i = 0; i < port_count; i++) {
+        // 获取第i个端口的信息
+        int get_info_ret = gp_port_info_list_get_info(port_list, i, &temp_port_info);
+        if (get_info_ret != GP_OK) {
+            OH_LOG_Print(LOG_APP, LOG_WARN, LOG_DOMAIN, LOG_TAG, "获取端口 %{public}d 信息失败", i);
+            continue;
+        }
+    
+        // 检查端口类型是否为GP_PORT_IP
+        GPPortType port_type;
+        gp_port_info_get_type(temp_port_info, &port_type);
+        if (port_type == GP_PORT_IP) {
+            ip_port_index = i; // 记录IP类型端口的索引
+            OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "找到IP类型端口，索引: %{public}d", ip_port_index);
+            break; // 找到第一个IP类型端口即可
+        }
+    }
+    
+    // 2. 校验是否存在IP类型端口（PTP/IP连接必须有）
+    if (ip_port_index == -1) {
+        OH_LOG_Print(LOG_APP, LOG_ERROR, LOG_DOMAIN, LOG_TAG, "端口列表中无GP_PORT_IP类型端口，无法进行PTP/IP连接");
+        gp_port_info_list_free(port_list);
+        return false;
+    }
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
 
     int port_index = gp_port_info_list_lookup_path(port_list, path);
     OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "查找端口索引: %{public}d", port_index);
