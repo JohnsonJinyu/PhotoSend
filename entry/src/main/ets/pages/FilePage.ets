@@ -5,12 +5,13 @@ import { ShutterSpeedDialog } from 'ets/component/CameraControlDialog/ShutterSpe
 import { image } from '@kit.ImageKit';
 import { fileIo } from '@kit.CoreFileKit'
 import { common } from '@kit.AbilityKit';
-import lanScanner from '../utils/GetCameraIp'
+import getCamIpAndName from '../utils/GetCameraIpAndName'
 
 
 
-const scanner = new lanScanner();
+const scanner = new getCamIpAndName();
 
+let cameraIp:string
 @Preview
 @Component
 export struct FilePage {
@@ -62,7 +63,30 @@ export struct FilePage {
   }
 
 
+/**
+ * @function 自动连接相机
+ * */
+  autoDetectCamera(){
+    // 获取可用相机列表
+    const cameraList = nativeLibGphoto.GetAvailableCameras()
+    if (cameraList.length==0) {
+      this.connectStatus='未连接到相机'
+      console.log('未检测到相机');
+      return
+    }
 
+    // 解析第一个相机的型号和路径
+    const GeneratedDestructArray_1=cameraList[0].split('|')
+    const model = GeneratedDestructArray_1[0];
+    const path = GeneratedDestructArray_1[1];
+
+    // 自动连接相机
+    const isConnected = nativeLibGphoto.ConnectCamera(model, path);
+    if (isConnected) {
+      console.log('相机连接成功');
+      this.connectStatus='相机连接成功'
+    }
+  }
 
 
 
@@ -201,11 +225,19 @@ export struct FilePage {
     Column() {
       // 状态栏
       Column({ space: 10 }) {
+        Row({space:10}){
+          Button('自动检测相机列表')
+            .onClick(() => {
+              this.autoDetectCamera()
+            })
 
-        Button('检测相机')
-          .onClick(() => {
-            this.checkConnection()
-          })
+          Button('检测相机')
+            .onClick(() => {
+              this.checkConnection()
+            })
+
+        }
+
 
         Row({space:10}){
           Button('手动连接相机')
@@ -214,8 +246,12 @@ export struct FilePage {
             })
 
           Button('IP测试')
-            .onClick(()=>{
-              scanner.getLocalSubnet()
+            .onClick(async ()=>{
+              let camIP = await scanner.getLocalSubnet()
+              if (camIP!=null) {
+                scanner.getCameraName(camIP)
+              }
+
             })
         }
 

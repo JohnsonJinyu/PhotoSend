@@ -86,6 +86,14 @@ extern napi_value SetGPhotoLibDirs(napi_env env, napi_callback_info info) {
 
     napi_value result;        // 返回结果给ArkTS
     napi_get_boolean(env, true, &result);  // 生成ArkTS的布尔值true
+    
+    // 直接在这里把libgphoto2的环境变量设置好
+    // CAMLIBS：相机驱动路径（如ptp2.so存放位置）
+    setenv("CAMLIBS", g_camLibDir.c_str(), 1);
+    // IOLIBS：端口模块路径（如ptpip.so存放位置，PTP/IP连接必需）
+    setenv("IOLIBS", g_camLibDir.c_str(), 1);
+    OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "CAMLIBS IOLIBS 环境变量设置OK");
+    
     return result;
 }
 
@@ -161,10 +169,7 @@ static bool InternalConnectCamera(const char *model, const char *path) {
     }
 
     // 第六步：设置环境变量（告诉libgphoto2驱动和端口模块的路径）
-    // CAMLIBS：相机驱动路径（如ptp2.so存放位置）
-    setenv("CAMLIBS", g_camLibDir.c_str(), 1);
-    // IOLIBS：端口模块路径（如ptpip.so存放位置，PTP/IP连接必需）
-    setenv("IOLIBS", g_camLibDir.c_str(), 1);
+    
 
     // 打印CAMLIBS路径（确认环境变量设置正确）
     const char *camlibs_value = getenv("CAMLIBS");
@@ -734,6 +739,94 @@ static napi_value GetPreviewNapi(napi_env env, napi_callback_info info) {
 }
 
 
+
+
+// ###########################################################################
+// 20. 枚举相机
+// ###########################################################################
+
+/**
+ * @brief 内部函数：枚举所有可用的相机，返回型号和路径列表
+ * @param cameras 输出参数：存储相机信息的数组（每个元素为"型号|路径"字符串）
+ * @param count 输出参数：相机数量
+ * @return bool 枚举成功返回true，失败返回false
+ */
+static bool ListAvailableCameras(std::vector<std::string>& cameras, int& count) {
+    // 检查驱动路径是否已设置（依赖SetGPhotoLibDirs传入的路径）
+    if (g_camLibDir.empty()) {
+        OH_LOG_Print(LOG_APP, LOG_ERROR, LOG_DOMAIN, LOG_TAG, "未设置驱动路径，请先调用SetGPhotoLibDirs");
+        return false;
+    }
+
+
+    // 创建相机列表（存储枚举结果）
+    CameraList *list = nullptr;
+    gp_list_new(&list);
+
+    // 核心：自动检测相机（枚举所有可用设备）
+    // 参数：相机列表、上下文（nullptr使用默认上下文）
+    int ret = gp_camera_autodetect(list, g_context);
+    if (ret != GP_OK) {
+        OH_LOG_Print(LOG_APP, LOG_ERROR, LOG_DOMAIN, LOG_TAG, "相机枚举失败，错误码: %{public}d", ret);
+        gp_list_free(list); // 释放列表
+        return false;
+    }
+
+    // 提取枚举结果（相机数量）
+    count = gp_list_count(list);
+    OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "检测到 %{public}d 台可用相机", count);
+
+    // 遍历列表，获取每个相机的型号和路径
+    for (int i = 0; i < count; i++) {
+        const char *model = nullptr;  // 相机型号（如"Nikon Zf"）
+        const char *path = nullptr;   // 连接路径（如"ptpip:192.168.1.1:55740"）
+        gp_list_get_name(list, i, &model);  // 获取型号
+        gp_list_get_value(list, i, &path);  // 获取路径
+
+        // 存储为"型号|路径"格式（方便后续拆分）
+        cameras.push_back(std::string(model) + "|" + std::string(path));
+    }
+
+    // 释放资源
+    gp_list_free(list);
+    return true;
+}
+
+
+
+/**
+ * @brief NAPI接口：获取所有可用相机的型号和路径列表
+ * @param env NAPI环境
+ * @param info 回调信息
+ * @return napi_value 返回ArkTS数组（每个元素为"型号|路径"字符串）
+ */
+static napi_value GetAvailableCameras(napi_env env, napi_callback_info info) {
+    std::vector<std::string> cameras;  // 存储相机信息
+    int count = 0;                     // 相机数量
+
+    // 调用内部枚举函数
+    bool success = ListAvailableCameras(cameras, count);
+    if (!success || count == 0) {
+        // 无相机时返回空数组
+        napi_value emptyArray;
+        napi_create_array(env, &emptyArray);
+        return emptyArray;
+    }
+
+    // 创建ArkTS数组，存储相机信息
+    napi_value resultArray;
+    napi_create_array(env, &resultArray);
+
+    // 向数组中添加元素（每个元素为"型号|路径"字符串）
+    for (int i = 0; i < count; i++) {
+        napi_value item = CreateNapiString(env, cameras[i].c_str());
+        napi_set_element(env, resultArray, i, item);
+    }
+
+    return resultArray;
+}
+
+
 // ###########################################################################
 // 20. NAPI模块注册：将C++函数映射为ArkTS可调用的接口（关键步骤）
 // ###########################################################################
@@ -750,6 +843,7 @@ static napi_value Init(napi_env env, napi_value exports) {
     // napi_property_descriptor：NAPI结构体，定义"ArkTS函数名→C++函数"的映射关系
     napi_property_descriptor api_list[] = {
         // 格式：{ArkTS侧函数名, 无, C++侧函数名, 无, 无, 无, 默认行为, 无}
+        {"GetAvailableCameras", nullptr, GetAvailableCameras, nullptr, nullptr, nullptr, napi_default, nullptr},
         {"SetGPhotoLibDirs", nullptr, SetGPhotoLibDirs, nullptr, nullptr, nullptr, napi_default, nullptr},
         {"ConnectCamera", nullptr, ConnectCamera, nullptr, nullptr, nullptr, napi_default, nullptr},
         {"Disconnect", nullptr, Disconnect, nullptr, nullptr, nullptr, napi_default, nullptr},

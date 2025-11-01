@@ -19,6 +19,13 @@ interface PhotoPathInfo {
 }
 
 
+/**
+ * 获取所有可用相机列表
+ * @returns 可用相机列表，每个元素为"型号|路径"格式的字符串
+ */
+export const GetAvailableCameras: () => string[];
+
+
 
 /**
  * 设置 gphoto2 插件目录（相机驱动和端口驱动）
