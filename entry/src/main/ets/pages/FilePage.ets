@@ -15,6 +15,11 @@ let cameraIp:string
 @Preview
 @Component
 export struct FilePage {
+
+  // 新增：连接状态检查定时器ID
+  private connectionCheckTimer: number = -1;
+
+
   // 状态管理
   // 连接状态
   @State isConnected: boolean = false;
@@ -36,6 +41,15 @@ export struct FilePage {
   @State shutterValue: string = "1/200"
   // 新增：用于UI展示的参数列表（从参数管理器获取）
   @State paramList: ParamOption[] = [];
+
+  // 新增：曝光补偿、测光模式、白平衡、对焦模式的状态变量
+  @State exposureCompensationValue: string = "NA"; // 曝光补偿
+  @State meterModeValue: string = "NA"; // 测光模式
+  @State whiteBalanceValue: string = "NA"; // 白平衡
+  @State focusModeValue: string = "NA"; // 对焦模式
+  @State exposureProgramValue: string = "NA"; // 曝光模式（P/A/S/M等）
+
+
 
   private nativeLibDir: string = '';
 
@@ -73,6 +87,10 @@ export struct FilePage {
     this.paramList = cameraParamManager.getParams();
     this.syncParamToUI();
 
+
+    // 启动连接状态定时检查（每3秒一次）
+    this.startConnectionCheck();
+
   }
 
   // 页面销毁时移除监听器，避免内存泄漏
@@ -80,7 +98,39 @@ export struct FilePage {
     cameraParamManager.removeListener(() => {
       // 这里需要传入与注册时相同的函数引用，实际开发中建议用命名函数
     });
+
+    // 停止连接状态检查定时器
+    this.stopConnectionCheck();
   }
+
+
+
+
+
+
+
+
+  // 启动连接状态定时检查
+  private startConnectionCheck() {
+    this.connectionCheckTimer = setInterval(() => {
+      // 仅在当前标记为已连接时才检查（优化性能）
+      if (this.isConnected) {
+        this.checkConnection();
+      }
+    }, 3000); // 3秒检查一次
+  }
+
+  // 停止连接状态检查
+  private stopConnectionCheck() {
+    if (this.connectionCheckTimer !== -1) {
+      clearInterval(this.connectionCheckTimer);
+      this.connectionCheckTimer = -1;
+    }
+  }
+
+
+
+
 
   // 将参数管理器的参数同步到页面UI状态
   private syncParamToUI() {
@@ -100,8 +150,52 @@ export struct FilePage {
 
     const apertureParam = this.paramList.find(p => p.name === 'aperture');
     if (apertureParam) {
-      this.apertureValue = parseFloat(apertureParam.currentValue); // 同步光圈值
-      console.log('同步光圈值:', this.apertureValue);
+      // 提取光圈值中的数字（处理"f/4"、"f/2.8"等格式）
+      const apertureNumber = parseFloat(apertureParam.currentValue.replace(/[^0-9.]/g, ''));
+      if (!isNaN(apertureNumber)) {
+        this.apertureValue = apertureNumber;
+        console.log('同步光圈值:', this.apertureValue);
+      } else {
+        console.warn('光圈值解析失败，原始值:', apertureParam.currentValue);
+      }
+    }
+
+
+    // 新增：同步曝光补偿
+    const evParam = this.paramList.find(p => p.name === 'exposureCompensation');
+    if (evParam) {
+      this.exposureCompensationValue = evParam.currentValue + "EV"; // 显示如"0EV"
+    }
+
+    // 新增：同步测光模式（注意参数名与相机返回一致，日志中为"exposureMeterMode"）
+    const meterModeParam = this.paramList.find(p => p.name === 'exposureMeterMode');
+    if (meterModeParam) {
+      this.meterModeValue = meterModeParam.currentValue; // 显示如"Multi Spot"
+    }
+
+
+
+    // 新增：同步白平衡
+    const wbParam = this.paramList.find(p => p.name === 'whiteBalance');
+    if (wbParam) {
+      this.whiteBalanceValue = wbParam.currentValue; // 显示如"Automatic"
+    }
+
+    // 新增：同步对焦模式（注意参数名与相机返回一致，日志中为"focusMode"）（提取英文缩写）
+    const focusModeParam = this.paramList.find(p => p.name === 'focusMode');
+    if (focusModeParam) {
+      // 使用正则表达式提取括号中的英文部分（如从"连续自动对焦（AF-C）"中提取"AF-C"）
+      const match = focusModeParam.currentValue.match(/\((.*?)\)/);
+      this.focusModeValue = match ? match[1] : focusModeParam.currentValue; // 若匹配失败则显示原始值
+    }
+
+
+    // 新增，同步曝光模式
+    const exposureProgramParam = this.paramList.find(p => p.name === 'exposureProgram');
+    if (exposureProgramParam) {
+      // 从"P（程序自动）"中提取"P"，从"A（光圈优先）"中提取"A"等
+      const programAbbr = exposureProgramParam.currentValue.split('（')[0];
+      this.exposureProgramValue = programAbbr;
     }
   }
 /**
@@ -150,11 +244,12 @@ export struct FilePage {
    * */
   checkConnection() {
     const connected = nativeLibGphoto.IsCameraConnected();
-    // 同步状态到参数管理器（关键步骤）
-    cameraParamManager.updateConnectionStatus(connected);
-    // 更新页面自身状态
-    this.isConnected = connected;
-    this.connectStatus = connected ? '相机已连接' : '未连接，请检查是否连接相机WiFi';
+    // 若状态发生变化，同步到参数管理器
+    if (connected !== this.isConnected) {
+      cameraParamManager.updateConnectionStatus(connected);
+      this.isConnected = connected;
+      this.connectStatus = connected ? '相机已连接' : '未连接，请检查是否连接相机WiFi';
+    }
   }
 
   /**
@@ -378,10 +473,14 @@ export struct FilePage {
           Column() {
             Text("Aperture")
               .fontSize(12)
-            Button("2.8")
+            Button(this.apertureValue.toString())
               .fontSize(12)
-              .width(70)
               .height(18)
+              .width(70)
+              // 可选：添加点击事件打开光圈设置弹窗
+              .onClick(() => {
+                // this.apertureDialogController.open();
+              })
           }
 
           Column() {
@@ -397,14 +496,14 @@ export struct FilePage {
           }
 
           Column() {
-            Text("Ev")
+            Text("EV")
               .fontSize(12)
-            Button(this.shutterValue.toString())
+            Button(this.exposureCompensationValue) // 绑定曝光补偿值（如"0EV"）
               .fontSize(12)
               .height(18)
               .width(70)
               .onClick(() => {
-                this.shutterDialogController.open()
+                // 可选：打开曝光补偿设置弹窗
               })
           }
 
@@ -420,7 +519,7 @@ export struct FilePage {
           Column() {
             Text("AF_MODE")
               .fontSize(12)
-            Button("AF_C")
+            Button(this.focusModeValue) // 绑定对焦模式（如"连续自动对焦（AF-C）"）
               .fontSize(12)
               .width(70)
               .height(18)
@@ -430,18 +529,17 @@ export struct FilePage {
             Text("测光")
               .fontSize(12)
 
-            Button(this.ISOValue.toString())
+            Button(this.meterModeValue) // 绑定测光模式（如"Multi Spot"）
               .fontSize(12)
-              .height(18)
               .width(70)
-              .onClick(() => this.isoDialogController.open())
+              .height(18)
 
           }
 
           Column() {
             Text("白平衡")
               .fontSize(12)
-            Button("2.8")
+            Button(this.whiteBalanceValue) // 绑定白平衡（如"Automatic"）
               .fontSize(12)
               .width(70)
               .height(18)
@@ -450,13 +548,10 @@ export struct FilePage {
           Column() {
             Text("曝光模式")
               .fontSize(12)
-            Button(this.shutterValue.toString())
+            Button(this.exposureProgramValue) // 绑定曝光模式缩写（如"P"、"A"）
               .fontSize(12)
               .height(18)
               .width(70)
-              .onClick(() => {
-                this.shutterDialogController.open()
-              })
           }
 
 

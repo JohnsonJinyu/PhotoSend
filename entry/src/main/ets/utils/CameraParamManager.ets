@@ -12,6 +12,9 @@ export interface ParamOption {
 }
 
 export class CameraParamManager {
+
+  private paramRefreshTimer: number = -1; // 参数刷新定时器
+
   private isConnected: boolean = false;
   private params: Map<string, ParamOption> = new Map();
   private listeners: Array<() => void> = [];
@@ -28,19 +31,43 @@ export class CameraParamManager {
       { name: 'iso', label: 'ISO', currentValue: 'NA', options: [], isEditable: false },
       { name: 'exposureCompensation', label: '曝光补偿', currentValue: 'NA', options: [], isEditable: false },
       { name: 'whiteBalance', label: '白平衡', currentValue: 'NA', options: [], isEditable: false },
+      { name: 'exposureMeterMode', label: '测光模式', currentValue: 'NA', options: [], isEditable: false },
+      { name: 'focusMode', label: '对焦模式', currentValue: 'NA', options: [], isEditable: false },
+      { name: 'exposureProgram', label: '曝光模式', currentValue: 'NA', options: [], isEditable: false },
     ];
 
     defaultParams.forEach(param => this.params.set(param.name, param));
   }
 
-  // 更新连接状态并刷新参数
+  // 更新连接状态时，启动/停止参数定时刷新
   updateConnectionStatus(connected: boolean) {
     this.isConnected = connected;
     if (connected) {
-      this.refreshAllParams(); // 连接成功后立即刷新参数
+      this.refreshAllParams(); // 立即刷新一次
+      this.startParamRefreshTimer(); // 启动定时刷新
     } else {
-      this.initDefaultParams(); // 断开连接重置为NA
+      this.stopParamRefreshTimer(); // 停止定时刷新
+      this.initDefaultParams();
       this.notifyListeners();
+    }
+  }
+
+  // 启动参数定时刷新（每2秒一次）
+  private startParamRefreshTimer() {
+    // 避免重复启动
+    if (this.paramRefreshTimer === -1) {
+      this.paramRefreshTimer = setInterval(() => {
+        this.refreshAllParams();
+      }, 2000); // 2秒刷新一次
+    }
+  }
+
+
+  // 停止参数定时刷新
+  private stopParamRefreshTimer() {
+    if (this.paramRefreshTimer !== -1) {
+      clearInterval(this.paramRefreshTimer);
+      this.paramRefreshTimer = -1;
     }
   }
 
@@ -57,6 +84,9 @@ export class CameraParamManager {
         this.updateParamCurrentValue('iso', status.iso);
         this.updateParamCurrentValue('exposureCompensation', status.exposureCompensation);
         this.updateParamCurrentValue('whiteBalance', status.whiteBalance);
+        this.updateParamCurrentValue('exposureMeterMode', status.exposureMeterMode);
+        this.updateParamCurrentValue('focusMode', status.focusMode);
+        this.updateParamCurrentValue('exposureProgram', status.exposureProgram); // 同步曝光模式
 
         // 刷新可选值（实际应从相机接口获取，这里模拟）
         await this.refreshParamOptions();
