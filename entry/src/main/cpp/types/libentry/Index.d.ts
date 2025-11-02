@@ -52,6 +52,28 @@ interface CameraStatus {
 
 
 /**
+ * 相机配置参数项接口，包含参数名称、显示名称、类型、当前值及可选值列表
+ */
+interface ConfigItem {
+  /** 参数名（如"aperture"、"shutter-speed"） */
+  name: string;
+  /** 参数显示名称（如"Aperture"、"Shutter Speed"） */
+  label: string;
+  /** 参数类型（如"choice"表示选项类型、"text"表示文本类型、"range"表示范围类型） */
+  type: string;
+  /** 参数当前值（如"f/5.6"、"1/100"） */
+  current: string;
+  /** 参数可选值列表（仅类型为"choice"时有效，如["f/2.8", "f/4", "f/5.6"]） */
+  choices: string[];
+}
+
+/**
+ * 获取相机所有配置参数（包含参数名、显示名、类型、当前值及可选值）
+ * @returns 配置参数列表，每个元素为符合ConfigItem接口的对象
+ */
+export const GetCameraConfig: () => ConfigItem[];
+
+/**
  * 获取所有可用相机列表
  * @returns 可用相机列表，每个元素为"型号|路径"格式的字符串
  */

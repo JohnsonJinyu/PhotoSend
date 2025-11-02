@@ -862,9 +862,9 @@ static void RecursiveFindWidget(CameraWidget *root, const char *targetName, Came
             valueStr = buf;
         }
     }
-    OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG,
+    /*OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG,
                  "节点路径：%{public}s，名称：%{public}s，类型：%{public}d，值：%{public}s", currentPath, currentName,
-                 type, valueStr);
+                 type, valueStr);*/
 
     // 2. 关键补充：检查当前节点是否为目标节点（原逻辑可能缺失，需补充）
     if (currentName && strcmp(currentName, targetName) == 0) {
@@ -1481,7 +1481,7 @@ static napi_value Init(napi_env env, napi_value exports) {
         {"SetCameraParameter", nullptr, SetCameraParameter, nullptr, nullptr, nullptr, napi_default, nullptr},
         {"GetPreview", nullptr, GetPreviewNapi, nullptr, nullptr, nullptr, napi_default, nullptr},
         {"GetCameraStatus", nullptr, GetCameraStatus, nullptr, nullptr, nullptr, napi_default, nullptr}, // 新增这行
-        {"getCameraConfig", nullptr, GetCameraConfig, nullptr, nullptr, nullptr, napi_default, nullptr},
+        {"GetCameraConfig", nullptr, GetCameraConfig, nullptr, nullptr, nullptr, napi_default, nullptr},
     };
 
     // 将接口映射表挂载到exports对象（ArkTS侧通过import获取这些函数）

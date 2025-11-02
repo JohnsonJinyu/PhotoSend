@@ -6,7 +6,7 @@ import { image } from '@kit.ImageKit';
 import { fileIo } from '@kit.CoreFileKit'
 import { common } from '@kit.AbilityKit';
 import getCamIpAndName from '../utils/GetCameraIpAndName'
-
+import { cameraParamManager,ParamOption  } from '../utils/CameraParamManager'
 
 
 const scanner = new getCamIpAndName();
@@ -34,7 +34,8 @@ export struct FilePage {
   @State apertureValue: number = 2.8
   // record current shutter value
   @State shutterValue: string = "1/200"
-
+  // 新增：用于UI展示的参数列表（从参数管理器获取）
+  @State paramList: ParamOption[] = [];
 
   private nativeLibDir: string = '';
 
@@ -60,31 +61,69 @@ export struct FilePage {
     this.checkConnection()
 
 
+    // 注册参数变化监听器（关键步骤）
+    cameraParamManager.addListener(() => {
+      // 当参数更新时，同步到页面状态
+      this.paramList = cameraParamManager.getParams();
+      // 同步具体参数到UI（如ISO、快门等）
+      this.syncParamToUI();
+    });
+
+    // 初始同步一次参数
+    this.paramList = cameraParamManager.getParams();
+    this.syncParamToUI();
+
   }
 
+  // 页面销毁时移除监听器，避免内存泄漏
+  aboutToDisappear(): void {
+    cameraParamManager.removeListener(() => {
+      // 这里需要传入与注册时相同的函数引用，实际开发中建议用命名函数
+    });
+  }
 
+  // 将参数管理器的参数同步到页面UI状态
+  private syncParamToUI() {
+    console.log('开始同步参数到UI，当前paramList:', JSON.stringify(this.paramList));
+
+    const isoParam = this.paramList.find(p => p.name === 'iso');
+    if (isoParam) {
+      this.ISOValue = isoParam.currentValue; // 同步ISO值到页面状态
+      console.log('同步ISO值:', this.ISOValue);
+    }
+
+    const shutterParam = this.paramList.find(p => p.name === 'shutter');
+    if (shutterParam) {
+      this.shutterValue = shutterParam.currentValue; // 同步快门值
+      console.log('同步快门值:', this.shutterValue);
+    }
+
+    const apertureParam = this.paramList.find(p => p.name === 'aperture');
+    if (apertureParam) {
+      this.apertureValue = parseFloat(apertureParam.currentValue); // 同步光圈值
+      console.log('同步光圈值:', this.apertureValue);
+    }
+  }
 /**
  * @function 自动连接相机
  * */
-  autoDetectCamera(){
-    // 获取可用相机列表
-    const cameraList = nativeLibGphoto.GetAvailableCameras()
-    if (cameraList.length==0) {
-      this.connectStatus='未连接到相机'
-      console.log('未检测到相机');
-      return
+  // 自动连接相机（修改版，可选）
+  autoDetectCamera() {
+    const cameraList = nativeLibGphoto.GetAvailableCameras();
+    if (cameraList.length === 0) {
+      this.connectStatus = '未连接到相机';
+      cameraParamManager.updateConnectionStatus(false); // 同步断开状态
+      return;
     }
-
-    // 解析第一个相机的型号和路径
-    const GeneratedDestructArray_1=cameraList[0].split('|')
+    const GeneratedDestructArray_1 = cameraList[0].split('|');
     const model = GeneratedDestructArray_1[0];
     const path = GeneratedDestructArray_1[1];
-
-    // 自动连接相机
     const isConnected = nativeLibGphoto.ConnectCamera(model, path);
     if (isConnected) {
-      console.log('相机连接成功');
-      this.connectStatus='相机连接成功'
+      this.connectStatus = '相机连接成功';
+      cameraParamManager.updateConnectionStatus(true); // 同步成功状态
+    } else {
+      cameraParamManager.updateConnectionStatus(false); // 同步失败状态
     }
   }
 
@@ -97,24 +136,25 @@ export struct FilePage {
    * */
   manualConnect() {
     // 这里假设型号和路径是固定的
-    let success = nativeLibGphoto.ConnectCamera("Nikon Zf", "ptpip:192.168.1.1")
-    if (success) {
-      this.isConnected = true
-      this.connectStatus = '相机已连接'
-    } else {
-      this.isConnected = false
-      this.connectStatus = '连接失败，请检查WiFi'
-    }
+    const success = nativeLibGphoto.ConnectCamera("Nikon Zf", "ptpip:192.168.1.1");
+    // 同步状态到参数管理器（关键步骤）
+    cameraParamManager.updateConnectionStatus(success);
+
+    // 更新页面自身状态
+    this.isConnected = success;
+    this.connectStatus = success ? '相机已连接' : '连接失败，请检查WiFi';
   }
 
   /**
    * @function 检查连接状态
    * */
   checkConnection() {
-    let connected = nativeLibGphoto.IsCameraConnected() //等待执行完，把结果复制给connected
-    this.isConnected = connected
-    console.info(this.connectStatus)
-    this.connectStatus = connected ? '相机已连接' : '未连接，请检查是否连接相机WiFi'
+    const connected = nativeLibGphoto.IsCameraConnected();
+    // 同步状态到参数管理器（关键步骤）
+    cameraParamManager.updateConnectionStatus(connected);
+    // 更新页面自身状态
+    this.isConnected = connected;
+    this.connectStatus = connected ? '相机已连接' : '未连接，请检查是否连接相机WiFi';
   }
 
   /**
@@ -216,6 +256,8 @@ export struct FilePage {
   }
 
 
+
+
   /**
    * 配置打印
    * */
@@ -272,8 +314,10 @@ export struct FilePage {
         Row({space:10}){
           Button('手动连接相机')
             .onClick(() => {
-              this.manualConnect()
+              this.manualConnect(); // 点击触发手动连接
             })
+            .enabled(!this.isConnected) // 连接中时禁用按钮
+
 
           Button('IP测试')
             .onClick(async ()=>{
@@ -289,7 +333,6 @@ export struct FilePage {
         Text(this.connectStatus)
           .fontSize(18)
 
-        Text(`驱动库路径: ${this.nativeLibDir.toString()}`)
       }
       .margin({ top: 10 })
 
