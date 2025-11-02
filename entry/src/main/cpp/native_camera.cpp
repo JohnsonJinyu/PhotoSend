@@ -429,57 +429,39 @@ static napi_value Disconnect(napi_env env, napi_callback_info info) {
  * @return bool 有效连接返回true，无效返回false
  */
 static bool IsCameraConnected() {
-    /**
-     * 方法1 查询量偏大，会导致相机主动断开连接
-     * */
-    /*if (!g_camera || !g_context)
-        return false;
-    // 调用gp_camera_get_summary：尝试获取相机摘要信息（测试通信是否正常）
-    // 若返回GP_OK，说明连接有效；否则为无效连接
-    return (gp_camera_get_summary(g_camera, nullptr, g_context) == GP_OK);*/
-    /**
-     * 方法2 直接断开连接无法更新状态
-     * */
-    /*return (g_connected && g_camera != nullptr && g_context != nullptr);*/
-    
-    /**
-     * 方法3 
-     * */
-    /*// 1. 基础检查：相机/上下文对象为空 → 未连接
-    if (!g_camera || !g_context) {
-        return false;
-    }
-
-    // 2. 轻量通信检查：获取相机基础能力（不会触发大量数据交互）
-    CameraAbilities abilities;
-    int result = gp_camera_get_abilities(g_camera, &abilities);
-    if (result != GP_OK) {
-        // 获取能力失败 → 连接无效
-        return false;
-    }
-
-    // 3. 可选：结合原有连接标志（双重确认）
-    return g_connected; // 假设g_connected是连接成功时设置的标志*/
-
-    // 方法4：
-    // 1. 基础检查：连接标志为false → 未连接
+    // 1. 基础连接标志检查
     if (!g_connected) {
         return false;
     }
-    // 2. 句柄有效性检查：相机/上下文为空 → 未连接（同时重置连接标志）
-    if (!g_camera || !g_context) {
+    // 2. 相机句柄有效性检查
+    if (!g_camera) {
         g_connected = false;
         return false;
     }
-    // 3. 轻量通信检查：调用gp_camera_get_abilities（仅需2个参数）
-    CameraAbilities abilities;
-    int result = gp_camera_get_abilities(g_camera, &abilities); // 移除g_context参数
+    // 3. 强校验：读取电量配置（通过配置树遍历）
+    CameraWidget *rootConfig = nullptr;
+    int result = gp_camera_get_config(g_camera, &rootConfig, g_context);
     if (result != GP_OK) {
-        // 通信失败 → 重置连接标志并返回未连接
         g_connected = false;
         return false;
     }
-    // 4. 所有检查通过 → 已连接
+
+    CameraWidget *batteryWidget = nullptr;
+    result = gp_widget_get_child_by_name(rootConfig, "batterylevel", &batteryWidget);
+    if (result != GP_OK || !batteryWidget) {
+        gp_widget_free(rootConfig); // 释放配置树资源
+        g_connected = false;
+        return false;
+    }
+
+    gp_widget_free(rootConfig); // 释放配置树资源
+    // 4. 补充设备能力检查（增强鲁棒性）
+    CameraAbilities abilities;
+    result = gp_camera_get_abilities(g_camera, &abilities);
+    if (result != GP_OK) {
+        g_connected = false;
+        return false;
+    }
     return true;
 }
 
