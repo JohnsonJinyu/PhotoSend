@@ -10,8 +10,32 @@ import { cameraParamManager,ParamOption  } from '../utils/CameraParamManager'
 
 
 const scanner = new getCamIpAndName();
-
 let cameraIp:string
+
+
+
+const evMap:Record<string,string>={
+  "-2": "-2",
+  "-1.666": "-1 2/3",
+  "-1.333": "-1 1/3",
+  "-1": "-1",
+  "-0.666": "-2/3",
+  "-0.333": "-1/3",
+  "0": "0",
+  "0.333": "+1/3",
+  "0.666": "+2/3",
+  "1": "+1",
+  "1.333": "+1 1/3",
+  "1.666": "+1 2/3",
+  "2": "+2"
+}
+
+
+interface ShutterOptionSec {
+  original: string;
+  sec: number | null;
+}
+
 @Preview
 @Component
 export struct FilePage {
@@ -36,7 +60,7 @@ export struct FilePage {
   // 当前ISO值，与浮窗双向绑定
   @State ISOValue: string = "100"
   // record current aperture value
-  @State apertureValue: number = 2.8
+  @State apertureValue: string  = ''
   // record current shutter value
   @State shutterValue: string = "1/200"
   // 新增：用于UI展示的参数列表（从参数管理器获取）
@@ -142,29 +166,49 @@ export struct FilePage {
       console.log('同步ISO值:', this.ISOValue);
     }
 
+    // 同步快门速度值
     const shutterParam = this.paramList.find(p => p.name === 'shutter');
     if (shutterParam) {
-      this.shutterValue = shutterParam.currentValue; // 同步快门值
-      console.log('同步快门值:', this.shutterValue);
+      // 转换当前值为秒数（如"0.6s" → 0.6）
+      const currentShutterSec = this.parseShutterToSeconds(shutterParam.currentValue);
+      if (currentShutterSec === null) {
+        console.warn('快门值解析失败，原始值:', shutterParam.currentValue);
+        return;
+      }
+
+      // 转换选项中的值为秒数，用于匹配（如"1/1000" → 0.001）
+      const shutterOptionsSec = shutterParam.options.map<ShutterOptionSec>(option => ({
+        original: option,
+        sec: this.parseShutterToSeconds(option)
+      })).filter(item => item.sec !== null);
+
+      // 检查当前值是否在选项中（允许微小精度误差，如0.333和1/3）
+      const matchedOption = shutterOptionsSec.find(item =>
+      Math.abs(item.sec as number - currentShutterSec) < 0.001 // 类型断言为number
+      );
+
+      if (matchedOption) {
+        console.log('快门值匹配成功:', matchedOption.original);
+        this.shutterValue = matchedOption.original; // 用选项中的原始格式显示
+      } else {
+        console.log('快门值未在选项中，使用原始值:', shutterParam.currentValue);
+        this.shutterValue = shutterParam.currentValue;
+      }
     }
 
+    // 同步光圈值
     const apertureParam = this.paramList.find(p => p.name === 'aperture');
     if (apertureParam) {
-      // 提取光圈值中的数字（处理"f/4"、"f/2.8"等格式）
-      const apertureNumber = parseFloat(apertureParam.currentValue.replace(/[^0-9.]/g, ''));
-      if (!isNaN(apertureNumber)) {
-        this.apertureValue = apertureNumber;
-        console.log('同步光圈值:', this.apertureValue);
-      } else {
-        console.warn('光圈值解析失败，原始值:', apertureParam.currentValue);
-      }
+      const apertureDisplay = apertureParam.currentValue.replace(/f\//i, 'F');
+      this.apertureValue = apertureDisplay; // 现在类型匹配
+      console.log('光圈显示值:', this.apertureValue);
     }
 
 
     // 新增：同步曝光补偿
     const evParam = this.paramList.find(p => p.name === 'exposureCompensation');
     if (evParam) {
-      this.exposureCompensationValue = evParam.currentValue + "EV"; // 显示如"0EV"
+      this.exposureCompensationValue = this.formatExposureCompensation(evParam.currentValue);
     }
 
     // 新增：同步测光模式（注意参数名与相机返回一致，日志中为"exposureMeterMode"）
@@ -185,8 +229,10 @@ export struct FilePage {
     const focusModeParam = this.paramList.find(p => p.name === 'focusMode');
     if (focusModeParam) {
       // 使用正则表达式提取括号中的英文部分（如从"连续自动对焦（AF-C）"中提取"AF-C"）
-      const match = focusModeParam.currentValue.match(/\((.*?)\)/);
-      this.focusModeValue = match ? match[1] : focusModeParam.currentValue; // 若匹配失败则显示原始值
+      const match = focusModeParam.currentValue.match(/[（(](.*?)[）)]/);
+
+      // 若匹配失败，直接截取最后3-4个字符（适用于"AF-S"、"AF-C"等固定长度）
+      this.focusModeValue = match ? match[1] : focusModeParam.currentValue.slice(-4).trim();
     }
 
 
@@ -381,6 +427,60 @@ export struct FilePage {
     console.error("获取相机信息失败：", e);
   }
 }
+
+
+
+
+
+  // 在 FilePage 中新增曝光补偿格式转换函数
+  private formatExposureCompensation(value: string): string {
+    const num = parseFloat(value);
+    if (isNaN(num)) {
+      return 'NA';
+    }
+
+    // 查找最接近的映射值
+    const closestKey = Object.keys(evMap).find(key => {
+      return Math.abs(parseFloat(key) - num) < 0.001;
+    });
+
+    // 返回转换后的值（带EV单位）
+    return closestKey ? `${evMap[parseFloat(closestKey)]}` : `${num}`;
+  }
+
+
+
+
+
+  /**
+   * 将快门速度字符串转为秒数（数值）
+   * @param shutterStr 快门速度字符串（如"1/1000"、"0.6s"、"2s"）
+   * @returns 对应的秒数（如0.001、0.6、2）
+   */
+  parseShutterToSeconds(shutterStr: string): number | null {
+  // 移除可能的单位"s"
+  const str = shutterStr.replace(/s$/i, '').trim();
+  // 处理分数形式（如"1/1000"）
+  if (str.includes('/')) {
+    const parts = str.split('/').map(Number);
+    const numerator = parts[0];
+    const denominator = parts[1];
+    if (!isNaN(numerator) && !isNaN(denominator) && denominator !== 0) {
+      return numerator / denominator;
+    }
+  }
+  // 处理小数/整数形式（如"0.6"、"2"）
+  const num = parseFloat(str);
+  return isNaN(num) ? null : num;
+}
+
+
+
+
+
+
+
+
 
 
   //###############################################################################
