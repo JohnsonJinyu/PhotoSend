@@ -1,5 +1,5 @@
 // ###########################################################################
-// 1. 头文件引入：依赖库的核心接口定义
+// 头文件引入：依赖库的核心接口定义
 // ###########################################################################
 // 基础内存/字符串操作库
 #include <cstddef>
@@ -21,14 +21,14 @@
 
 
 // ###########################################################################
-// 2. 宏定义：日志配置（固定格式，方便定位日志来源）
+//  宏定义：日志配置（固定格式，方便定位日志来源）
 // ###########################################################################
 #define LOG_DOMAIN 0x0001      // 日志域（自定义标识，区分不同模块日志）
 #define LOG_TAG "NativeCamera" // 日志标签（日志中显示的模块名）
 
 
 // ###########################################################################
-// 3. 全局变量：跨函数共享相机状态（避免重复创建/泄漏，需谨慎管理）
+// 全局变量：跨函数共享相机状态（避免重复创建/泄漏，需谨慎管理）
 // ###########################################################################
 // 相机对象指针：指向已初始化的相机实例（nullptr = 未连接）
 // （libgphoto2中，Camera是所有相机操作的核心载体）
@@ -38,13 +38,13 @@ static Camera *g_camera = nullptr;
 static GPContext *g_context = nullptr;
 // 连接状态标记：true = 已连接，false = 未连接（简化状态判断）
 static bool g_connected = false;
-
 // 动态库路径：存储ArkTS层传入的"驱动/端口模块"存放路径（如/data/storage/.../arm64）
 static std::string g_camLibDir;
 
 
+
 // ###########################################################################
-// 4. 工具函数：NAPI数据类型转换（C++ → ArkTS）
+// 工具函数：NAPI数据类型转换（C++ → ArkTS）
 // ###########################################################################
 /**
  * @brief 将C语言字符串（const char*）转换为ArkTS可识别的napi_value字符串
@@ -62,7 +62,7 @@ static napi_value CreateNapiString(napi_env env, const char *str) {
 
 
 // ###########################################################################
-// 5. NAPI接口：从ArkTS获取动态库路径（驱动/端口模块存放位置）
+// NAPI接口：从ArkTS获取动态库路径（驱动/端口模块存放位置）
 // ###########################################################################
 /**
  * @brief ArkTS层调用此函数，传入设备上"驱动/端口模块"的路径，存到全局变量g_camLibDir
@@ -98,22 +98,10 @@ extern napi_value SetGPhotoLibDirs(napi_env env, napi_callback_info info) {
 }
 
 
-// ###########################################################################
-// 6. 待实现函数：从ArkTS获取相机IP（当前未实现，预留接口）
-// ###########################################################################
-/**
- * @brief 预留接口：计划从ArkTS获取相机IP，供端口扫描使用
- * @param env NAPI环境
- * @param info NAPI回调信息
- * @return napi_value 暂返回nullptr（未实现）
- */
-static napi_value GetCameraIp(napi_env env, napi_callback_info info) {
-    return nullptr; // 待后续实现IP获取逻辑
-}
 
 
 // ###########################################################################
-// 7. 核心函数：相机连接逻辑（libgphoto2核心流程，PTP/IP连接关键）
+// 核心函数：相机连接逻辑（libgphoto2核心流程，PTP/IP连接关键）
 // ###########################################################################
 /**
  * @brief 内部函数：用libgphoto2完成相机初始化（驱动加载→型号匹配→端口配置→连接）
@@ -169,12 +157,7 @@ static bool InternalConnectCamera(const char *model, const char *path) {
         return false;
     }
 
-    // 第六步：设置环境变量（告诉libgphoto2驱动和端口模块的路径）
-
-
-    // 打印CAMLIBS路径（确认环境变量设置正确）
-    const char *camlibs_value = getenv("CAMLIBS");
-    OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "CAMLIBS的默认值为: %{public}s", camlibs_value);
+    
 
     // 第七步：加载相机能力列表（从CAMLIBS路径加载驱动，识别支持的相机型号）
     // gp_abilities_list_load：扫描驱动，将支持的相机型号存入abilities_list
@@ -189,7 +172,7 @@ static bool InternalConnectCamera(const char *model, const char *path) {
         OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "ltdl查找驱动无错误");
     }
 
-    OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "加载相机能力列表成功");
+    //OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "加载相机能力列表成功");
 
     // 第九步：校验能力列表加载结果（失败则释放资源返回）
     if (load_ret != GP_OK) {
@@ -219,7 +202,6 @@ static bool InternalConnectCamera(const char *model, const char *path) {
 
     // 第十二步：获取指定型号的能力配置，并设置到相机对象
     CameraAbilities abilities; // 存储相机能力（如支持的功能、协议）
-    // gp_abilities_list_get_abilities：从列表中获取指定索引的相机能力
     gp_abilities_list_get_abilities(abilities_list, model_index, &abilities);
     // gp_camera_set_abilities：将能力配置绑定到相机对象（告诉相机"你是这个型号"）
     gp_camera_set_abilities(g_camera, abilities);
@@ -233,7 +215,7 @@ static bool InternalConnectCamera(const char *model, const char *path) {
     // gp_port_info_list_load：从IOLIBS路径加载端口模块，扫描可用端口
     gp_port_info_list_load(port_list);
 
-    OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "加载端口列表成功");
+    //OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "加载端口列表成功");
     // 打印端口总数（确认端口模块加载正常，PTP/IP需要至少1个IP端口）
     OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "加载端口列表成功，共发现 %{public}d 个端口",
                  gp_port_info_list_count(port_list));
@@ -309,7 +291,7 @@ static bool InternalConnectCamera(const char *model, const char *path) {
 
 
 // ###########################################################################
-// 8. 核心函数：触发相机拍照（内部逻辑，不直接暴露给ArkTS）
+// 核心函数：触发相机拍照（内部逻辑，不直接暴露给ArkTS）
 // ###########################################################################
 /**
  * @brief 内部函数：触发已连接的相机拍照，并返回照片在相机中的存储路径
@@ -344,7 +326,7 @@ static bool InternalCapture(char *outFolder, char *outFilename) {
 
 
 // ###########################################################################
-// 9. 核心函数：从相机下载照片（内部逻辑，不直接暴露给ArkTS）
+// 核心函数：从相机下载照片（内部逻辑，不直接暴露给ArkTS）
 // ###########################################################################
 /**
  * @brief 内部函数：根据"相机中的文件路径"，下载照片到内存，并返回二进制数据
@@ -401,7 +383,7 @@ static bool InternalDownloadFile(const char *folder, const char *filename, uint8
 
 
 // ###########################################################################
-// 10. NAPI接口：断开相机连接（暴露给ArkTS调用）
+//  NAPI接口：断开相机连接（暴露给ArkTS调用）
 // ###########################################################################
 /**
  * @brief ArkTS层调用此函数，断开相机连接并释放所有资源
@@ -434,7 +416,7 @@ static napi_value Disconnect(napi_env env, napi_callback_info info) {
 
 
 // ###########################################################################
-// 11. 工具函数：检查相机是否处于连接状态（内部逻辑）
+// 工具函数：检查相机是否处于连接状态（内部逻辑）
 // ###########################################################################
 /**
  * @brief 内部函数：判断相机是否有效连接（避免仅依赖g_connected的误判）
@@ -451,7 +433,7 @@ static bool IsCameraConnected() {
 
 
 // ###########################################################################
-// 12. NAPI接口：检查相机连接状态（暴露给ArkTS调用）
+// NAPI接口：检查相机连接状态（暴露给ArkTS调用）
 // ###########################################################################
 /**
  * @brief ArkTS层调用此函数，获取当前相机连接状态
@@ -471,7 +453,7 @@ static napi_value IsCameraConnectedNapi(napi_env env, napi_callback_info info) {
 
 
 // ###########################################################################
-// 13. NAPI接口：连接相机（暴露给ArkTS调用，封装InternalConnectCamera）
+// NAPI接口：连接相机（暴露给ArkTS调用，封装InternalConnectCamera）
 // ###########################################################################
 /**
  * @brief ArkTS层调用此函数，传入相机型号和PTP/IP路径，触发连接
@@ -503,7 +485,7 @@ static napi_value ConnectCamera(napi_env env, napi_callback_info info) {
 
 
 // ###########################################################################
-// 14. NAPI接口：触发拍照（暴露给ArkTS调用，封装InternalCapture）
+// NAPI接口：触发拍照（暴露给ArkTS调用，封装InternalCapture）
 // ###########################################################################
 /**
  * @brief ArkTS层调用此函数，触发相机拍照，并返回照片路径信息
@@ -536,7 +518,7 @@ static napi_value TakePhoto(napi_env env, napi_callback_info info) {
 
 
 // ###########################################################################
-// 15. NAPI接口：下载照片（暴露给ArkTS调用，封装InternalDownloadFile）
+// NAPI接口：下载照片（暴露给ArkTS调用，封装InternalDownloadFile）
 // ###########################################################################
 /**
  * @brief ArkTS层调用此函数，传入照片路径，下载照片并返回二进制数据
@@ -584,7 +566,7 @@ static napi_value DownloadPhoto(napi_env env, napi_callback_info info) {
 
 
 // ###########################################################################
-// 16. 核心函数：设置相机参数（内部逻辑，如闪光灯、ISO等）
+// 核心函数：设置相机参数（内部逻辑，如闪光灯、ISO等）
 // ###########################################################################
 /**
  * @brief 内部函数：设置相机的配置参数（如闪光灯模式、ISO、白平衡等）
@@ -626,7 +608,7 @@ static bool SetConfig(const char *key, const char *value) {
 
 
 // ###########################################################################
-// 17. NAPI接口：设置相机参数（暴露给ArkTS调用，封装SetConfig）
+// NAPI接口：设置相机参数（暴露给ArkTS调用，封装SetConfig）
 // ###########################################################################
 /**
  * @brief ArkTS层调用此函数，传入参数名和值，设置相机配置
@@ -659,7 +641,7 @@ static napi_value SetCameraParameter(napi_env env, napi_callback_info info) {
 
 
 // ###########################################################################
-// 18. 核心函数：获取相机实时预览（内部逻辑，如取景框画面）
+// 核心函数：获取相机实时预览（内部逻辑，如取景框画面）
 // ###########################################################################
 /**
  * @brief 内部函数：获取相机实时预览画面（二进制数据，通常为JPEG格式）
@@ -708,7 +690,7 @@ static bool GetPreview(uint8_t **data, size_t *length) {
 
 
 // ###########################################################################
-// 19. NAPI接口：获取相机预览（暴露给ArkTS调用，封装GetPreview）
+// NAPI接口：获取相机预览（暴露给ArkTS调用，封装GetPreview）
 // ###########################################################################
 /**
  * @brief ArkTS层调用此函数，获取相机实时预览画面
@@ -743,7 +725,7 @@ static napi_value GetPreviewNapi(napi_env env, napi_callback_info info) {
 
 
 // ###########################################################################
-// 20. 枚举相机
+// 枚举相机
 // ###########################################################################
 
 /**
@@ -1365,7 +1347,7 @@ EXTERN_C_END
 
 
 // ###########################################################################
-// 21. NAPI模块信息：定义模块的基本属性（ArkTS侧识别模块的关键）
+// NAPI模块信息：定义模块的基本属性（ArkTS侧识别模块的关键）
 // ###########################################################################
 static napi_module cameraModule = {
     .nm_version = 1,          // NAPI模块版本（固定为1）
@@ -1379,7 +1361,7 @@ static napi_module cameraModule = {
 
 
 // ###########################################################################
-// 22. 模块注册入口：so库加载时自动注册NAPI模块
+// 模块注册入口：so库加载时自动注册NAPI模块
 // ###########################################################################
 /**
  * @brief 构造函数属性（__attribute__((constructor))）：so库被加载时自动执行
