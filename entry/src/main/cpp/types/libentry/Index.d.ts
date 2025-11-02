@@ -18,6 +18,38 @@ interface PhotoPathInfo {
   name: string;
 }
 
+/**
+ * 相机状态信息接口，包含电量、参数、存储等信息
+ */
+interface CameraStatus {
+  /** 是否成功获取信息 */
+  isSuccess: boolean;
+  /** 电量状态（如"Full"、"50%"、"Low"） */
+  batteryLevel: string;
+  /** 光圈值（如"2.8"、"5.6"、"Auto"） */
+  aperture: string;
+  /** 快门速度（如"1/1000"、"0.001"、"Auto"） */
+  shutter: string;
+  /** ISO值（如"400"、"800"、"Auto"） */
+  iso: string;
+  /** 曝光补偿（如"0.3"、"-1.0"，单位EV） */
+  exposureCompensation: string;
+  /** 白平衡模式（如"Auto"、"Daylight"、"Tungsten"） */
+  whiteBalance: string;
+  /** 拍摄模式（如"Program"、"Aperture Priority"、"Manual"） */
+  captureMode: string;
+  /** 剩余存储空间（单位：字节，大整数） */
+  freeSpaceBytes: bigint;
+  /** 剩余可拍摄张数 */
+  remainingPictures: number;
+  /** 曝光模式 */
+  exposureProgram:string;
+  /** 对焦模式*/
+  focusMode:string;
+  /** 测光模式 */
+  exposureMeterMode:string;
+}
+
 
 /**
  * 获取所有可用相机列表
@@ -26,6 +58,11 @@ interface PhotoPathInfo {
 export const GetAvailableCameras: () => string[];
 
 
+/**
+ * 获取相机的状态信息（电量、参数、存储等）
+ * @returns 相机状态信息对象（CameraStatus），包含各类属性
+ */
+export const GetCameraStatus: () => CameraStatus;
 
 /**
  * 设置 gphoto2 插件目录（相机驱动和端口驱动）

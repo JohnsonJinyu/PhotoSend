@@ -216,6 +216,36 @@ export struct FilePage {
   }
 
 
+  /**
+   * 配置打印
+   * */
+
+  async  getCameraInfo() {
+  try {
+    // 调用Native接口，返回包含所有信息的对象
+    const camInfo = nativeLibGphoto.GetCameraStatus();
+
+    // 解析信息（示例）
+    console.log("相机连接状态：", camInfo.isSuccess);
+    console.log("电量：", camInfo.batteryLevel);
+    console.log("当前光圈：", camInfo.aperture);
+    console.log("当前快门：", camInfo.shutter);
+    console.log("当前ISO：", camInfo.iso);
+    console.log("曝光补偿：", camInfo.exposureCompensation + "EV");
+    console.log("白平衡：", camInfo.whiteBalance);
+    console.log("拍摄模式：", camInfo.captureMode);
+    //console.log("剩余空间：", (camInfo.freeSpaceBytes / 1024 / 1024).toFixed(2) + "MB");
+    console.log("剩余可拍张数：", camInfo.remainingPictures);
+    console.log("曝光模式",camInfo.exposureProgram);
+    console.log(`对焦模式：${camInfo.focusMode}`);       // 如"连续自动对焦（AF-C）"
+    console.log(`测光模式：${camInfo.exposureMeterMode}`); // 如"矩阵测光"
+
+  } catch (e) {
+    console.error("获取相机信息失败：", e);
+  }
+}
+
+
   //###############################################################################
   //          Build Area
   //###############################################################################
@@ -226,9 +256,9 @@ export struct FilePage {
       // 状态栏
       Column({ space: 10 }) {
         Row({space:10}){
-          Button('自动检测相机列表')
+          Button('配置打印')
             .onClick(() => {
-              this.autoDetectCamera()
+              this.getCameraInfo()
             })
 
           Button('检测相机')
@@ -247,10 +277,10 @@ export struct FilePage {
 
           Button('IP测试')
             .onClick(async ()=>{
-              let camIP = await scanner.getLocalSubnet()
+              /*let camIP = await scanner.getLocalSubnet()
               if (camIP!=null) {
                 scanner.getCameraName(camIP)
-              }
+              }*/
 
             })
         }
