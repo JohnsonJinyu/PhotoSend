@@ -253,7 +253,7 @@ export struct FilePage {
 
   build() {
     Column() {
-      // 状态栏
+      // 功能测试区
       Column({ space: 10 }) {
         Row({space:10}){
           Button('配置打印')
@@ -315,52 +315,122 @@ export struct FilePage {
       /**
        * 参数控制栏
        * */
-      Row({ space: 10 }) {
-        Column() {
-          Text("AF_MODE")
-            .fontSize(12)
-          Button("AF_C")
-            .fontSize(12)
-            .width(70)
-            .height(18)
+      Column(){
+
+        // 第一排参数设置
+        Row({ space: 10 }) {
+
+          Column() {
+            Text("ISO")
+              .fontSize(12)
+
+            Button(this.ISOValue.toString())
+              .fontSize(12)
+              .height(18)
+              .width(70)
+              .onClick(() => this.isoDialogController.open())
+
+          }
+
+          Column() {
+            Text("Aperture")
+              .fontSize(12)
+            Button("2.8")
+              .fontSize(12)
+              .width(70)
+              .height(18)
+          }
+
+          Column() {
+            Text("Shutter")
+              .fontSize(12)
+            Button(this.shutterValue.toString())
+              .fontSize(12)
+              .height(18)
+              .width(70)
+              .onClick(() => {
+                this.shutterDialogController.open()
+              })
+          }
+
+          Column() {
+            Text("Ev")
+              .fontSize(12)
+            Button(this.shutterValue.toString())
+              .fontSize(12)
+              .height(18)
+              .width(70)
+              .onClick(() => {
+                this.shutterDialogController.open()
+              })
+          }
+
+
+
         }
+        .width("100%")
+        .padding(10)
 
-        Column() {
-          Text("ISO")
-            .fontSize(12)
 
-          Button(this.ISOValue.toString())
-            .fontSize(12)
-            .height(18)
-            .width(70)
-            .onClick(() => this.isoDialogController.open())
+        // 第二排参数设置
+        Row({ space: 10 }) {
+          Column() {
+            Text("AF_MODE")
+              .fontSize(12)
+            Button("AF_C")
+              .fontSize(12)
+              .width(70)
+              .height(18)
+          }
+
+          Column() {
+            Text("测光")
+              .fontSize(12)
+
+            Button(this.ISOValue.toString())
+              .fontSize(12)
+              .height(18)
+              .width(70)
+              .onClick(() => this.isoDialogController.open())
+
+          }
+
+          Column() {
+            Text("白平衡")
+              .fontSize(12)
+            Button("2.8")
+              .fontSize(12)
+              .width(70)
+              .height(18)
+          }
+
+          Column() {
+            Text("曝光模式")
+              .fontSize(12)
+            Button(this.shutterValue.toString())
+              .fontSize(12)
+              .height(18)
+              .width(70)
+              .onClick(() => {
+                this.shutterDialogController.open()
+              })
+          }
+
 
         }
-
-        Column() {
-          Text("Aperture")
-            .fontSize(12)
-          Button("2.8")
-            .fontSize(12)
-            .width(70)
-            .height(18)
-        }
-
-        Column() {
-          Text("Shutter")
-            .fontSize(12)
-          Button(this.shutterValue.toString())
-            .fontSize(12)
-            .height(18)
-            .width(70)
-            .onClick(() => {
-              this.shutterDialogController.open()
-            })
-        }
+        .width("100%")
+        .padding(10)
 
       }
       .width("100%")
-      .padding(20)
+
+
+
+
+
+
+
+
 
 
       /**

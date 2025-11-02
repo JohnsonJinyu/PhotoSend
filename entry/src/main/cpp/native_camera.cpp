@@ -40,7 +40,14 @@ static GPContext *g_context = nullptr;
 static bool g_connected = false;
 // 动态库路径：存储ArkTS层传入的"驱动/端口模块"存放路径（如/data/storage/.../arm64）
 static std::string g_camLibDir;
-
+// 存储单个配置参数的信息
+struct ConfigItem {
+    std::string name;                 // 参数名（如"aperture"）
+    std::string label;                // 显示名称（如"Aperture"）
+    std::string type;                 // 参数类型（"choice"|"text"|"range"等）
+    std::string current;              // 当前值
+    std::vector<std::string> choices; // 可选值列表（仅选项类型）
+};
 
 
 // ###########################################################################
@@ -157,7 +164,6 @@ static bool InternalConnectCamera(const char *model, const char *path) {
         return false;
     }
 
-    
 
     // 第七步：加载相机能力列表（从CAMLIBS路径加载驱动，识别支持的相机型号）
     // gp_abilities_list_load：扫描驱动，将支持的相机型号存入abilities_list
@@ -172,7 +178,7 @@ static bool InternalConnectCamera(const char *model, const char *path) {
         OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "ltdl查找驱动无错误");
     }
 
-    //OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "加载相机能力列表成功");
+    // OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "加载相机能力列表成功");
 
     // 第九步：校验能力列表加载结果（失败则释放资源返回）
     if (load_ret != GP_OK) {
@@ -215,8 +221,8 @@ static bool InternalConnectCamera(const char *model, const char *path) {
     // gp_port_info_list_load：从IOLIBS路径加载端口模块，扫描可用端口
     gp_port_info_list_load(port_list);
 
-    //OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "加载端口列表成功");
-    // 打印端口总数（确认端口模块加载正常，PTP/IP需要至少1个IP端口）
+    // OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "加载端口列表成功");
+    //  打印端口总数（确认端口模块加载正常，PTP/IP需要至少1个IP端口）
     OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "加载端口列表成功，共发现 %{public}d 个端口",
                  gp_port_info_list_count(port_list));
 
@@ -575,35 +581,41 @@ static napi_value DownloadPhoto(napi_env env, napi_callback_info info) {
  * @return bool 设置成功返回true，失败返回false
  */
 static bool SetConfig(const char *key, const char *value) {
-    // 未连接相机，直接返回失败
     if (!g_connected)
         return false;
 
-    // CameraWidget：libgphoto2结构体，存储相机配置参数（树形结构，如root→flash→on）
     CameraWidget *root = nullptr;
-
-    // 获取相机的配置树（root为根节点，包含所有可配置参数）
-    gp_camera_get_config(g_camera, &root, g_context);
-
-    // CameraWidget *child：存储目标参数节点（如"flash"节点）
-    CameraWidget *child = nullptr;
-
-    // 在配置树中根据参数名查找目标节点
-    if (gp_widget_get_child_by_name(root, key, &child) != GP_OK) {
-        gp_widget_free(root); // 未找到节点，释放配置树
+    if (gp_camera_get_config(g_camera, &root, g_context) != GP_OK) {
+        OH_LOG_Print(LOG_APP, LOG_ERROR, LOG_DOMAIN, LOG_TAG, "获取配置树失败");
         return false;
     }
 
-    // 设置目标节点的参数值（如将"flash"节点的值设为"on"）
-    gp_widget_set_value(child, value);
-    // 将修改后的配置树应用到相机（实际生效）
-    int ret = gp_camera_set_config(g_camera, root, g_context);
+    CameraWidget *child = nullptr;
+    int ret = gp_widget_get_child_by_name(root, key, &child);
+    if (ret != GP_OK) {
+        OH_LOG_Print(LOG_APP, LOG_ERROR, LOG_DOMAIN, LOG_TAG, "未找到参数: %{public}s", key);
+        gp_widget_free(root);
+        return false;
+    }
 
-    // 释放配置树内存（避免泄漏）
+    // 设置参数值（自动适配类型：选项/文本/开关等）
+    ret = gp_widget_set_value(child, value);
+    if (ret != GP_OK) {
+        OH_LOG_Print(LOG_APP, LOG_ERROR, LOG_DOMAIN, LOG_TAG, "设置参数值失败: %{public}s", gp_result_as_string(ret));
+        gp_widget_free(root);
+        return false;
+    }
+
+    // 应用配置到相机
+    ret = gp_camera_set_config(g_camera, root, g_context);
     gp_widget_free(root);
+    if (ret != GP_OK) {
+        OH_LOG_Print(LOG_APP, LOG_ERROR, LOG_DOMAIN, LOG_TAG, "应用配置失败: %{public}s", gp_result_as_string(ret));
+        return false;
+    }
 
-    // 返回设置结果（GP_OK=成功）
-    return (ret == GP_OK);
+    OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "参数 %{public}s 设置为 %{public}s 成功", key, value);
+    return true;
 }
 
 
@@ -878,48 +890,37 @@ static void RecursiveFindWidget(CameraWidget *root, const char *targetName, Came
 // ###########################################################################
 // 定义结构体：存储所有需要的相机信息
 typedef struct {
-    char batteryLevel[32];    // 电量（如"Full"、"50%"）
-    char aperture[32];        // 光圈（如"2.8"、"Auto"）
-    char shutter[32];         // 快门速度（如"1/1000"、"0.001"）
-    char iso[32];             // ISO（如"400"、"Auto"）
-    char exposureComp[32];    // 曝光补偿（如"0.3"、"-1.0"）
-    char whiteBalance[32];    // 白平衡（如"Auto"、"Daylight"）
-    char captureMode[32];     // 拍摄模式（如"Program"、"Aperture Priority"）
-    char focusMode[32];           // 对焦模式（如“AF-C”→“连续自动对焦”）
-    char exposureMeterMode[32];   // 测光模式（如“8010”→“矩阵测光”）
-    long long freeSpaceBytes; // 剩余空间（字节）
-    int remainingPictures;    // 剩余可拍张数
-    char exposureProgram[32]; // 曝光模式（M/A/S/P/AUTO）
-    bool isSuccess;           // 是否获取成功
+    char batteryLevel[32];      // 电量（如"Full"、"50%"）
+    char aperture[32];          // 光圈（如"2.8"、"Auto"）
+    char shutter[32];           // 快门速度（如"1/1000"、"0.001"）
+    char iso[32];               // ISO（如"400"、"Auto"）
+    char exposureComp[32];      // 曝光补偿（如"0.3"、"-1.0"）
+    char whiteBalance[32];      // 白平衡（如"Auto"、"Daylight"）
+    char captureMode[32];       // 拍摄模式（如"Program"、"Aperture Priority"）
+    char focusMode[32];         // 对焦模式（如“AF-C”→“连续自动对焦”）
+    char exposureMeterMode[32]; // 测光模式（如“8010”→“矩阵测光”）
+    long long freeSpaceBytes;   // 剩余空间（字节）
+    int remainingPictures;      // 剩余可拍张数
+    char exposureProgram[32];   // 曝光模式（M/A/S/P/AUTO）
+    bool isSuccess;             // 是否获取成功
 } CameraInfo;
 
 // 标准快门档位（单位：秒），按从小到大排序
 const float standardShutterSpeeds[] = {
-    1/8000.0f, 1/6400.0f, 1/5000.0f, 1/4000.0f, 1/3200.0f,
-    1/2500.0f, 1/2000.0f, 1/1600.0f, 1/1250.0f, 1/1000.0f,
-    1/800.0f,  1/640.0f,   1/500.0f,   1/400.0f,   1/320.0f,
-    1/250.0f,  1/200.0f,   1/160.0f,   1/125.0f,   1/100.0f,
-    1/80.0f,   1/60.0f,    1/50.0f,    1/40.0f,    1/30.0f,
-    1/25.0f,   1/20.0f,    1/15.0f,    1/12.5f,    1/10.0f,
-    0.125f,    0.166f,     0.2f,       0.25f,      0.3f,
-    0.4f,      0.5f,       0.6f,       0.8f,       1.0f,
-    1.3f,      1.6f,       2.0f,       2.5f,       3.2f,
-    4.0f,      5.0f,       6.0f,       8.0f,       10.0f
-};
+    1 / 8000.0f, 1 / 6400.0f, 1 / 5000.0f, 1 / 4000.0f, 1 / 3200.0f, 1 / 2500.0f, 1 / 2000.0f, 1 / 1600.0f, 1 / 1250.0f,
+    1 / 1000.0f, 1 / 800.0f,  1 / 640.0f,  1 / 500.0f,  1 / 400.0f,  1 / 320.0f,  1 / 250.0f,  1 / 200.0f,  1 / 160.0f,
+    1 / 125.0f,  1 / 100.0f,  1 / 80.0f,   1 / 60.0f,   1 / 50.0f,   1 / 40.0f,   1 / 30.0f,   1 / 25.0f,   1 / 20.0f,
+    1 / 15.0f,   1 / 12.5f,   1 / 10.0f,   0.125f,      0.166f,      0.2f,        0.25f,       0.3f,        0.4f,
+    0.5f,        0.6f,        0.8f,        1.0f,        1.3f,        1.6f,        2.0f,        2.5f,        3.2f,
+    4.0f,        5.0f,        6.0f,        8.0f,        10.0f};
 
 // 对应的分数显示（与上面的档位一一对应）
-const char* standardShutterLabels[] = {
-    "1/8000s", "1/6400s", "1/5000s", "1/4000s", "1/3200s",
-    "1/2500s", "1/2000s", "1/1600s", "1/1250s", "1/1000s",
-    "1/800s",  "1/640s",  "1/500s",  "1/400s",  "1/320s",
-    "1/250s",  "1/200s",  "1/160s",  "1/125s",  "1/100s",
-    "1/80s",   "1/60s",   "1/50s",   "1/40s",   "1/30s",
-    "1/25s",   "1/20s",   "1/15s",   "1/12.5s", "1/10s",
-    "1/8s",    "1/6s",    "1/5s",    "1/4s",    "1/3s",
-    "1/2.5s",  "1/2s",    "0.6s",    "0.8s",    "1s",
-    "1.3s",    "1.6s",    "2s",      "2.5s",    "3.2s",
-    "4s",      "5s",      "6s",      "8s",      "10s"
-};
+const char *standardShutterLabels[] = {
+    "1/8000s", "1/6400s", "1/5000s", "1/4000s", "1/3200s", "1/2500s", "1/2000s", "1/1600s", "1/1250s", "1/1000s",
+    "1/800s",  "1/640s",  "1/500s",  "1/400s",  "1/320s",  "1/250s",  "1/200s",  "1/160s",  "1/125s",  "1/100s",
+    "1/80s",   "1/60s",   "1/50s",   "1/40s",   "1/30s",   "1/25s",   "1/20s",   "1/15s",   "1/12.5s", "1/10s",
+    "1/8s",    "1/6s",    "1/5s",    "1/4s",    "1/3s",    "1/2.5s",  "1/2s",    "0.6s",    "0.8s",    "1s",
+    "1.3s",    "1.6s",    "2s",      "2.5s",    "3.2s",    "4s",      "5s",      "6s",      "8s",      "10s"};
 
 // 标准档位数量（需与上面数组长度一致）
 const int numStandardShutters = sizeof(standardShutterSpeeds) / sizeof(standardShutterSpeeds[0]);
@@ -991,59 +992,59 @@ static CameraInfo InternalGetCameraInfo() {
     }
 
 // 3.3 快门速度（修正：匹配标准档位，解决偏差问题）
-targetWidget = nullptr;
-RecursiveFindWidget(root, "shutterspeed", &targetWidget, "");
-if (targetWidget) {
-    CameraWidgetType type;
-    gp_widget_get_type(targetWidget, &type);
-    if (type == GP_WIDGET_RADIO || type == GP_WIDGET_MENU) {
-        const char *shutterStr = nullptr;
-        gp_widget_get_value(targetWidget, &shutterStr);
-        if (shutterStr) {
-            // 1. 处理Auto模式
-            if (strcmp(shutterStr, "Auto") == 0 || strcmp(shutterStr, "auto") == 0) {
-                strncpy(info.shutter, "Auto", sizeof(info.shutter) - 1);
-                info.shutter[sizeof(info.shutter) - 1] = '\0';
-                //continue; // 跳过后续计算
-            }
-
-            // 2. 解析原始快门值（单位：秒）
-            char shutterValStr[32] = {0};
-            // 处理两种格式："0.0015s"（小数）或"1/640s"（分数，部分相机可能返回）
-            if (strstr(shutterStr, "/") != nullptr) {
-                // 若原始值是分数格式（如"1/640s"），直接提取
-                strncpy(shutterValStr, shutterStr, strlen(shutterStr));
-            } else {
-                // 若原始值是小数格式（如"0.0015s"），去掉"s"并转换为浮点数
-                strncpy(shutterValStr, shutterStr, strlen(shutterStr) - 1); // 去掉末尾的"s"
-            }
-            float shutterSec = atof(shutterValStr); // 转换为秒数（如0.0015625）
-
-            // 3. 找到与原始值最接近的标准档位
-            if (shutterSec > 0) { // 确保值有效
-                int bestMatchIndex = 0;
-                float minDiff = fabsf(shutterSec - standardShutterSpeeds[0]);
-
-                // 遍历所有标准档位，找差值最小的
-                for (int i = 1; i < numStandardShutters; i++) {
-                    float diff = fabsf(shutterSec - standardShutterSpeeds[i]);
-                    if (diff < minDiff) {
-                        minDiff = diff;
-                        bestMatchIndex = i;
-                    }
+    targetWidget = nullptr;
+    RecursiveFindWidget(root, "shutterspeed", &targetWidget, "");
+    if (targetWidget) {
+        CameraWidgetType type;
+        gp_widget_get_type(targetWidget, &type);
+        if (type == GP_WIDGET_RADIO || type == GP_WIDGET_MENU) {
+            const char *shutterStr = nullptr;
+            gp_widget_get_value(targetWidget, &shutterStr);
+            if (shutterStr) {
+                // 1. 处理Auto模式
+                if (strcmp(shutterStr, "Auto") == 0 || strcmp(shutterStr, "auto") == 0) {
+                    strncpy(info.shutter, "Auto", sizeof(info.shutter) - 1);
+                    info.shutter[sizeof(info.shutter) - 1] = '\0';
+                    // continue; // 跳过后续计算
                 }
 
-                // 4. 使用标准档位的标签作为显示值
-                strncpy(info.shutter, standardShutterLabels[bestMatchIndex], sizeof(info.shutter) - 1);
-                info.shutter[sizeof(info.shutter) - 1] = '\0';
-            } else {
-                // 无效值处理
-                strncpy(info.shutter, "未知", sizeof(info.shutter) - 1);
-                info.shutter[sizeof(info.shutter) - 1] = '\0';
+                // 2. 解析原始快门值（单位：秒）
+                char shutterValStr[32] = {0};
+                // 处理两种格式："0.0015s"（小数）或"1/640s"（分数，部分相机可能返回）
+                if (strstr(shutterStr, "/") != nullptr) {
+                    // 若原始值是分数格式（如"1/640s"），直接提取
+                    strncpy(shutterValStr, shutterStr, strlen(shutterStr));
+                } else {
+                    // 若原始值是小数格式（如"0.0015s"），去掉"s"并转换为浮点数
+                    strncpy(shutterValStr, shutterStr, strlen(shutterStr) - 1); // 去掉末尾的"s"
+                }
+                float shutterSec = atof(shutterValStr); // 转换为秒数（如0.0015625）
+
+                // 3. 找到与原始值最接近的标准档位
+                if (shutterSec > 0) { // 确保值有效
+                    int bestMatchIndex = 0;
+                    float minDiff = fabsf(shutterSec - standardShutterSpeeds[0]);
+
+                    // 遍历所有标准档位，找差值最小的
+                    for (int i = 1; i < numStandardShutters; i++) {
+                        float diff = fabsf(shutterSec - standardShutterSpeeds[i]);
+                        if (diff < minDiff) {
+                            minDiff = diff;
+                            bestMatchIndex = i;
+                        }
+                    }
+
+                    // 4. 使用标准档位的标签作为显示值
+                    strncpy(info.shutter, standardShutterLabels[bestMatchIndex], sizeof(info.shutter) - 1);
+                    info.shutter[sizeof(info.shutter) - 1] = '\0';
+                } else {
+                    // 无效值处理
+                    strncpy(info.shutter, "未知", sizeof(info.shutter) - 1);
+                    info.shutter[sizeof(info.shutter) - 1] = '\0';
+                }
             }
         }
     }
-}
 
 
     // 3.4 ISO（正确类型：GP_WIDGET_RADIO，值为选项名）
@@ -1187,7 +1188,7 @@ if (targetWidget) {
             }
         }
     }
-    
+
     // 3.11：对焦模式（focusmode节点）
     targetWidget = nullptr;
     RecursiveFindWidget(root, "focusmode", &targetWidget, ""); // 节点名称与日志一致
@@ -1211,8 +1212,8 @@ if (targetWidget) {
             info.focusMode[sizeof(info.focusMode) - 1] = '\0'; // 手动加结束符
         }
     }
-    
-    
+
+
     // 新增：测光模式（exposuremetermode节点）
     targetWidget = nullptr;
     RecursiveFindWidget(root, "exposuremetermode", &targetWidget, ""); // 节点名称与日志一致
@@ -1274,7 +1275,7 @@ static napi_value GetCameraStatus(napi_env env, napi_callback_info info) {
     // 在返回对象中添加曝光模式属性
     napi_set_named_property(env, result, "exposureProgram", CreateNapiString(env, camInfo.exposureProgram));
     napi_set_named_property(env, result, "focusMode", CreateNapiString(env, camInfo.focusMode));
-napi_set_named_property(env, result, "exposureMeterMode", CreateNapiString(env, camInfo.exposureMeterMode));
+    napi_set_named_property(env, result, "exposureMeterMode", CreateNapiString(env, camInfo.exposureMeterMode));
 
     // 数值型属性（单独处理，避免转字符串丢失精度）
     napi_value freeSpaceVal;
@@ -1287,10 +1288,160 @@ napi_set_named_property(env, result, "exposureMeterMode", CreateNapiString(env, 
 
     return result;
 }
-    
-    
-    
-    
+
+
+/**
+ * 递归遍历配置树节点，收集参数信息
+ * @param widget 配置树节点
+ * @param items 存储结果的数组
+ */
+static void TraverseConfigTree(CameraWidget *widget, std::vector<ConfigItem> &items) {
+    if (!widget)
+        return;
+
+    // 获取节点类型（如GP_WIDGET_MENU=选项，GP_WIDGET_TEXT=文本等）
+    CameraWidgetType type;
+    gp_widget_get_type(widget, &type);
+
+    // 只处理可设置的参数节点（跳过文件夹类型）
+    if (type != GP_WIDGET_SECTION && type != GP_WIDGET_WINDOW) {
+        ConfigItem item;
+        // 获取参数名称和显示标签
+        const char *name_ptr = nullptr;        // 中间变量，接收C字符串地址
+        gp_widget_get_name(widget, &name_ptr); // 传递二级指针，类型匹配
+        item.name = name_ptr ? name_ptr : "";  // 转换为std::string
+
+        // 同理处理标签（假设gp_widget_get_label也有相同问题）
+        const char *label_ptr = nullptr;
+        gp_widget_get_label(widget, &label_ptr);
+        item.label = label_ptr ? label_ptr : "";
+
+        // 转换类型为字符串
+        switch (type) {
+        case GP_WIDGET_MENU:
+            item.type = "choice";
+            break;
+        case GP_WIDGET_TEXT:
+            item.type = "text";
+            break;
+        case GP_WIDGET_RANGE:
+            item.type = "range";
+            break;
+        case GP_WIDGET_TOGGLE:
+            item.type = "toggle";
+            break;
+        default:
+            item.type = "unknown";
+        }
+
+        // 获取当前值
+        const char *value;
+        if (gp_widget_get_value(widget, &value) == GP_OK) {
+            item.current = value ? value : "";
+        }
+
+        // 对于选项类型，获取所有可选值
+        if (type == GP_WIDGET_MENU) {
+            int choiceCount = gp_widget_count_choices(widget);
+            for (int i = 0; i < choiceCount; i++) {
+                const char *choice;
+                if (gp_widget_get_choice(widget, i, &choice) == GP_OK) {
+                    item.choices.push_back(choice);
+                }
+            }
+        }
+
+        items.push_back(item);
+    }
+
+    // 递归处理子节点
+    int childCount = gp_widget_count_children(widget);
+    for (int i = 0; i < childCount; i++) {
+        CameraWidget *child;
+        if (gp_widget_get_child(widget, i, &child) == GP_OK) {
+            TraverseConfigTree(child, items);
+        }
+    }
+}
+
+/**
+ * 内部函数：获取所有相机配置参数
+ * @param items 输出参数：存储配置参数的数组
+ * @return 是否成功
+ */
+static bool GetAllConfigItems(std::vector<ConfigItem> &items) {
+    if (!g_connected || !g_camera || !g_context) {
+        OH_LOG_Print(LOG_APP, LOG_ERROR, LOG_DOMAIN, LOG_TAG, "相机未连接，无法获取配置");
+        return false;
+    }
+
+    // 获取配置树根节点
+    CameraWidget *root = nullptr;
+    int ret = gp_camera_get_config(g_camera, &root, g_context);
+    if (ret != GP_OK) {
+        OH_LOG_Print(LOG_APP, LOG_ERROR, LOG_DOMAIN, LOG_TAG, "获取配置树失败: %{public}s", gp_result_as_string(ret));
+        return false;
+    }
+
+    // 遍历配置树
+    TraverseConfigTree(root, items);
+
+    // 释放配置树
+    gp_widget_free(root);
+    return true;
+}
+
+
+/**
+ * NAPI接口：获取相机所有配置参数（含可选值和当前值）
+ * @return ArkTS数组，每个元素为{name, label, type, current, choices}
+ */
+static napi_value GetCameraConfig(napi_env env, napi_callback_info info) {
+    std::vector<ConfigItem> items;
+    bool success = GetAllConfigItems(items);
+
+    // 创建ArkTS数组
+    napi_value resultArray;
+    napi_create_array(env, &resultArray);
+
+    if (success) {
+        for (size_t i = 0; i < items.size(); i++) {
+            const ConfigItem &item = items[i];
+            // 创建单个参数对象
+            napi_value obj;
+            napi_create_object(env, &obj);
+
+            // 设置name属性
+            napi_set_named_property(env, obj, "name", CreateNapiString(env, item.name.c_str()));
+            // 设置label属性
+            napi_set_named_property(env, obj, "label", CreateNapiString(env, item.label.c_str()));
+            // 设置type属性
+            napi_set_named_property(env, obj, "type", CreateNapiString(env, item.type.c_str()));
+            // 设置current属性
+            napi_set_named_property(env, obj, "current", CreateNapiString(env, item.current.c_str()));
+
+            // 创建choices数组
+            napi_value choicesArray;
+            napi_create_array(env, &choicesArray);
+            for (size_t j = 0; j < item.choices.size(); j++) {
+                napi_value choice = CreateNapiString(env, item.choices[j].c_str());
+                napi_set_element(env, choicesArray, j, choice);
+            }
+            napi_set_named_property(env, obj, "choices", choicesArray);
+
+            // 将对象添加到结果数组
+            napi_set_element(env, resultArray, i, obj);
+        }
+    }
+
+    return resultArray;
+}
+
+
+
+
+
+
     
     
     
@@ -1330,6 +1481,7 @@ static napi_value Init(napi_env env, napi_value exports) {
         {"SetCameraParameter", nullptr, SetCameraParameter, nullptr, nullptr, nullptr, napi_default, nullptr},
         {"GetPreview", nullptr, GetPreviewNapi, nullptr, nullptr, nullptr, napi_default, nullptr},
         {"GetCameraStatus", nullptr, GetCameraStatus, nullptr, nullptr, nullptr, napi_default, nullptr}, // 新增这行
+        {"getCameraConfig", nullptr, GetCameraConfig, nullptr, nullptr, nullptr, napi_default, nullptr},
     };
 
     // 将接口映射表挂载到exports对象（ArkTS侧通过import获取这些函数）
