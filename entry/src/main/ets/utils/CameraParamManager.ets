@@ -91,7 +91,7 @@ export class CameraParamManager {
         // 刷新可选值（实际应从相机接口获取，这里模拟）
         await this.refreshParamOptions();
         this.notifyListeners();
-        console.log('参数更新成功，当前参数:', JSON.stringify(Array.from(this.params.values())));
+        //console.log('参数更新成功，当前参数:', JSON.stringify(Array.from(this.params.values())));
       }
     } catch (error) {
       console.error('刷新参数失败:', error);

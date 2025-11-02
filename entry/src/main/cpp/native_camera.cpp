@@ -690,42 +690,81 @@ static napi_value SetCameraParameter(napi_env env, napi_callback_info info) {
  * @return bool 获取成功返回true，失败返回false
  */
 static bool GetPreview(uint8_t **data, size_t *length) {
-    // 未连接相机，直接返回失败
-    if (!g_connected)
+    // 1. 基础校验：连接状态和相机句柄
+    if (!g_connected || !g_camera || !data || !length) {
+        printf("GetPreview: 无效的连接状态或参数\n");
         return false;
+    }
+    *data = nullptr;
+    *length = 0;
 
-    // CameraFile：存储预览数据（预览通常是压缩后的小尺寸图片）
+    // 新增：二次校验相机句柄是否有效（通过获取相机型号验证）
+    /*const char *model = gp_camera_get_model(g_camera);
+    if (!model) {
+        printf("GetPreview: g_camera句柄无效（无法获取型号）\n");
+        g_connected = false; // 重置连接状态
+        return false;
+    }*/
+
+    // 新增：校验上下文是否有效（若g_context为空，用默认上下文）
+    GPContext *ctx = g_context ? g_context : gp_context_new();
+    if (!ctx) {
+        printf("GetPreview: 上下文无效，无法创建默认上下文\n");
+        return false;
+    }
+
+
+
+    // 2. 创建文件对象并校验
     CameraFile *file = nullptr;
+    int ret = gp_file_new(&file);
+    if (ret != GP_OK || !file) {
+        printf("GetPreview: 创建CameraFile失败\n");
+        return false;
+    }
 
-    // 创建空的CameraFile对象
-    gp_file_new(&file);
-
-    // 调用libgphoto2预览函数：gp_camera_capture_preview
-    // 实时获取相机取景框画面（非拍照，无存储）
-    int ret = gp_camera_capture_preview(g_camera, file, g_context);
-
-    // 获取预览失败，释放CameraFile并返回false
+    // 3. 拉取预览数据（核心步骤，打印错误码）
+    ret = gp_camera_capture_preview(g_camera, file, g_context);
     if (ret != GP_OK) {
+        printf("GetPreview: 拉取预览失败，错误码: %d\n", ret); // 错误码可查libgphoto2文档
         gp_file_unref(file);
         return false;
     }
 
-    // 从CameraFile中提取预览数据和大小
+    // 4. 提取数据和大小（严格校验）
     const char *previewData = nullptr;
     unsigned long previewSize = 0;
     gp_file_get_data_and_size(file, &previewData, &previewSize);
 
-    // 分配内存存储预览数据
+    // 校验数据有效性（关键：避免空指针或0长度）
+    if (!previewData || previewSize == 0 || previewSize > 1024 * 1024) { // 限制最大1MB（防异常大文件）
+        printf("GetPreview: 无效的预览数据，size=%lu\n", previewSize);
+        gp_file_unref(file);
+        return false;
+    }
+
+    // 5. 安全分配内存并拷贝（避免溢出）
     *data = (uint8_t *)malloc(previewSize);
-    // 拷贝数据到分配的内存
+    if (!*data) {
+        printf("GetPreview: 内存分配失败\n");
+        gp_file_unref(file);
+        return false;
+    }
     memcpy(*data, previewData, previewSize);
-    // 设置数据长度
     *length = previewSize;
 
-    // 释放CameraFile对象
+    // 提取数据后添加
+    printf("Preview header: 0x%02X%02X%02X%02X, size=%lu\n",
+       (unsigned char)previewData[0],
+       (unsigned char)previewData[1],
+       (unsigned char)previewData[2],
+       (unsigned char)previewData[3],
+       previewSize);
+    
+    
+    // 6. 释放资源（必须做）
     gp_file_unref(file);
-
-    return true; // 获取预览成功
+    return true;
 }
 
 
@@ -985,7 +1024,7 @@ static CameraInfo InternalGetCameraInfo() {
     if (targetWidget) {
         CameraWidgetType type;
         gp_widget_get_type(targetWidget, &type);
-        OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "电量节点类型：%d", type); // 调试：打印实际类型
+        OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "电量节点类型：%{public}d", type); // 调试：打印实际类型
 
         if (type == GP_WIDGET_TOGGLE) { // 正确类型：整数（如80=80%）
             int batteryVal = 0;
@@ -1005,7 +1044,7 @@ static CameraInfo InternalGetCameraInfo() {
     if (targetWidget) {
         CameraWidgetType type;
         gp_widget_get_type(targetWidget, &type);
-        OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "光圈节点类型：%d", type);
+        OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "光圈节点类型：%{public}d", type);
 
         if (type == GP_WIDGET_RADIO || type == GP_WIDGET_MENU) { // 枚举类型，值为选项名
             const char *apertureStr = nullptr;
@@ -1081,7 +1120,7 @@ static CameraInfo InternalGetCameraInfo() {
     if (targetWidget) {
         CameraWidgetType type;
         gp_widget_get_type(targetWidget, &type);
-        OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "ISO节点类型：%d", type);
+        OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "ISO节点类型：%{public}d", type);
 
         if (type == GP_WIDGET_RADIO || type == GP_WIDGET_MENU) {
             const char *isoStr = nullptr;
@@ -1098,7 +1137,7 @@ static CameraInfo InternalGetCameraInfo() {
     if (targetWidget) {
         CameraWidgetType type;
         gp_widget_get_type(targetWidget, &type);
-        OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "曝光补偿节点类型：%d", type);
+        OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "曝光补偿节点类型：%{public}d", type);
 
         if (type == GP_WIDGET_RADIO || type == GP_WIDGET_MENU) {
             const char *ecStr = nullptr;
@@ -1125,7 +1164,7 @@ static CameraInfo InternalGetCameraInfo() {
             else
                 strncpy(info.whiteBalance, wbVal, sizeof(info.whiteBalance) - 1);
         }
-        OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "白平衡：%s", info.whiteBalance);
+        OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "白平衡：%{public}s", info.whiteBalance);
     } else {
         OH_LOG_Print(LOG_APP, LOG_WARN, LOG_DOMAIN, LOG_TAG, "未找到白平衡节点（whitebalance）");
     }
@@ -1136,7 +1175,7 @@ static CameraInfo InternalGetCameraInfo() {
     if (targetWidget) {
         CameraWidgetType type;
         gp_widget_get_type(targetWidget, &type);
-        OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "拍摄模式节点类型：%d", type);
+        OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "拍摄模式节点类型：%{public}d", type);
 
         if (type == GP_WIDGET_RADIO || type == GP_WIDGET_MENU) {
             const char *modeStr = nullptr;

@@ -158,12 +158,12 @@ export struct FilePage {
 
   // 将参数管理器的参数同步到页面UI状态
   private syncParamToUI() {
-    console.log('开始同步参数到UI，当前paramList:', JSON.stringify(this.paramList));
+    //console.log('开始同步参数到UI，当前paramList:', JSON.stringify(this.paramList));
 
     const isoParam = this.paramList.find(p => p.name === 'iso');
     if (isoParam) {
       this.ISOValue = isoParam.currentValue; // 同步ISO值到页面状态
-      console.log('同步ISO值:', this.ISOValue);
+     // console.log('同步ISO值:', this.ISOValue);
     }
 
     // 同步快门速度值
@@ -188,10 +188,10 @@ export struct FilePage {
       );
 
       if (matchedOption) {
-        console.log('快门值匹配成功:', matchedOption.original);
+      //  console.log('快门值匹配成功:', matchedOption.original);
         this.shutterValue = matchedOption.original; // 用选项中的原始格式显示
       } else {
-        console.log('快门值未在选项中，使用原始值:', shutterParam.currentValue);
+      //  console.log('快门值未在选项中，使用原始值:', shutterParam.currentValue);
         this.shutterValue = shutterParam.currentValue;
       }
     }
@@ -201,7 +201,7 @@ export struct FilePage {
     if (apertureParam) {
       const apertureDisplay = apertureParam.currentValue.replace(/f\//i, 'F');
       this.apertureValue = apertureDisplay; // 现在类型匹配
-      console.log('光圈显示值:', this.apertureValue);
+     // console.log('光圈显示值:', this.apertureValue);
     }
 
 
@@ -302,52 +302,55 @@ export struct FilePage {
    * @function 启动预览
    * */
   startPreview() {
-    if (this.previewRunning) {
-      return
+    if (this.previewRunning || !this.isConnected) {
+      return;
     }
-    this.previewRunning = true
+    this.previewRunning = true;
     this.timerId = setInterval(() => {
       this.updatePreview();
-    }, 300) // 每300ms拉1帧
+    }, 500); // 500ms一帧，平衡流畅度和性能
+    console.log('预览已启动');
   }
 
   /**
    * @function 停止预览
    * */
   stopPreview() {
-    if (this.timerId !== -1) {
-      clearInterval(this.timerId)
-      this.timerId = -1
+    if (!this.previewRunning) {
+      return;
     }
-    this.previewRunning = false
-    this.previewPixelMap = null // 清空画面
+    clearInterval(this.timerId);
+    this.timerId = -1;
+    this.previewRunning = false;
+    this.previewPixelMap = null;
+    console.log('预览已停止');
   }
 
   /**
    * @function 拉取一帧预览
    * */
   async updatePreview() {
-    // 从native获取Uint8Array
-    const buffer: Uint8Array = nativeLibGphoto.GetPreview()
-    if (!buffer) {
-      return
+    try {
+      const buffer: Uint8Array = nativeLibGphoto.GetPreview();
+      if (!buffer || buffer.length === 0) {
+        console.warn('预览数据为空');
+        return;
+      }
+
+      // 移除不兼容的format属性，由系统自动识别图像格式
+      const srcOps: image.SourceOptions = {
+        sourceDensity: 0
+      };
+
+      const imgSrc: image.ImageSource = image.createImageSource(buffer.buffer as ArrayBuffer, srcOps);
+      const pixelMap: image.PixelMap = await imgSrc.createPixelMap();
+      this.previewPixelMap = pixelMap;
+    } catch (e) {
+      console.error('预览解码失败:', e);
+      this.stopPreview();
+      this.statusMessage = '预览异常，请检查相机连接';
     }
-
-    // 解码选项可留空或按需填写（如密度、期望尺寸）
-    const srcOps: image.SourceOptions = {
-      sourceDensity: 0
-    }
-
-    // 创建ImageSource（传入压缩图片你的ArrayBuffer）
-    const imgSrc: image.ImageSource = image.createImageSource(buffer.buffer as ArrayBuffer, srcOps)
-
-    // 从ImageSource 生成PixelMap
-    const pixelMap: image.PixelMap = await imgSrc.createPixelMap()
-
-    // 更新到UI
-    this.previewPixelMap = pixelMap
   }
-
 
   /**
    * 拍照逻辑
