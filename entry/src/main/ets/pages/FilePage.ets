@@ -527,9 +527,27 @@ export struct FilePage {
             })
         }
 
+        Row({space:10}){
+          Text(this.connectStatus)
+            .fontSize(18)
 
-        Text(this.connectStatus)
-          .fontSize(18)
+          // LED灯
+          Circle()
+            .borderRadius(12) // 圆角为宽度的一半，确保正圆
+            .width(24) // 设置宽度为24vp
+            .height(24) // 高度与宽度一致，形成正圆
+            .fill(this.isConnected ? '#00C853' : '#F44336') //绿色=已连接 ，红色=未连接
+            // 阴影效果增强发光感
+            .shadow({
+              radius:8, //阴影模糊半径
+              color: this.isConnected ? 'rgba(0, 200, 83, 0.6)' : 'rgba(244, 67, 54, 0.6)', // 阴影颜色与主体一致，降低透明度
+              offsetX: 0,
+              offsetY:0
+            })
+            .animation({duration:300}); //颜色切换添加300ms过度
+        }
+
+
 
       }
       .margin({ top: 10 })
