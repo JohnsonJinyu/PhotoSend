@@ -4,7 +4,7 @@ import { ShutterSpeedDialog } from 'ets/component/CameraControlDialog/ShutterSpe
 @Preview
 @Component
 
-export struct RemoteControl {
+export struct RemoteTest {
 
   // 当前ISO值，与浮窗双向绑定
   @State ISOValue:string="100"

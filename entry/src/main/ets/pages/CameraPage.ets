@@ -2,7 +2,7 @@ import { promptAction } from "@kit.ArkUI"
 import { UIAbility, common, Want } from '@kit.AbilityKit'
 
 import { BusinessError } from '@ohos.base'
-import { RemoteControl } from "./RemoteTest";
+import { RemoteControl } from "./RemoteControl";
 
 
 // 定义具体的连接模式类型
@@ -56,7 +56,16 @@ export struct CameraPage {
   private SupportCamManufacturer:string[]=['Nikon','Sony','Canon']
   // 连接模式操作选项列表
 
-  pageStack: NavPathStack = new NavPathStack();
+  @Provide('pageStack') pageStack: NavPathStack = new NavPathStack();
+
+
+
+  @Builder
+  pageMap(name: string) {
+    if (name == "RemoteControl") {
+      RemoteControl();
+    }
+  }
 
 
   build() {
@@ -301,6 +310,7 @@ export struct CameraPage {
       .height('100%')
       .backgroundColor($r('sys.color.comp_background_list_card'))
     }
+    .navDestination(this.pageMap)
 
   }
 }

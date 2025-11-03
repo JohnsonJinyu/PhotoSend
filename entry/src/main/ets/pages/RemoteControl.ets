@@ -39,6 +39,8 @@ interface ShutterOptionSec {
 @Preview
 @Component
 export struct RemoteControl {
+  @Consume('pageStack') pageStack: NavPathStack;
+
 
   // 新增：连接状态检查定时器ID
   private connectionCheckTimer: number = -1;
@@ -492,237 +494,240 @@ export struct RemoteControl {
 
 
   build() {
-    Column() {
-      // 功能测试区
-      Column({ space: 10 }) {
-        Row({space:10}){
-          Button('配置打印')
-            .onClick(() => {
-              this.getCameraInfo()
-            })
-
-          Button('检测相机')
-            .onClick(() => {
-              this.checkConnection()
-            })
-
-        }
-
-
-        Row({space:10}){
-          Button('手动连接相机')
-            .onClick(() => {
-              this.manualConnect(); // 点击触发手动连接
-            })
-            .enabled(!this.isConnected) // 连接中时禁用按钮
-
-
-          Button('IP测试')
-            .onClick(async ()=>{
-              /*let camIP = await scanner.getLocalSubnet()
-              if (camIP!=null) {
-                scanner.getCameraName(camIP)
-              }*/
-
-            })
-        }
-
-        Row({space:10}){
-          Text(this.connectStatus)
-            .fontSize(18)
-
-          // LED灯
-          Circle()
-            .borderRadius(12) // 圆角为宽度的一半，确保正圆
-            .width(24) // 设置宽度为24vp
-            .height(24) // 高度与宽度一致，形成正圆
-            .fill(this.isConnected ? '#00C853' : '#F44336') //绿色=已连接 ，红色=未连接
-            // 阴影效果增强发光感
-            .shadow({
-              radius:8, //阴影模糊半径
-              color: this.isConnected ? 'rgba(0, 200, 83, 0.6)' : 'rgba(244, 67, 54, 0.6)', // 阴影颜色与主体一致，降低透明度
-              offsetX: 0,
-              offsetY:0
-            })
-            .animation({duration:300}); //颜色切换添加300ms过度
-        }
-
-
-
-      }
-      .margin({ top: 10 })
-
+    NavDestination(){
       Column() {
-        if (this.previewPixelMap) {
-          Image(this.previewPixelMap)
-            .width('100%')
-            .height(250)
-            .objectFit(ImageFit.Contain)
-        } else {
-          Text(this.previewRunning ? '正在加载预览...' : '未启动预览')
-            .width('100%')
-            .height(250)
-            .backgroundColor(Color.Black)
-            .fontColor(Color.White)
-            .fontSize(16)
-            .textAlign(TextAlign.Center)
+        // 功能测试区
+        Column({ space: 10 }) {
+          Row({space:10}){
+            Button('配置打印')
+              .onClick(() => {
+                this.getCameraInfo()
+              })
+
+            Button('检测相机')
+              .onClick(() => {
+                this.checkConnection()
+              })
+
+          }
+
+
+          Row({space:10}){
+            Button('手动连接相机')
+              .onClick(() => {
+                this.manualConnect(); // 点击触发手动连接
+              })
+              .enabled(!this.isConnected) // 连接中时禁用按钮
+
+
+            Button('IP测试')
+              .onClick(async ()=>{
+                /*let camIP = await scanner.getLocalSubnet()
+                if (camIP!=null) {
+                  scanner.getCameraName(camIP)
+                }*/
+
+              })
+          }
+
+          Row({space:10}){
+            Text(this.connectStatus)
+              .fontSize(18)
+
+            // LED灯
+            Circle()
+              .borderRadius(12) // 圆角为宽度的一半，确保正圆
+              .width(24) // 设置宽度为24vp
+              .height(24) // 高度与宽度一致，形成正圆
+              .fill(this.isConnected ? '#00C853' : '#F44336') //绿色=已连接 ，红色=未连接
+              // 阴影效果增强发光感
+              .shadow({
+                radius:8, //阴影模糊半径
+                color: this.isConnected ? 'rgba(0, 200, 83, 0.6)' : 'rgba(244, 67, 54, 0.6)', // 阴影颜色与主体一致，降低透明度
+                offsetX: 0,
+                offsetY:0
+              })
+              .animation({duration:300}); //颜色切换添加300ms过度
+          }
+
+
+
         }
-      }
-      .margin({ top: 10 })
+        .margin({ top: 10 })
+
+        Column() {
+          if (this.previewPixelMap) {
+            Image(this.previewPixelMap)
+              .width('100%')
+              .height(250)
+              .objectFit(ImageFit.Contain)
+          } else {
+            Text(this.previewRunning ? '正在加载预览...' : '未启动预览')
+              .width('100%')
+              .height(250)
+              .backgroundColor(Color.Black)
+              .fontColor(Color.White)
+              .fontSize(16)
+              .textAlign(TextAlign.Center)
+          }
+        }
+        .margin({ top: 10 })
 
 
-      /**
-       * 参数控制栏
-       * */
-      Column(){
+        /**
+         * 参数控制栏
+         * */
+        Column(){
 
-        // 第一排参数设置
-        Row({ space: 10 }) {
+          // 第一排参数设置
+          Row({ space: 10 }) {
 
-          Column() {
-            Text("ISO")
-              .fontSize(12)
+            Column() {
+              Text("ISO")
+                .fontSize(12)
 
-            Button(this.ISOValue.toString())
-              .fontSize(12)
-              .height(18)
-              .width(70)
-              .onClick(() => this.isoDialogController.open())
+              Button(this.ISOValue.toString())
+                .fontSize(12)
+                .height(18)
+                .width(70)
+                .onClick(() => this.isoDialogController.open())
+
+            }
+
+            Column() {
+              Text("Aperture")
+                .fontSize(12)
+              Button(this.apertureValue.toString())
+                .fontSize(12)
+                .height(18)
+                .width(70)
+                // 可选：添加点击事件打开光圈设置弹窗
+                .onClick(() => {
+                  // this.apertureDialogController.open();
+                })
+            }
+
+            Column() {
+              Text("Shutter")
+                .fontSize(12)
+              Button(this.shutterValue.toString())
+                .fontSize(12)
+                .height(18)
+                .width(70)
+                .onClick(() => {
+                  this.shutterDialogController.open()
+                })
+            }
+
+            Column() {
+              Text("EV")
+                .fontSize(12)
+              Button(this.exposureCompensationValue) // 绑定曝光补偿值（如"0EV"）
+                .fontSize(12)
+                .height(18)
+                .width(70)
+                .onClick(() => {
+                  // 可选：打开曝光补偿设置弹窗
+                })
+            }
+
+
 
           }
+          .width("100%")
+          .padding(10)
 
-          Column() {
-            Text("Aperture")
-              .fontSize(12)
-            Button(this.apertureValue.toString())
-              .fontSize(12)
-              .height(18)
-              .width(70)
-              // 可选：添加点击事件打开光圈设置弹窗
-              .onClick(() => {
-                // this.apertureDialogController.open();
-              })
+
+          // 第二排参数设置
+          Row({ space: 10 }) {
+            Column() {
+              Text("AF_MODE")
+                .fontSize(12)
+              Button(this.focusModeValue) // 绑定对焦模式（如"连续自动对焦（AF-C）"）
+                .fontSize(12)
+                .width(70)
+                .height(18)
+            }
+
+            Column() {
+              Text("测光")
+                .fontSize(12)
+
+              Button(this.meterModeValue) // 绑定测光模式（如"Multi Spot"）
+                .fontSize(12)
+                .width(70)
+                .height(18)
+
+            }
+
+            Column() {
+              Text("白平衡")
+                .fontSize(12)
+              Button(this.whiteBalanceValue) // 绑定白平衡（如"Automatic"）
+                .fontSize(12)
+                .width(70)
+                .height(18)
+            }
+
+            Column() {
+              Text("曝光模式")
+                .fontSize(12)
+              Button(this.exposureProgramValue) // 绑定曝光模式缩写（如"P"、"A"）
+                .fontSize(12)
+                .height(18)
+                .width(70)
+            }
+
+
           }
-
-          Column() {
-            Text("Shutter")
-              .fontSize(12)
-            Button(this.shutterValue.toString())
-              .fontSize(12)
-              .height(18)
-              .width(70)
-              .onClick(() => {
-                this.shutterDialogController.open()
-              })
-          }
-
-          Column() {
-            Text("EV")
-              .fontSize(12)
-            Button(this.exposureCompensationValue) // 绑定曝光补偿值（如"0EV"）
-              .fontSize(12)
-              .height(18)
-              .width(70)
-              .onClick(() => {
-                // 可选：打开曝光补偿设置弹窗
-              })
-          }
-
-
+          .width("100%")
+          .padding(10)
 
         }
         .width("100%")
-        .padding(10)
 
 
-        // 第二排参数设置
+
+
+
+
+
+
+
+
+        /**
+         * 预览控制栏（调试用）
+         * */
+
         Row({ space: 10 }) {
-          Column() {
-            Text("AF_MODE")
-              .fontSize(12)
-            Button(this.focusModeValue) // 绑定对焦模式（如"连续自动对焦（AF-C）"）
-              .fontSize(12)
-              .width(70)
-              .height(18)
-          }
+          Button('启动预览')
+            .enabled(!this.previewRunning)
+            .onClick(() => this.startPreview())
 
-          Column() {
-            Text("测光")
-              .fontSize(12)
-
-            Button(this.meterModeValue) // 绑定测光模式（如"Multi Spot"）
-              .fontSize(12)
-              .width(70)
-              .height(18)
-
-          }
-
-          Column() {
-            Text("白平衡")
-              .fontSize(12)
-            Button(this.whiteBalanceValue) // 绑定白平衡（如"Automatic"）
-              .fontSize(12)
-              .width(70)
-              .height(18)
-          }
-
-          Column() {
-            Text("曝光模式")
-              .fontSize(12)
-            Button(this.exposureProgramValue) // 绑定曝光模式缩写（如"P"、"A"）
-              .fontSize(12)
-              .height(18)
-              .width(70)
-          }
-
-
+          Button('停止预览')
+            .enabled(this.previewRunning)
+            .onClick(() => this.stopPreview())
         }
-        .width("100%")
-        .padding(10)
+        .margin({ top: 10 })
 
+
+        /**
+         * 底部控制栏
+         * */
+        Row({ space: 10 }) {
+          Button('图库')
+
+
+          Button('拍照')
+            .onClick(()=>{
+              this.takeAndDownloadKnown()
+            })
+        }
+        .margin({ top: 20 })
       }
       .width("100%")
-
-
-
-
-
-
-
-
-
-
-      /**
-       * 预览控制栏（调试用）
-       * */
-
-      Row({ space: 10 }) {
-        Button('启动预览')
-          .enabled(!this.previewRunning)
-          .onClick(() => this.startPreview())
-
-        Button('停止预览')
-          .enabled(this.previewRunning)
-          .onClick(() => this.stopPreview())
-      }
-      .margin({ top: 10 })
-
-
-      /**
-       * 底部控制栏
-       * */
-      Row({ space: 10 }) {
-        Button('图库')
-
-
-        Button('拍照')
-          .onClick(()=>{
-            this.takeAndDownloadKnown()
-          })
-      }
-      .margin({ top: 20 })
+      .height("100%")
     }
-    .width("100%")
-    .height("100%")
+
   }
 }
