@@ -13,7 +13,7 @@ interface ImageInfo {
 
 @Preview
 @Component
-export struct PhonePage {
+export struct PicturesPage {
   @State images: ImageInfo[] = []
   @State isLoading: boolean = true
   @State appStoragePath: string = ``
