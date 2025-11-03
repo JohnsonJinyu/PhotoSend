@@ -1,6 +1,5 @@
 import { promptAction } from "@kit.ArkUI"
-import { UIAbility,common ,Want } from '@kit.AbilityKit'
-
+import { UIAbility, common, Want } from '@kit.AbilityKit'
 
 import { BusinessError } from '@ohos.base'
 
@@ -27,6 +26,9 @@ class modeSelectedArray {
   }
 }
 
+
+
+
 @Preview
 @Component
 export struct CameraPage {
@@ -35,23 +37,27 @@ export struct CameraPage {
   @State selectedModeIndex: number = 1
   // 定义响应式变量(@state 确保UI能够实时更新
   @State isDeviceConnected: boolean = false
-
-
+  // 设置相机厂商
+  @State currentCamManufacturer: string = 'Nikon'
+  // 定义相机型号
+  @State currentCamModel: string = 'Zf'
   // 4. 状态更新示例（比如连接成功/失败时更新状态） 在下面用
   // 连接成功时
   //this.isDeviceConnected = true;
   // 连接失败/断开时
- // this.isDeviceConnected = false;
+  // this.isDeviceConnected = false;
 
   // 连接模式选项
   private modeOptions: ConnectionMode[] = ['蓝牙', 'WiFi-AP', 'WiFi-STA']
-
-
+  // 相机型号选项
+  private SupportNikonModel:string[]=['Zf','Zfc','Z9','Z8','Z7','Z7_2','Z6','Z6_2','Z6 III','Z5','Z50','Z30']
+  // 预计支持的相机厂商
+  private SupportCamManufacturer:string[]=['Nikon','Sony','Canon']
   // 连接模式操作选项列表
 
 
   build() {
-    Column() {
+    Column({ space: 10 }) {
 
       //顶部图片显示区域
       Image($r(`app.media.camera_pre_zf`))
@@ -59,38 +65,104 @@ export struct CameraPage {
         .height(300)
 
 
-      // 型号显示区域
-      Text(`Nikon ZF`)
-        .fontSize(24)
-        .padding(20)
+      // 设备型号显示区域
+      Row() {
 
-      // 显示设备连接状态
-      Text(`设备状态:${this.isDeviceConnected?`已连接`:`未连接`}`)
-        .fontSize(16)
-        .padding(10)
+        Button(this.currentCamManufacturer)
+          .buttonStyle(ButtonStyleMode.NORMAL)
+          .width(120)
+          .fontWeight(FontWeight.Medium)
+          .onClick(() => {
+            this.getUIContext().showTextPickerDialog({
+              range: this.SupportCamManufacturer,
+              defaultPickerItemHeight: 36,
+              canLoop: true,
+              selected:this.selectedModeIndex,
+              onAccept: (value: TextPickerResult) => {
+                if(typeof value.index == 'number'){
+                  this.selectedModeIndex = value.index
+                  this.currentCamModel = this.SupportCamManufacturer[value.index]
+                }
+              }
+
+            })
+          })
+
+
+        Button(this.currentCamModel)
+          .buttonStyle(ButtonStyleMode.NORMAL)
+          .width(80)
+          .fontWeight(FontWeight.Medium)
+          .onClick(()=>{
+            this.getUIContext().showTextPickerDialog({
+              range:this.SupportNikonModel,
+              // selected：初始选中项的索引，绑定组件的状态变量selectedModeIndex
+              // 作用：打开弹窗时，默认选中上一次用户确认的选项（保证状态连贯性）
+              selected:this.selectedModeIndex,
+              onAccept:(value:TextPickerResult)=>{
+                //1、确保索引有效（单选项选选择器的index是number类型）
+                if (typeof value.index == `number`) {
+                  //2、更新选中索引的状态变量（下次打开选择其实默认选中当前项）
+                  this.selectedModeIndex = value.index
+                  //3、根据索引更新当前模式的状态变量（直接影响UI显示）
+                  this.currentCamModel = this.SupportNikonModel[value.index]
+                }
+              }
+            })
+          })
+
+      }
+
+
+      // 设备连接状态栏
+      Row(){
+        // 显示设备连接状态
+        Text(`设备状态:${this.isDeviceConnected ? `已连接` : `未连接`}`)
+          .fontSize(16)
+          .padding(10)
+
+
+        // LED灯
+        Circle()
+          .borderRadius(12) // 圆角为宽度的一半，确保正圆
+          .width(24) // 设置宽度为24vp
+          .height(24) // 高度与宽度一致，形成正圆
+          .fill(this.isDeviceConnected ? '#00C853' : '#F44336') //绿色=已连接 ，红色=未连接
+          // 阴影效果增强发光感
+          .shadow({
+            radius:8, //阴影模糊半径
+            color: this.isDeviceConnected ? 'rgba(0, 200, 83, 0.6)' : 'rgba(244, 67, 54, 0.6)', // 阴影颜色与主体一致，降低透明度
+            offsetX: 0,
+            offsetY:0
+          })
+          .animation({duration:300}); //颜色切换添加300ms过度
+
+      }
+
+
 
       Row() {
 
         // 跳转WiFi或蓝牙设置页面，让用户手动选择连接
-        Button(`连接相机`)
+        Button(`跳转WIFI设置`)
           .buttonStyle(ButtonStyleMode.EMPHASIZED)
-          .fontSize(22)
+          .fontSize(12)
           .height(50)
           .width(140)
           .margin({ right: 10 })
-          .onClick(async ()=>{ //异步回调，因为startAbility可能需要等待结果
-            try{
+          .onClick(async () => { //异步回调，因为startAbility可能需要等待结果
+            try {
               //1、更具当前选中的连接模式，构造对应系统页面的want(跳转参数)
-              let targetWant:Want;// Want 是ArkUI中用于跨能力跳转的参数对象
+              let targetWant: Want; // Want 是ArkUI中用于跨能力跳转的参数对象
               // 2、调用系统能力，发起跳转（需要传入组件上下文）
-              let context =getContext(this) as  common.UIAbilityContext
-             // const uiAbilityContext = getContext(this) as common.UIAbilityContext
+              let context = getContext(this) as common.UIAbilityContext
+              // const uiAbilityContext = getContext(this) as common.UIAbilityContext
 
-              switch (this.currentConnectionMode){
+              switch (this.currentConnectionMode) {
                 // case 1:wifi
                 case `WiFi-AP`:
                 case `WiFi-STA`:
-                  targetWant={
+                  targetWant = {
                     bundleName: 'com.huawei.hmos.settings',
                     abilityName: 'com.huawei.hmos.settings.MainAbility',
                     uri: 'wifi_entry',
@@ -99,8 +171,8 @@ export struct CameraPage {
                   break
 
                 //case 2:bluetooth
-                case `蓝牙`:{
-                  targetWant={
+                case `蓝牙`: {
+                  targetWant = {
                     bundleName: 'com.huawei.hmos.settings',
                     abilityName: 'com.huawei.hmos.settings.MainAbility',
                     uri: 'bluetooth_entry',
@@ -109,10 +181,9 @@ export struct CameraPage {
                 }
                 // 默认情况，理论不会触发，因为模式已经被类型限定死
                 default:
-                  promptAction.showToast({message:`请选择有效的连接模式`});
+                  promptAction.showToast({ message: `请选择有效的连接模式` });
                   return; //终止后续逻辑
               }
-
 
 
               if (!context) {
@@ -129,7 +200,7 @@ export struct CameraPage {
               });
 
 
-            }catch (error) {
+            } catch (error) {
               const err = error as BusinessError;
               promptAction.showToast({ message: `跳转失败：${err.message || '未知错误'}` });
               console.error(`跳转系统设置失败：${JSON.stringify(err)}`);
@@ -186,13 +257,25 @@ export struct CameraPage {
             })
           })
       }
-      .padding(20)
+
+
+      Button('手动连接相机')
+        .fontSize(16)
+        .width(280)
+        .height(50)
+
+
+
+
+
+
 
 
       Button(`遥控拍照`)
         .fontSize(22)
         .width(280)
         .height(50)
+        .margin({ top: 20 })
 
 
       Button('下载照片')
