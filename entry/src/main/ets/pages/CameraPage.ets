@@ -147,7 +147,7 @@ export struct CameraPage {
         Button(`跳转WIFI设置`)
           .buttonStyle(ButtonStyleMode.EMPHASIZED)
           .fontSize(12)
-          .height(50)
+          .height(40)
           .width(140)
           .margin({ right: 10 })
           .onClick(async () => { //异步回调，因为startAbility可能需要等待结果
@@ -211,7 +211,7 @@ export struct CameraPage {
         Button(`模式:${this.currentConnectionMode}`)
           .fontSize(12)
           .width(120)
-          .height(50)
+          .height(40)
           .onClick(() => {
             this.getUIContext().showTextPickerDialog({
               // range：选择器的选项列表，这里绑定组件中定义的连接模式数组（['蓝牙', 'WiFi-AP', 'WiFi-STA']）
@@ -262,7 +262,10 @@ export struct CameraPage {
       Button('手动连接相机')
         .fontSize(16)
         .width(280)
-        .height(50)
+        .height(40)
+        .onClick(()=>{
+
+        })
 
 
 
@@ -274,18 +277,21 @@ export struct CameraPage {
       Button(`遥控拍照`)
         .fontSize(22)
         .width(280)
-        .height(50)
-        .margin({ top: 20 })
+        .height(40)
+        .margin({ top: 10 })
+        .onClick(()=>{
+
+        })
 
 
       Button('下载照片')
         .fontSize(22)
         .width(280)
-        .height(50)
-        .margin({ top: 20 })
+        .height(40)
+        .margin({ top: 10 })
 
 
-      Blank(10)
+
     }
     .width('100%')
     .height('100%')

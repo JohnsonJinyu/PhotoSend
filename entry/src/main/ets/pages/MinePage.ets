@@ -7,10 +7,8 @@ export struct MinePage {
         .width(24)
         .height(24)
         .margin({ right: 16 })
-
       Text(title)
         .fontSize(16)
-        .fontColor(Color.Black)
 
       Blank()
 
@@ -60,6 +58,5 @@ export struct MinePage {
     }
     .width('100%')
     .height('100%')
-    .backgroundColor(Color.White)
   }
 }
