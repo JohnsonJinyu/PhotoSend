@@ -39,7 +39,7 @@ interface ShutterOptionSec {
 @Preview
 @Component
 export struct RemoteControl {
-  @Consume('pageStack') pageStack: NavPathStack;
+  //@Consume('pageStack') pageStack: NavPathStack;
 
 
   // 新增：连接状态检查定时器ID
