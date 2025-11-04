@@ -30,7 +30,7 @@ class modeSelectedArray {
 
 
 
-@Preview
+
 @Component
 export struct CameraPage {
 

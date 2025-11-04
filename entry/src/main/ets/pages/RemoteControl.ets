@@ -43,7 +43,7 @@ export function RemoteControlBuilder() {
 }
 
 
-@Preview
+
 @Component
 export struct RemoteControl {
   //@Consume('pageStack') pageStack: NavPathStack;
