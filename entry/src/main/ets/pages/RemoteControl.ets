@@ -7,6 +7,7 @@ import { fileIo } from '@kit.CoreFileKit'
 import { common } from '@kit.AbilityKit';
 import getCamIpAndName from '../utils/GetCameraIpAndName'
 import { cameraParamManager,ParamOption  } from '../utils/CameraParamManager'
+import { CameraPage } from './CameraPage';
 
 
 const scanner = new getCamIpAndName();
@@ -65,13 +66,13 @@ export struct RemoteControl {
   @State photoList: nativeLibGphoto.PhotoPathInfo[] = [];
   @State currentPreviewInterval: number = 0;
   @State statusMessage: string = '请连接相机';
-  @State isoValue: string = '100';
+
   // 当前ISO值，与浮窗双向绑定
-  @State ISOValue: string = "100"
+  @State ISOValue: string = "NA"
   // record current aperture value
-  @State apertureValue: string  = ''
+  @State apertureValue: string  = 'NA'
   // record current shutter value
-  @State shutterValue: string = "1/200"
+  @State shutterValue: string = "NA"
   // 新增：用于UI展示的参数列表（从参数管理器获取）
   @State paramList: ParamOption[] = [];
 
@@ -285,6 +286,7 @@ export struct RemoteControl {
    * */
   manualConnect() {
     // 这里假设型号和路径是固定的
+    //const success = nativeLibGphoto.ConnectCamera("Nikon Zf", "ptpip:192.168.1.1");
     const success = nativeLibGphoto.ConnectCamera("Nikon Zf", "ptpip:192.168.1.1");
     // 同步状态到参数管理器（关键步骤）
     cameraParamManager.updateConnectionStatus(success);

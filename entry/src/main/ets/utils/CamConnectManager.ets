@@ -23,6 +23,12 @@ class CamConnectionManager {
   private state: boolean = false;
   private stateMessage: string = '未连接相机';
 
+
+  // 新增：存储相机厂商和型号
+  private cameraManufacturer: string = 'Nikon';
+  private cameraModel: string = 'Zf';
+
+
   // 监听器列表（存储各页面的回调）
   private listeners: ConnectionListener[] = [];
 
@@ -40,6 +46,19 @@ class CamConnectionManager {
     return CamConnectionManager.instance;
   }
 
+  // 新增：更新相机厂商和型号的方法
+  updateCameraInfo(manufacturer: string, model: string) {
+    this.cameraManufacturer = manufacturer;
+    this.cameraModel = model;
+  }
+
+  // 新增：获取拼接后的相机名称（厂商 + 型号，带空格）
+  getCameraFullName(): string {
+    return `${this.cameraManufacturer} ${this.cameraModel}`;
+  }
+
+
+
   // 手动连接相机（核心方法，参考RemoteControl的连接逻辑）
   async connectCamera(): Promise<boolean> {
     // 已连接状态直接返回
@@ -55,7 +74,7 @@ class CamConnectionManager {
 
     try {
       // 调用底层连接接口（与RemoteControl保持一致）
-      const isConnected = await nativeCamera.ConnectCamera('Nikon Zf','ptpip:192.168.1.1');
+      const isConnected = await nativeCamera.ConnectCamera(camConnectionManager.getCameraFullName(),'ptpip:192.168.1.1');
 
       if (isConnected) {
         // 连接成功：更新状态并启动监测

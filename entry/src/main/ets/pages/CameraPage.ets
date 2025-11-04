@@ -1,9 +1,8 @@
 import { promptAction } from "@kit.ArkUI"
-import { UIAbility, common, Want } from '@kit.AbilityKit'
+import { common, Want } from '@kit.AbilityKit'
 
 import { BusinessError } from '@ohos.base'
-import { RemoteControl } from "./RemoteControl";
-import { camConnectionManager, ConnectionState } from '../utils/CamConnectManager';
+import { camConnectionManager } from '../utils/CamConnectManager';
 
 // 定义具体的连接模式类型
 type ConnectionMode = '蓝牙' | 'WiFi-AP' | 'WiFi-STA';
@@ -44,10 +43,7 @@ export struct CameraPage {
   @State currentConnectionMode: ConnectionMode = 'WiFi-AP'
   @State selectedModeIndex: number = 1
 
-  // 设置相机厂商
-  @State currentCamManufacturer: string = 'Nikon'
-  // 定义相机型号
-  @State currentCamModel: string = 'Zf'
+
   // 4. 状态更新示例（比如连接成功/失败时更新状态） 在下面用
   // 连接成功时
   //this.isDeviceConnected = true;
@@ -61,7 +57,10 @@ export struct CameraPage {
   // 预计支持的相机厂商
   private SupportCamManufacturer:string[]=['Nikon','Sony','Canon']
   // 连接模式操作选项列表
-
+  // 设置默认相机厂商
+  @State currentCamManufacturer: string = 'Nikon'
+  // 定义默认相机型号
+  @State currentCamModel: string = 'Zf'
 
 
 
@@ -73,6 +72,9 @@ export struct CameraPage {
     const GetStateAndMessage = camConnectionManager.getCurrentState();
     this.deviceConnectState =GetStateAndMessage.state
     this.connectMsg = GetStateAndMessage.message;
+
+    // 2. 新增：初始化时同步默认的厂商和型号到管理器
+    camConnectionManager.updateCameraInfo(this.currentCamManufacturer, this.currentCamModel);
   }
 
   aboutToDisappear() {
@@ -113,6 +115,8 @@ export struct CameraPage {
                 if(typeof value.index == 'number'){
                   this.selectedModeIndex = value.index
                   this.currentCamManufacturer = this.SupportCamManufacturer[value.index]
+                  // 同步到管理器：厂商变化时更新
+                  camConnectionManager.updateCameraInfo(this.currentCamManufacturer, this.currentCamModel);
                 }
               }
 
@@ -137,6 +141,8 @@ export struct CameraPage {
                   this.selectedModeIndex = value.index
                   //3、根据索引更新当前模式的状态变量（直接影响UI显示）
                   this.currentCamModel = this.SupportNikonModel[value.index]
+                  // 同步到管理器：型号变化时更新
+                  camConnectionManager.updateCameraInfo(this.currentCamManufacturer, this.currentCamModel);
                 }
               }
             })
