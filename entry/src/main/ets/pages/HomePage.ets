@@ -59,6 +59,7 @@ struct HomePage {
     .hideBackButton(true) // 根导航隐藏返回按钮
     .hideToolBar(true)
 
+
   }
 
   // 自定义底部Tab样式（增加内边距避免贴边）
@@ -75,7 +76,7 @@ struct HomePage {
     }
     .width('100%')
     .height(56)
-    .padding({ top: 8, bottom: 8 }) // Tab项内部增加内边距
+    //.padding({ top: 8, bottom: 8 }) // Tab项内部增加内边距
     .justifyContent(FlexAlign.Center);
   }
 }

@@ -36,6 +36,13 @@ interface ShutterOptionSec {
   sec: number | null;
 }
 
+
+@Builder
+export function RemoteControlBuilder() {
+  RemoteControl();
+}
+
+
 @Preview
 @Component
 export struct RemoteControl {
@@ -728,6 +735,7 @@ export struct RemoteControl {
       .width("100%")
       .height("100%")
     }
+    .title('遥控拍照')
 
   }
 }

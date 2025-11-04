@@ -1,0 +1,12 @@
+{
+  "routerMap": [
+    {
+      "name": "RemoteControl",
+      "pageSourceFile": "src/main/ets/pages/RemoteControl.ets",
+      "buildFunction": "RemoteControlBuilder",
+      "data": {
+        "description" : "this is RemoteControl"
+      }
+    }
+  ]
+}

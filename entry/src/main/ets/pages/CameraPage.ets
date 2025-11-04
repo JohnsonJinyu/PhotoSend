@@ -34,7 +34,7 @@ class modeSelectedArray {
 @Component
 export struct CameraPage {
 
-  //@Consume('pageStack') pageStack: NavPathStack;
+  @Consume('pageStack') pageStack: NavPathStack;
 
 
 
@@ -297,7 +297,7 @@ export struct CameraPage {
         .height(40)
         .margin({ top: 10 })
         .onClick(()=>{
-
+          this.pageStack.pushPathByName('RemoteControl',null,true)
         })
 
 
