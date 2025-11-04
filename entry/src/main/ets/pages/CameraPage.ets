@@ -3,7 +3,7 @@ import { UIAbility, common, Want } from '@kit.AbilityKit'
 
 import { BusinessError } from '@ohos.base'
 import { RemoteControl } from "./RemoteControl";
-
+import { camConnectionManager, ConnectionState } from '../utils/CamConnectManager';
 
 // 定义具体的连接模式类型
 type ConnectionMode = '蓝牙' | 'WiFi-AP' | 'WiFi-STA';
@@ -35,14 +35,15 @@ class modeSelectedArray {
 export struct CameraPage {
 
   @Consume('pageStack') pageStack: NavPathStack;
-
+  // 定义响应式变量(@state 确保UI能够实时更新
+  @State deviceConnectState: boolean = false;
+  @State connectMsg: string = '未连接相机';
 
 
   // 状态控制
   @State currentConnectionMode: ConnectionMode = 'WiFi-AP'
   @State selectedModeIndex: number = 1
-  // 定义响应式变量(@state 确保UI能够实时更新
-  @State isDeviceConnected: boolean = false
+
   // 设置相机厂商
   @State currentCamManufacturer: string = 'Nikon'
   // 定义相机型号
@@ -65,12 +66,25 @@ export struct CameraPage {
 
 
 
-  @Builder
-  pageMap(name: string) {
-    if (name == "RemoteControl") {
-      RemoteControl();
-    }
+  aboutToAppear() {
+    // 注册监听器
+    camConnectionManager.addListener(this.handleStateChange);
+    // 初始化状态
+    const GetStateAndMessage = camConnectionManager.getCurrentState();
+    this.deviceConnectState =GetStateAndMessage.state
+    this.connectMsg = GetStateAndMessage.message;
   }
+
+  aboutToDisappear() {
+    // 移除监听器
+    camConnectionManager.removeListener(this.handleStateChange);
+  }
+
+  // 状态变化回调
+  private handleStateChange = (state: boolean, message: string) => {
+    this.deviceConnectState = state;
+    this.connectMsg = message;
+  };
 
 
   build() {
@@ -134,7 +148,7 @@ export struct CameraPage {
       // 设备连接状态栏
       Row(){
         // 显示设备连接状态
-        Text(`设备状态:${this.isDeviceConnected ? `已连接` : `未连接`}`)
+        Text(`设备状态:${this.deviceConnectState ? `已连接` : `未连接`}`)
           .fontSize(16)
           .padding(10)
 
@@ -144,11 +158,11 @@ export struct CameraPage {
           .borderRadius(12) // 圆角为宽度的一半，确保正圆
           .width(24) // 设置宽度为24vp
           .height(24) // 高度与宽度一致，形成正圆
-          .fill(this.isDeviceConnected ? '#00C853' : '#F44336') //绿色=已连接 ，红色=未连接
+          .fill(this.deviceConnectState ? '#00C853' : '#F44336') //绿色=已连接 ，红色=未连接
           // 阴影效果增强发光感
           .shadow({
             radius:8, //阴影模糊半径
-            color: this.isDeviceConnected ? 'rgba(0, 200, 83, 0.6)' : 'rgba(244, 67, 54, 0.6)', // 阴影颜色与主体一致，降低透明度
+            color: this.deviceConnectState ? 'rgba(0, 200, 83, 0.6)' : 'rgba(244, 67, 54, 0.6)', // 阴影颜色与主体一致，降低透明度
             offsetX: 0,
             offsetY:0
           })
@@ -281,6 +295,7 @@ export struct CameraPage {
         .width(280)
         .height(40)
         .onClick(()=>{
+          camConnectionManager.connectCamera()
 
         })
 
