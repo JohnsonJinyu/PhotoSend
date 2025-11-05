@@ -29,7 +29,11 @@ link_directories(
 
 
 # 6. 业务 Native 库（保持不变）
-add_library(entry SHARED Camera/native_camera.cpp Camera/camera_common.h Camera/camera_device.h Camera/camera_device.cpp Camera/camera_config.h Camera/camera_config.cpp Camera/frame_processor.h Camera/frame_processor.cpp Camera/camera_callback.h Camera/camera_callback.cpp Camera/native_camera.h)
+add_library(entry SHARED Camera/camera_common.h Camera/camera_device.h Camera/camera_device.cpp
+Camera/camera_config.h Camera/camera_config.cpp
+Camera/camera_preview.h Camera/camera_preview.cpp
+Camera/camera_callback.h Camera/camera_callback.cpp
+Camera/native_camera.h Camera/native_camera.cpp )
 
 # 7. 链接所有库（关键修改：链接动态库，补充缺失的依赖）
 target_link_libraries(entry PUBLIC
