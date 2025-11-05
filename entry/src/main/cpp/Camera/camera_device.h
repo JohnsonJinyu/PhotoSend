@@ -32,4 +32,14 @@ typedef struct _GPContext GPContext;
  */
 napi_value ConnectCamera(napi_env env, napi_callback_info info);
 
+
+
+/**
+ * @brief ArkTS层调用此函数，获取当前相机连接状态
+ * @param env NAPI环境
+ * @param info NAPI回调信息
+ * @return napi_value 返回布尔值给ArkTS（true=已连接，false=未连接）
+ */
+napi_value IsCameraConnectedNapi(napi_env env, napi_callback_info info);
+
 #endif // PHOTOSEND_CAMERA_DEVICE_H

@@ -257,3 +257,92 @@ static napi_value ConnectCamera(napi_env env, napi_callback_info info) {
     napi_get_boolean(env, success, &result);
     return result;
 }
+
+
+
+
+
+
+
+
+
+
+
+
+// ###########################################################################
+// 工具函数：检查相机是否处于连接状态（内部逻辑）
+// ###########################################################################
+/**
+ * @brief 内部函数：判断相机是否有效连接（避免仅依赖g_connected的误判）
+ * @return bool 有效连接返回true，无效返回false
+ */
+static bool IsCameraConnected() {
+    // 1. 基础连接标志检查
+    if (!g_connected) {
+        return false;
+    }
+    // 2. 相机句柄有效性检查
+    if (!g_camera) {
+        g_connected = false;
+        return false;
+    }
+    // 3. 强校验：读取电量配置（通过配置树遍历）
+    CameraWidget *rootConfig = nullptr;
+    int result = gp_camera_get_config(g_camera, &rootConfig, g_context);
+    if (result != GP_OK) {
+        g_connected = false;
+        return false;
+    }
+
+    CameraWidget *batteryWidget = nullptr;
+    result = gp_widget_get_child_by_name(rootConfig, "batterylevel", &batteryWidget);
+    if (result != GP_OK || !batteryWidget) {
+        gp_widget_free(rootConfig); // 释放配置树资源
+        g_connected = false;
+        return false;
+    }
+
+    gp_widget_free(rootConfig); // 释放配置树资源
+    // 4. 补充设备能力检查（增强鲁棒性）
+    CameraAbilities abilities;
+    result = gp_camera_get_abilities(g_camera, &abilities);
+    if (result != GP_OK) {
+        g_connected = false;
+        return false;
+    }
+    return true;
+}
+
+
+// ###########################################################################
+// NAPI接口：检查相机连接状态（暴露给ArkTS调用）
+// ###########################################################################
+/**
+ * @brief ArkTS层调用此函数，获取当前相机连接状态
+ * @param env NAPI环境
+ * @param info NAPI回调信息
+ * @return napi_value 返回布尔值给ArkTS（true=已连接，false=未连接）
+ */
+static napi_value IsCameraConnectedNapi(napi_env env, napi_callback_info info) {
+    // 调用内部函数获取连接状态
+    bool connected = IsCameraConnected();
+
+    // 转换为ArkTS的布尔值并返回
+    napi_value result;
+    napi_get_boolean(env, connected, &result);
+    return result;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
