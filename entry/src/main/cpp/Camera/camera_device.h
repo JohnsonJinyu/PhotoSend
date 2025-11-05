@@ -30,7 +30,7 @@ typedef struct _GPContext GPContext;
  * @param info NAPI回调信息（包含2个参数：相机型号字符串、PTP/IP路径字符串）
  * @return napi_value 返回布尔值给ArkTS层（true=连接成功，false=连接失败）
  */
-napi_value ConnectCamera(napi_env env, napi_callback_info info);
+static napi_value ConnectCamera(napi_env env, napi_callback_info info);
 
 
 
@@ -40,6 +40,6 @@ napi_value ConnectCamera(napi_env env, napi_callback_info info);
  * @param info NAPI回调信息
  * @return napi_value 返回布尔值给ArkTS（true=已连接，false=未连接）
  */
-napi_value IsCameraConnectedNapi(napi_env env, napi_callback_info info);
+static napi_value IsCameraConnectedNapi(napi_env env, napi_callback_info info);
 
 #endif // PHOTOSEND_CAMERA_DEVICE_H

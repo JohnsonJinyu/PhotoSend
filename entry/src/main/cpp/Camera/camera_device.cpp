@@ -6,7 +6,7 @@
 #include <gphoto2/gphoto2.h>
 #include <js_native_api_types.h>
 #include <ltdl.h>
-
+#include "camera_device.h"  // 关联头文件声明
 #include <hilog/log.h>
 #include <napi/native_api.h>
 #define LOG_DOMAIN 0x0001      // 日志域（自定义标识，区分不同模块日志）
