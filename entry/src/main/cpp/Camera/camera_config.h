@@ -11,6 +11,3 @@
 #endif //PHOTOSEND_CAMERA_CONFI_H
 
 
-static bool InternalConnectCamera(const char *model, const char *path);
-
-static napi_value ConnectCamera(napi_env env, napi_callback_info info);
