@@ -77,7 +77,7 @@ export struct PicturesPage {
       this.images = imageFiles;
     } catch (err) {
       console.error('加载图片失败: ' + JSON.stringify(err));
-      promptAction.showToast({ message: '加载图片失败' });
+      //promptAction.showToast({ message: '加载图片失败' });
     } finally {
       this.isLoading = false;
     }

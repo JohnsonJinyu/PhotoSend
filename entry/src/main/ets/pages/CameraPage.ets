@@ -218,7 +218,7 @@ export struct CameraPage {
                 }
                 // 默认情况，理论不会触发，因为模式已经被类型限定死
                 default:
-                  promptAction.showToast({ message: `请选择有效的连接模式` });
+                  //promptAction.showToast({ message: `请选择有效的连接模式` });
                   return; //终止后续逻辑
               }
 
@@ -231,15 +231,15 @@ export struct CameraPage {
               await context.startAbility(targetWant);
 
               // 跳转成功提示（华为设备适配的吐司样式，用户体验更统一）
-              promptAction.showToast({
+              /*promptAction.showToast({
                 message: `已跳转至${this.currentConnectionMode}设置`,
                 duration: 2000 // 华为设备吐司默认显示1.5秒，这里延长至2秒确保阅读
-              });
+              });*/
 
 
             } catch (error) {
               const err = error as BusinessError;
-              promptAction.showToast({ message: `跳转失败：${err.message || '未知错误'}` });
+              //promptAction.showToast({ message: `跳转失败：${err.message || '未知错误'}` });
               console.error(`跳转系统设置失败：${JSON.stringify(err)}`);
             }
           })
