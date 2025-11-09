@@ -176,36 +176,7 @@ static napi_value Disconnect(napi_env env, napi_callback_info info) {
 
 
 
-// ###########################################################################
-// NAPI接口：连接相机（暴露给ArkTS调用，封装InternalConnectCamera）
-// ###########################################################################
-/**
- * @brief ArkTS层调用此函数，传入相机型号和PTP/IP路径，触发连接
- * @param env NAPI环境
- * @param info NAPI回调信息（包含2个参数：型号、路径）
- * @return napi_value 返回布尔值给ArkTS（true=连接成功，false=失败）
- */
-static napi_value ConnectCamera(napi_env env, napi_callback_info info) {
-    size_t argc = 2;    // 期望接收2个参数（型号、路径）
-    napi_value args[2]; // 存储ArkTS传入的参数
-    // 提取ArkTS传入的参数
-    napi_get_cb_info(env, info, &argc, args, nullptr, nullptr);
 
-    char model[128] = {0}; // 缓冲区：存储相机型号（如"Nikon Zf"）
-    char path[128] = {0};  // 缓冲区：存储PTP/IP路径（如"ptpip:192.168.1.1:55740"）
-
-    // 将ArkTS参数转换为C字符串
-    napi_get_value_string_utf8(env, args[0], model, sizeof(model) - 1, nullptr);
-    napi_get_value_string_utf8(env, args[1], path, sizeof(path) - 1, nullptr);
-
-    // 调用内部连接函数，传入型号和路径
-    bool success = InternalConnectCamera(model, path);
-
-    // 转换结果为ArkTS布尔值并返回
-    napi_value result;
-    napi_get_boolean(env, success, &result);
-    return result;
-}
 
 
 // ###########################################################################

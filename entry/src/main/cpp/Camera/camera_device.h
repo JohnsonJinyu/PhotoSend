@@ -30,7 +30,16 @@ extern  napi_value GetAvailableCameras(napi_env env, napi_callback_info info);
  * @param info NAPI回调信息
  * @return napi_value 返回布尔值给ArkTS（true=已连接，false=未连接）
  */
-napi_value IsCameraConnectedNapi(napi_env env, napi_callback_info info);
+extern napi_value IsCameraConnectedNapi(napi_env env, napi_callback_info info);
+
+
+/**
+ * @brief ArkTS层调用此函数，传入相机型号和PTP/IP路径，触发连接
+ * @param env NAPI环境
+ * @param info NAPI回调信息（包含2个参数：型号、路径）
+ * @return napi_value 返回布尔值给ArkTS（true=连接成功，false=失败）
+ */
+extern napi_value ConnectCamera(napi_env env, napi_callback_info info);
 
 
 #endif //PHOTOSEND_CAMERA_DEVICE_H
