@@ -12,7 +12,8 @@
 #include "hilog/log.h"
 #include "native_common.h"
 
-
+#define LOG_DOMAIN 0x0003      // 日志域（自定义标识，区分不同模块日志）
+#define LOG_TAG "Camera_device" // 日志标签（日志中显示的模块名）
 
 
 
@@ -204,16 +205,6 @@ bool InternalConnectCamera(const char *model, const char *path) {
     g_connected = true;
     return true;
 }
-
-
-
-
-
-
-
-
-
-
 
 
 

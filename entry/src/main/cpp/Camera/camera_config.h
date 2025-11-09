@@ -6,5 +6,11 @@
 
 #ifndef PHOTOSEND_CAMERA_CONFIG_H
 #define PHOTOSEND_CAMERA_CONFIG_H
+#include <napi/native_api.h>
+
+
+extern napi_value GetCameraConfig(napi_env env, napi_callback_info info);
+
+
 
 #endif //PHOTOSEND_CAMERA_CONFIG_H

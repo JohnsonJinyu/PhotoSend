@@ -26,6 +26,12 @@ GPContext *g_context = nullptr;
 // 连接状态标记：true = 已连接，false = 未连接（简化状态判断）
 bool g_connected = false;
 
+// 定义全局变量（这里是实际内存分配的地方）
+std::string g_camLibDir;  // 无需static，默认初始化为空字符串
+
+
+
+
 
 
 // ###########################################################################
