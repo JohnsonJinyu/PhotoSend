@@ -74,7 +74,7 @@ class CamConnectionManager {
 
     try {
       // 调用底层连接接口（与RemoteControl保持一致）
-      const isConnected = await nativeCamera.ConnectCamera(camConnectionManager.getCameraFullName(),'ptpip:192.168.1.1');
+      const isConnected = await nativeCamera.ConnectCamera(camConnectionManager.getCameraFullName(),'ptpip:192.168.1.1:15740');
 
       if (isConnected) {
         // 连接成功：更新状态并启动监测

@@ -164,7 +164,8 @@ export struct RemoteControl {
 
 
 
-
+  // 新增：用于跟踪当前是否正在处理预览帧，防止并发问题
+  private isProcessingPreview: boolean = false;
 
   // 将参数管理器的参数同步到页面UI状态
   private syncParamToUI() {
@@ -317,9 +318,13 @@ export struct RemoteControl {
       return;
     }
     this.previewRunning = true;
+    // 增加预览间隔到1000ms，减轻相机负担
     this.timerId = setInterval(() => {
-      this.updatePreview();
-    }, 500); // 500ms一帧，平衡流畅度和性能
+      // 检查是否正在处理上一帧，避免并发问题
+      if (!this.isProcessingPreview) {
+        this.updatePreview();
+      }
+    }, 1000); // 改为1秒一帧
     console.log('预览已启动');
   }
 
@@ -330,38 +335,112 @@ export struct RemoteControl {
     if (!this.previewRunning) {
       return;
     }
-    clearInterval(this.timerId);
-    this.timerId = -1;
+
+    // 清除定时器
+    if (this.timerId !== -1) {
+      clearInterval(this.timerId);
+      this.timerId = -1;
+    }
+
+    // 释放预览资源
+    if (this.previewPixelMap) {
+      this.previewPixelMap.release().catch((e:Error) => {
+        console.error('停止预览时释放资源失败:', e);
+      });
+      this.previewPixelMap = null;
+    }
+
     this.previewRunning = false;
-    this.previewPixelMap = null;
+    this.isProcessingPreview = false;
     console.log('预览已停止');
   }
 
   /**
-   * @function 拉取一帧预览
+   * @function 更新预览
    * */
   async updatePreview() {
+    // 标记为正在处理
+    this.isProcessingPreview = true;
     try {
-      const buffer: Uint8Array = nativeLibGphoto.GetPreview();
-      if (!buffer || buffer.length === 0) {
-        console.warn('预览数据为空');
+      // 1. 检查相机连接状态
+      if (!nativeLibGphoto.IsCameraConnected()) {
+        console.warn('相机已断开连接，停止预览');
+        this.stopPreview();
         return;
       }
 
-      // 移除不兼容的format属性，由系统自动识别图像格式
+      // 2. 获取预览数据
+      /*const buffer: Uint8Array = nativeLibGphoto.GetPreview();
+
+      if (!buffer || !(buffer instanceof Uint8Array)) {
+        console.error('GetPreview返回无效数据');
+        return;
+      }*/
+
+      const arrayBuffer: ArrayBuffer = nativeLibGphoto.GetPreview();
+
+      // 第一步：检查是否为有效的ArrayBuffer
+      if (!arrayBuffer || !(arrayBuffer instanceof ArrayBuffer)) {
+        console.error('GetPreview返回无效的ArrayBuffer');
+        return;
+      }
+
+      // 第二步：将ArrayBuffer转换为Uint8Array视图
+      const buffer = new Uint8Array(arrayBuffer);
+
+      console.log(`ArkTS层收到预览数据：长度=${buffer.length}`);
+      if (buffer.length === 0) {
+        console.warn('无效的预览数据，长度为0');
+        return;
+      }
+
+      // 3. 释放旧的PixelMap（更安全的释放方式）
+      if (this.previewPixelMap) {
+        try {
+          await this.previewPixelMap.release();
+        } catch (e) {
+          console.error('释放旧预览资源失败:', e);
+        }
+        this.previewPixelMap = null;
+      }
+
+
+
+
+
+
+      // 5. 创建图像源和像素图
       const srcOps: image.SourceOptions = {
-        sourceDensity: 0
+        sourceDensity: 0,
+        //format: image.Format.JPEG // 明确指定格式
       };
 
-      const imgSrc: image.ImageSource = image.createImageSource(buffer.buffer as ArrayBuffer, srcOps);
+      const imgSrc: image.ImageSource = image.createImageSource(
+        buffer.buffer as ArrayBuffer,
+        srcOps
+      );
+
+      // 检查图像源是否有效
+      if (!imgSrc) {
+        console.error('创建ImageSource失败');
+        return;
+      }
+
+      // 6. 创建PixelMap并设置
       const pixelMap: image.PixelMap = await imgSrc.createPixelMap();
       this.previewPixelMap = pixelMap;
+
     } catch (e) {
-      console.error('预览解码失败:', e);
+      console.error('预览处理异常:', e);
+      // 发生严重错误时停止预览
       this.stopPreview();
-      this.statusMessage = '预览异常，请检查相机连接';
+      this.statusMessage = '预览异常: ' + (e instanceof Error ? e.message : String(e));
+    } finally {
+      // 无论成功失败，都标记为处理完成
+      this.isProcessingPreview = false;
     }
   }
+
 
   /**
    * 拍照逻辑

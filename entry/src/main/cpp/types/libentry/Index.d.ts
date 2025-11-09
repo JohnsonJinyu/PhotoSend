@@ -122,7 +122,7 @@ export const TakePhoto: () => PhotoPathInfo;
  * 获取相机实时预览画面
  * @returns Base64编码的预览图像数据字符串
  */
-export const GetPreview: () => Uint8Array;
+export const GetPreview: () => ArrayBuffer;
 
 /**
  * 从相机下载照片
