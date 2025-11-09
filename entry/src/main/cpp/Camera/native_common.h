@@ -8,10 +8,15 @@
 #define PHOTOSEND_NATIVE_COMMON_H
 
 
+#include "gphoto2/gphoto2-camera.h"
+#include "gphoto2/gphoto2-context.h"
 #include <cstdarg>  // 暴露可变参数声明（供日志宏使用）
 
+// 声明全局相机变量（extern表示“在其他地方定义”）
+extern Camera* g_camera;       // 相机对象指针
+extern GPContext* g_context;   // 相机上下文指针
 
-
+extern bool g_connected;
 
 
 #endif //PHOTOSEND_NATIVE_COMMON_H
