@@ -254,3 +254,127 @@ bool IsCameraConnected() {
     }
     return true;
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// ###########################################################################
+// 枚举相机
+// ###########################################################################
+
+/**
+ * @brief 内部函数：枚举所有可用的相机，返回型号和路径列表
+ * @param cameras 输出参数：存储相机信息的数组（每个元素为"型号|路径"字符串）
+ * @param count 输出参数：相机数量
+ * @return bool 枚举成功返回true，失败返回false
+ */
+static bool ListAvailableCameras(std::vector<std::string> &cameras, int &count) {
+    // 检查驱动路径是否已设置（依赖SetGPhotoLibDirs传入的路径）
+    if (g_camLibDir.empty()) {
+        OH_LOG_Print(LOG_APP, LOG_ERROR, LOG_DOMAIN, LOG_TAG, "未设置驱动路径，请先调用SetGPhotoLibDirs");
+        return false;
+    }
+
+
+    // 创建相机列表（存储枚举结果）
+    CameraList *list = nullptr;
+    gp_list_new(&list);
+
+    // 核心：自动检测相机（枚举所有可用设备）
+    // 参数：相机列表、上下文（nullptr使用默认上下文）
+    int ret = gp_camera_autodetect(list, g_context);
+    if (ret != GP_OK) {
+        OH_LOG_Print(LOG_APP, LOG_ERROR, LOG_DOMAIN, LOG_TAG, "相机枚举失败，错误码: %{public}d", ret);
+        gp_list_free(list); // 释放列表
+        return false;
+    }
+
+    // 提取枚举结果（相机数量）
+    count = gp_list_count(list);
+    OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "检测到 %{public}d 台可用相机", count);
+
+    // 遍历列表，获取每个相机的型号和路径
+    for (int i = 0; i < count; i++) {
+        const char *model = nullptr;       // 相机型号（如"Nikon Zf"）
+        const char *path = nullptr;        // 连接路径（如"ptpip:192.168.1.1:55740"）
+        gp_list_get_name(list, i, &model); // 获取型号
+        gp_list_get_value(list, i, &path); // 获取路径
+
+        // 存储为"型号|路径"格式（方便后续拆分）
+        cameras.push_back(std::string(model) + "|" + std::string(path));
+    }
+
+    // 释放资源
+    gp_list_free(list);
+    return true;
+}
+
+
+/**
+ * @brief NAPI接口：获取所有可用相机的型号和路径列表
+ * @param env NAPI环境
+ * @param info 回调信息
+ * @return napi_value 返回ArkTS数组（每个元素为"型号|路径"字符串）
+ */
+napi_value GetAvailableCameras(napi_env env, napi_callback_info info) {
+    std::vector<std::string> cameras; // 存储相机信息
+    int count = 0;                    // 相机数量
+
+    // 调用内部枚举函数
+    bool success = ListAvailableCameras(cameras, count);
+    if (!success || count == 0) {
+        // 无相机时返回空数组
+        napi_value emptyArray;
+        napi_create_array(env, &emptyArray);
+        return emptyArray;
+    }
+
+    // 创建ArkTS数组，存储相机信息
+    napi_value resultArray;
+    napi_create_array(env, &resultArray);
+
+    // 向数组中添加元素（每个元素为"型号|路径"字符串）
+    for (int i = 0; i < count; i++) {
+        napi_value item = CreateNapiString(env, cameras[i].c_str());
+        napi_set_element(env, resultArray, i, item);
+    }
+
+    return resultArray;
+}
+
+
+
+// ###########################################################################
+// NAPI接口：检查相机连接状态（暴露给ArkTS调用）
+// ###########################################################################
+/**
+ * @brief ArkTS层调用此函数，获取当前相机连接状态
+ * @param env NAPI环境
+ * @param info NAPI回调信息
+ * @return napi_value 返回布尔值给ArkTS（true=已连接，false=未连接）
+ */
+napi_value IsCameraConnectedNapi(napi_env env, napi_callback_info info) {
+    // 调用内部函数获取连接状态
+    bool connected = IsCameraConnected();
+
+    // 转换为ArkTS的布尔值并返回
+    napi_value result;
+    napi_get_boolean(env, connected, &result);
+    return result;
+}

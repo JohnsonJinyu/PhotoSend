@@ -41,4 +41,9 @@ extern std::string g_camLibDir;  // 注意：去掉static，否则无法跨文�
 extern  napi_value CreateNapiString(napi_env env, const char *str);
 
 
+
+// 设置动态变量库
+extern napi_value SetGPhotoLibDirs(napi_env env, napi_callback_info info);
+
+
 #endif //PHOTOSEND_NATIVE_COMMON_H

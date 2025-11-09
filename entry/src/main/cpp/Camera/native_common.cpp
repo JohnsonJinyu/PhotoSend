@@ -50,3 +50,53 @@ napi_value CreateNapiString(napi_env env, const char *str) {
     napi_create_string_utf8(env, str ? str : "", NAPI_AUTO_LENGTH, &result);
     return result; // 返回给ArkTS层
 }
+
+
+
+
+// ###########################################################################
+// NAPI接口：从ArkTS获取动态库路径（驱动/端口模块存放位置）
+// ###########################################################################
+/**
+ * @brief ArkTS层调用此函数，传入设备上"驱动/端口模块"的路径，存到全局变量g_camLibDir
+ * @param env NAPI环境
+ * @param info NAPI回调信息（包含ArkTS传入的参数）
+ * @return napi_value 返回true给ArkTS，标识路径已接收
+ */
+napi_value SetGPhotoLibDirs(napi_env env, napi_callback_info info) {
+    size_t argc = 1;    // 期望接收1个参数（动态库路径字符串）
+    napi_value args[1]; // 存储ArkTS传入的参数
+    // napi_get_cb_info：从回调信息中提取ArkTS传入的参数，存入args数组
+    napi_get_cb_info(env, info, &argc, args, nullptr, nullptr);
+
+    char camDir[256]; // 缓冲区：存储转换后的C字符串（长度256足够存路径）
+    // napi_get_value_string_utf8：将ArkTS字符串参数转C字符串，存入camDir
+    napi_get_value_string_utf8(env, args[0], camDir, sizeof(camDir) - 1, nullptr);
+
+    g_camLibDir = camDir; // 存入全局变量，供后续驱动加载使用
+    // 打印日志：确认路径已正确接收（方便调试路径是否正确）
+    OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "g_camLibDir的值为：%{public}s", g_camLibDir.c_str());
+
+    napi_value result;                    // 返回结果给ArkTS
+    napi_get_boolean(env, true, &result); // 生成ArkTS的布尔值true
+
+    // 直接在这里把libgphoto2的环境变量设置好
+    // CAMLIBS：相机驱动路径（如ptp2.so存放位置）
+    setenv("CAMLIBS", g_camLibDir.c_str(), 1);
+    // IOLIBS：端口模块路径（如ptpip.so存放位置，PTP/IP连接必需）
+    setenv("IOLIBS", g_camLibDir.c_str(), 1);
+    OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "CAMLIBS IOLIBS 环境变量设置OK");
+
+    return result;
+}
+
+
+
+
+
+
+
+
+
+
+
