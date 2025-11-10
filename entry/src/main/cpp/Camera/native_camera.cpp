@@ -68,16 +68,64 @@ static bool InternalCapture(char *outFolder, char *outFilename) {
     // 参数3：输出参数，存储拍照后的文件路径
     // 参数4：上下文对象
     int ret = gp_camera_capture(g_camera, GP_CAPTURE_IMAGE, &path, g_context);
+    
+    
 
     // 拍照失败（如相机忙、无存储空间），返回false
     if (ret != GP_OK)
         return false;
+    
+    
+    
+    // 拍照成功后，同步路径到文件系统
+    int fs_ret = gp_filesystem_append(g_camera->fs, path.folder, path.name, g_context);
+    if (fs_ret != GP_OK) {
+    // 记录警告日志，部分相机可能不需要此步骤，但建议兼容
+    OH_LOG_Print(LOG_APP, LOG_WARN, LOG_DOMAIN, LOG_TAG, "Failed to append to filesystem: %{public}d", fs_ret);
+    }
 
     // 将相机返回的路径拷贝到输出参数（供后续下载使用）
     strcpy(outFolder, path.folder); // 拷贝文件夹路径
     strcpy(outFilename, path.name); // 拷贝文件名
     return true;                    // 拍照成功
 }
+
+
+// ###########################################################################
+// NAPI接口：触发拍照（暴露给ArkTS调用，封装InternalCapture）
+// ###########################################################################
+/**
+ * @brief ArkTS层调用此函数，触发相机拍照，并返回照片路径信息
+ * @param env NAPI环境
+ * @param info NAPI回调信息
+ * @return napi_value 返回ArkTS对象（包含success、folder、name三个属性）
+ */
+static napi_value TakePhoto(napi_env env, napi_callback_info info) {
+    // 缓冲区：存储拍照后的文件夹路径和文件名
+    char folder[128] = {0};
+    char name[128] = {0};
+
+    // 调用内部拍照函数
+    bool success = InternalCapture(folder, name);
+
+    // 创建ArkTS对象：用于返回多个结果（success、folder、name）
+    napi_value result;
+    napi_create_object(env, &result);
+
+    // 给对象添加属性：success（拍照是否成功）
+    napi_set_named_property(env, result, "success", CreateNapiString(env, success ? "true" : "false"));
+    // 给对象添加属性：folder（照片在相机中的文件夹路径）
+    napi_set_named_property(env, result, "folder", CreateNapiString(env, folder));
+    // 给对象添加属性：name（照片在相机中的文件名）
+    napi_set_named_property(env, result, "name", CreateNapiString(env, name));
+
+    // 返回对象给ArkTS（ArkTS侧可通过result.folder获取路径）
+    return result;
+}
+
+
+
+
 
 
 // ###########################################################################
@@ -137,79 +185,6 @@ static bool InternalDownloadFile(const char *folder, const char *filename, uint8
 }
 
 
-// ###########################################################################
-//  NAPI接口：断开相机连接（暴露给ArkTS调用）
-// ###########################################################################
-/**
- * @brief ArkTS层调用此函数，断开相机连接并释放所有资源
- * @param env NAPI环境
- * @param info NAPI回调信息
- * @return napi_value 返回true给ArkTS，标识已断开
- */
-static napi_value Disconnect(napi_env env, napi_callback_info info) {
-    // 若相机对象存在，先结束会话并释放
-    if (g_camera) {
-        // gp_camera_exit：通知相机结束连接（关闭端口、清理会话）
-        gp_camera_exit(g_camera, g_context);
-        // gp_camera_unref：释放相机对象（引用计数为0时自动销毁）
-        gp_camera_unref(g_camera);
-        g_camera = nullptr; // 指针置空，避免悬空
-    }
-    // 若上下文对象存在，释放上下文
-    if (g_context) {
-        gp_context_unref(g_context); // 释放上下文
-        g_context = nullptr;         // 指针置空
-    }
-    // 更新连接状态为未连接
-    g_connected = false;
-
-    // 返回true给ArkTS
-    napi_value result;
-    napi_get_boolean(env, true, &result);
-    return result;
-}
-
-
-
-
-
-
-
-
-
-
-
-// ###########################################################################
-// NAPI接口：触发拍照（暴露给ArkTS调用，封装InternalCapture）
-// ###########################################################################
-/**
- * @brief ArkTS层调用此函数，触发相机拍照，并返回照片路径信息
- * @param env NAPI环境
- * @param info NAPI回调信息
- * @return napi_value 返回ArkTS对象（包含success、folder、name三个属性）
- */
-static napi_value TakePhoto(napi_env env, napi_callback_info info) {
-    // 缓冲区：存储拍照后的文件夹路径和文件名
-    char folder[128] = {0};
-    char name[128] = {0};
-
-    // 调用内部拍照函数
-    bool success = InternalCapture(folder, name);
-
-    // 创建ArkTS对象：用于返回多个结果（success、folder、name）
-    napi_value result;
-    napi_create_object(env, &result);
-
-    // 给对象添加属性：success（拍照是否成功）
-    napi_set_named_property(env, result, "success", CreateNapiString(env, success ? "true" : "false"));
-    // 给对象添加属性：folder（照片在相机中的文件夹路径）
-    napi_set_named_property(env, result, "folder", CreateNapiString(env, folder));
-    // 给对象添加属性：name（照片在相机中的文件名）
-    napi_set_named_property(env, result, "name", CreateNapiString(env, name));
-
-    // 返回对象给ArkTS（ArkTS侧可通过result.folder获取路径）
-    return result;
-}
 
 
 // ###########################################################################
@@ -264,6 +239,40 @@ static napi_value DownloadPhoto(napi_env env, napi_callback_info info) {
 
 
 
+
+
+
+// ###########################################################################
+//  NAPI接口：断开相机连接（暴露给ArkTS调用）
+// ###########################################################################
+/**
+ * @brief ArkTS层调用此函数，断开相机连接并释放所有资源
+ * @param env NAPI环境
+ * @param info NAPI回调信息
+ * @return napi_value 返回true给ArkTS，标识已断开
+ */
+static napi_value Disconnect(napi_env env, napi_callback_info info) {
+    // 若相机对象存在，先结束会话并释放
+    if (g_camera) {
+        // gp_camera_exit：通知相机结束连接（关闭端口、清理会话）
+        gp_camera_exit(g_camera, g_context);
+        // gp_camera_unref：释放相机对象（引用计数为0时自动销毁）
+        gp_camera_unref(g_camera);
+        g_camera = nullptr; // 指针置空，避免悬空
+    }
+    // 若上下文对象存在，释放上下文
+    if (g_context) {
+        gp_context_unref(g_context); // 释放上下文
+        g_context = nullptr;         // 指针置空
+    }
+    // 更新连接状态为未连接
+    g_connected = false;
+
+    // 返回true给ArkTS
+    napi_value result;
+    napi_get_boolean(env, true, &result);
+    return result;
+}
 
 
 
