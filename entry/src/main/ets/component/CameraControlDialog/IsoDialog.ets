@@ -17,6 +17,7 @@ export struct IsoDialog {
         .fontSize(18)
         .margin({ bottom: 10 })
         .textAlign(TextAlign.Center)
+        .fontColor("#FFFFFF")
 
       Slider({
         min: 0,
@@ -28,6 +29,10 @@ export struct IsoDialog {
         .showSteps(true)
         .showTips(false)
         .stepSize(10)
+        .trackColor("#666666")
+        .selectedColor("#666666")
+        .blockColor("#FFFFFF")
+        //.blockSize({ width: 4, height: 20 }) // 关键：滑块宽窄高长，形成竖条
         .enableHapticFeedback(true) // 触感反馈， 需要配置vibrate权限
         .trackThickness(5) // 增加滑轨厚度，让刻度更清晰
         .onChange((value: number, mode: SliderChangeMode) => {

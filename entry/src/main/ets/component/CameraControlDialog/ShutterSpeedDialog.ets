@@ -19,6 +19,7 @@ export struct ShutterSpeedDialog{
       Text(`${this.shutterOptions[this.currentIndex]}`)
         .fontSize(18)
         .fontWeight(FontWeight.Bold)
+        .fontColor("#ffffff")
 
       Slider({
         min:0,
@@ -30,9 +31,9 @@ export struct ShutterSpeedDialog{
         .showSteps(true)
         .showTips(false)
         .enableHapticFeedback(true)
-        .trackColor('#CCCCCC') // 轨道整体颜色（灰色，可自定义）
-        .selectedColor('#CCCCCC') // 选中区域颜色 → 与轨道颜色一致，消除填充感
-        .blockColor($r('sys.color.comp_background_list_card')) // 滑块颜色（白色，突出显示）
+        .trackColor("#666666")
+        .selectedColor("#666666")
+        .blockColor("#FFFFFF")
         .trackThickness(6)
         .onChange((value:number,mode:SliderChangeMode)=>{
           this.currentIndex=Math.round(value)

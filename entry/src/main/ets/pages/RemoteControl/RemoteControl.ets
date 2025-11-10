@@ -82,55 +82,63 @@ export struct RemoteControl {
   isoDialogController: CustomDialogController = new CustomDialogController({
     builder: IsoDialog({ selectedISOValue: this.ISOValue }),
     customStyle: true,
-    alignment: DialogAlignment.Center
+    alignment: DialogAlignment.Center,
+    offset: { dx: 0, dy: 60 }
   });
   // 光圈选择弹窗
   apertureDialogController:CustomDialogController = new CustomDialogController({
     builder:ApertureDialog({selectedApertureValue:this.apertureValue}),
     customStyle:true,
-    alignment:DialogAlignment.Center
+    alignment:DialogAlignment.Center,
+    offset: { dx: 0, dy: 60 }
   })
 
   // 快门速度选择弹窗
   shutterDialogController: CustomDialogController = new CustomDialogController({
     builder: ShutterSpeedDialog({ SelectedShutterValue: this.shutterValue }),
     customStyle: true,
-    alignment: DialogAlignment.Center
+    alignment: DialogAlignment.Center,
+    offset: { dx: 0, dy: 60 }
   });
 
   // 曝光补偿选项弹窗
   evDialogController:CustomDialogController = new CustomDialogController({
     builder:ExposureCompensationDialog({selected_EV_Value:this.exposureCompensationValue}),
     customStyle:true,
-    alignment:DialogAlignment.Center
+    alignment:DialogAlignment.Center,
+    offset: { dx: 0, dy: 60 }
   })
 
   // 曝光补偿选项弹窗
   ExposureMode_DialogController:CustomDialogController = new CustomDialogController({
     builder:ExposureModeDialog({selected_ExposureMode_Value:this.exposureProgramValue}),
     customStyle:true,
-    alignment:DialogAlignment.Center
+    alignment:DialogAlignment.Center,
+    offset: { dx: 0, dy: 60 }
   })
 
   // 对焦模式选择弹窗
   Focus_Mode_DialogController:CustomDialogController = new CustomDialogController({
     builder:FocusModeDialog({selected_Focus_Mode_Value:$focusModeValue}),
     customStyle: true,
-    alignment: DialogAlignment.Center
+    alignment: DialogAlignment.Center,
+    offset: { dx: 0, dy: 60 }
   })
 
   // 测光模式选择弹窗
   ExposureMeterMode_DialogController:CustomDialogController = new CustomDialogController({
     builder:ExposureMeterModeDialog({selected_ExposureMeterMode_Value:this.meterModeValue}),
     customStyle: true,
-    alignment: DialogAlignment.Center
+    alignment: DialogAlignment.Center,
+    offset: { dx: 0, dy: 60 }
   })
 
   // 白平衡选择弹窗
   whiteBalance_DialogController:CustomDialogController = new CustomDialogController({
     builder:WhiteBalanceDialog({selectedI_WB_Value:this.whiteBalanceValue}),
     customStyle: true,
-    alignment: DialogAlignment.Center
+    alignment: DialogAlignment.Center,
+    offset: { dx: 0, dy: 60 }
   })
 
 

@@ -15,6 +15,7 @@ export struct ExposureModeDialog {
         .fontSize(18)
         .margin({ bottom: 10 })
         .textAlign(TextAlign.Center)
+        .fontColor("#ffffff")
 
       Slider({
         min: 0,
@@ -26,6 +27,9 @@ export struct ExposureModeDialog {
         .showSteps(true)
         .showTips(false)
         .stepSize(10)
+        .trackColor("#666666")
+        .selectedColor("#666666")
+        .blockColor("#FFFFFF")
         .enableHapticFeedback(true) // 触感反馈， 需要配置vibrate权限
         .trackThickness(5) // 增加滑轨厚度，让刻度更清晰
         .onChange((value: number, mode: SliderChangeMode) => {
