@@ -1,26 +1,27 @@
-// IsoDialog.ets
+// FocusModeDialog
+
+import nativeCamera from 'libentry.so'
+
 @CustomDialog
-export struct IsoDialog {
+export struct FocusModeDialog {
   controller: CustomDialogController //控制器属性
-  @Link selectedISOValue: string // 双向绑定的ISO
-  private IsoOptions: string[] =
-    ['100', '125', '160', '200', '250', '320', '400', '500', '640', '800', '1000', '1250', '1600',
-      '3200', '6400', '51200', '12800', '25600', '512000']
+  @Link selected_Focus_Mode_Value: string // 双向绑定的AF_Mode
+  private Focus_Mode_Options: string[] = ['AF-S', 'AF-C', 'AF-F', 'MF']
   // 当前选中的索引（slider绑定的数值）
-  @State currentIndex: number = this.IsoOptions.indexOf(this.selectedISOValue)
+  @State currentIndex: number = this.Focus_Mode_Options.indexOf(this.selected_Focus_Mode_Value)
 
   build() {
 
     Column() {
       // 自定义滑动提示文本
-      Text(`${this.IsoOptions[this.currentIndex]}`)
+      Text(`${this.Focus_Mode_Options[this.currentIndex]}`)
         .fontSize(18)
         .margin({ bottom: 10 })
         .textAlign(TextAlign.Center)
 
       Slider({
         min: 0,
-        max: this.IsoOptions.length - 1,
+        max: this.Focus_Mode_Options.length - 1,
         step: 1,
         style: SliderStyle.OutSet,
         value: this.currentIndex
@@ -32,14 +33,15 @@ export struct IsoDialog {
         .trackThickness(5) // 增加滑轨厚度，让刻度更清晰
         .onChange((value: number, mode: SliderChangeMode) => {
           this.currentIndex = Math.round(value)
-          // 滑动结束后，同步到双向绑定的ISO 更新主页面
+          // 滑动结束后，同步到双向绑定的Focus_Mode_Value 更新主页面
           if (mode == SliderChangeMode.End) {
-            this.selectedISOValue = this.IsoOptions[this.currentIndex]
+            this.selected_Focus_Mode_Value = this.Focus_Mode_Options[this.currentIndex]
           }
         })
 
     }
     .width("100%")
     .padding(30)
+
   }
 }

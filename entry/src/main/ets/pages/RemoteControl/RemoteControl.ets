@@ -4,9 +4,14 @@ import { ShutterSpeedDialog } from 'ets/component/CameraControlDialog/ShutterSpe
 import { image } from '@kit.ImageKit';
 import { fileIo } from '@kit.CoreFileKit'
 import { common } from '@kit.AbilityKit';
-import getCamIpAndName from '../utils/GetCameraIpAndName'
-import { cameraParamManager, ParamOption } from '../utils/CameraParamManager'
-import { CameraPage } from './CameraPage';
+import getCamIpAndName from '../../utils/GetCameraIpAndName'
+import { cameraParamManager, ParamOption } from '../../utils/CameraParamManager'
+import { ApertureDialog } from '../../component/CameraControlDialog/ApertureDialog';
+import { FocusModeDialog } from '../../component/CameraControlDialog/FocusModeDialog';
+import { ExposureCompensationDialog } from '../../component/CameraControlDialog/ExposureCompensationDialog';
+import { WhiteBalanceDialog } from '../../component/CameraControlDialog/WhiteBalanceDialog';
+import { ExposureMeterModeDialog } from '../../component/CameraControlDialog/ExposureMeterModeDialog';
+import { ExposureModeDialog } from '../../component/CameraControlDialog/ExposureModeDialog';
 
 
 const scanner = new getCamIpAndName();
@@ -52,7 +57,6 @@ export struct RemoteControl {
   @State connectStatus: string = '未连接相机';
   @State previewPixelMap: PixelMap | null = null; // 预览帧
   @State previewRunning: boolean = false; // 预览运行状态
-  private timerId: number = -1; // 预览定时器ID
   @State previewImage: string = '';
   @State photoList: nativeLibGphoto.PhotoPathInfo[] = [];
   @State currentPreviewInterval: number = 0;
@@ -70,18 +74,69 @@ export struct RemoteControl {
   @State exposureProgramValue: string = "NA";
 
   private nativeLibDir: string = '';
+  private timerId: number = -1; // 预览定时器ID
 
-  // 弹窗控制器（完全保留原有逻辑）
+
+  // 弹窗控制器
+  // ISO 值选择弹窗
   isoDialogController: CustomDialogController = new CustomDialogController({
-    builder: IsoDialog({ selectedISO: this.ISOValue }),
+    builder: IsoDialog({ selectedISOValue: this.ISOValue }),
     customStyle: true,
     alignment: DialogAlignment.Center
   });
+  // 光圈选择弹窗
+  apertureDialogController:CustomDialogController = new CustomDialogController({
+    builder:ApertureDialog({selectedApertureValue:this.apertureValue}),
+    customStyle:true,
+    alignment:DialogAlignment.Center
+  })
+
+  // 快门速度选择弹窗
   shutterDialogController: CustomDialogController = new CustomDialogController({
-    builder: ShutterSpeedDialog({ SelectedShutter: this.shutterValue }),
+    builder: ShutterSpeedDialog({ SelectedShutterValue: this.shutterValue }),
     customStyle: true,
     alignment: DialogAlignment.Center
   });
+
+  // 曝光补偿选项弹窗
+  evDialogController:CustomDialogController = new CustomDialogController({
+    builder:ExposureCompensationDialog({selected_EV_Value:this.exposureCompensationValue}),
+    customStyle:true,
+    alignment:DialogAlignment.Center
+  })
+
+  // 曝光补偿选项弹窗
+  ExposureMode_DialogController:CustomDialogController = new CustomDialogController({
+    builder:ExposureModeDialog({selected_ExposureMode_Value:this.exposureProgramValue}),
+    customStyle:true,
+    alignment:DialogAlignment.Center
+  })
+
+  // 对焦模式选择弹窗
+  Focus_Mode_DialogController:CustomDialogController = new CustomDialogController({
+    builder:FocusModeDialog({selected_Focus_Mode_Value:$focusModeValue}),
+    customStyle: true,
+    alignment: DialogAlignment.Center
+  })
+
+  // 测光模式选择弹窗
+  ExposureMeterMode_DialogController:CustomDialogController = new CustomDialogController({
+    builder:ExposureMeterModeDialog({selected_ExposureMeterMode_Value:this.meterModeValue}),
+    customStyle: true,
+    alignment: DialogAlignment.Center
+  })
+
+  // 白平衡选择弹窗
+  whiteBalance_DialogController:CustomDialogController = new CustomDialogController({
+    builder:WhiteBalanceDialog({selectedI_WB_Value:this.whiteBalanceValue}),
+    customStyle: true,
+    alignment: DialogAlignment.Center
+  })
+
+
+
+
+
 
 
   aboutToAppear(): void {
@@ -104,6 +159,11 @@ export struct RemoteControl {
     this.syncParamToUI();
 
     this.startConnectionCheck();
+
+
+
+
+
   }
 
   aboutToDisappear(): void {
@@ -451,10 +511,43 @@ export struct RemoteControl {
   }
 
 
+
+
+
+  // 在RemoteControl组件内添加参数按钮构建方法
+  @Builder
+  private buildParamButton(label: string, value: string, onClick: () => void) {
+    Column({ space: 4 }) {
+      Text(label)
+        .fontSize(12)
+        .fontColor('#666') // 浅色标签区分主次
+        .width('100%')
+        .textAlign(TextAlign.Center)
+
+      Button(value)
+        .fontSize(14)
+        .height(36)
+        .width('100%') // 自适应网格宽度
+        .backgroundColor('#f5f5f5')
+        .fontColor('#333')
+        .borderRadius(6)
+        .onClick(onClick)
+    }
+    .padding({ left: 4, right: 4 })
+  }
+
+
+
+
+
+
+
   // 构建UI（完全保留原有结构，未改动）
   build() {
     NavDestination() {
       Column() {
+
+        // 顶部控制区域
         Column({ space: 10 }) {
           Row({ space: 10 }) {
             Button('配置打印')
@@ -504,6 +597,9 @@ export struct RemoteControl {
         }
         .margin({ top: 10 })
 
+
+
+        // 预览画面显示区域
         Column() {
           if (this.previewPixelMap) {
             Image(this.previewPixelMap)
@@ -522,99 +618,49 @@ export struct RemoteControl {
         }
         .margin({ top: 10 })
 
+
+
+
+        // 参数控制栏
         Column() {
-          Row({ space: 10 }) {
-            Column() {
-              Text("ISO")
-                .fontSize(12)
-              Button(this.ISOValue.toString())
-                .fontSize(12)
-                .height(18)
-                .width(70)
-                .onClick(() => this.isoDialogController.open())
-            }
-
-            Column() {
-              Text("Aperture")
-                .fontSize(12)
-              Button(this.apertureValue.toString())
-                .fontSize(12)
-                .height(18)
-                .width(70)
-                .onClick(() => {
-                  // this.apertureDialogController.open();
-                })
-            }
-
-            Column() {
-              Text("Shutter")
-                .fontSize(12)
-              Button(this.shutterValue.toString())
-                .fontSize(12)
-                .height(18)
-                .width(70)
-                .onClick(() => {
-                  this.shutterDialogController.open()
-                })
-            }
-
-            Column() {
-              Text("EV")
-                .fontSize(12)
-              Button(this.exposureCompensationValue)
-                .fontSize(12)
-                .height(18)
-                .width(70)
-                .onClick(() => {
-                  // 可选：打开曝光补偿设置弹窗
-                })
-            }
+          // 第一组：曝光核心参数（ISO、光圈、快门、曝光补偿）
+          Grid(){
+            GridItem(){this.buildParamButton('ISO',this.ISOValue,()=>{this.isoDialogController.open()})}
+            GridItem(){ this.buildParamButton('光圈', this.apertureValue, () => {this.apertureDialogController.open()}) }
+            GridItem() { this.buildParamButton('快门', this.shutterValue, () =>{this.shutterDialogController.open()} ) }
+            GridItem() { this.buildParamButton('曝光补偿', this.exposureCompensationValue, () => { this.evDialogController.open() }) }
           }
-          .width("100%")
+          .columnsTemplate('1fr 1fr 1fr 1fr') // 4列网格
+          .columnsGap(8)
           .padding(10)
+          .height(80)  // 固定第一组网格高度（按钮36 + 间距 + 内边距）
+          .backgroundColor('#f9f9f9')  // 可选：添加背景色区分区域
+          .borderRadius(8)
 
-          Row({ space: 10 }) {
-            Column() {
-              Text("AF_MODE")
-                .fontSize(12)
-              Button(this.focusModeValue)
-                .fontSize(12)
-                .width(70)
-                .height(18)
-            }
-
-            Column() {
-              Text("测光")
-                .fontSize(12)
-              Button(this.meterModeValue)
-                .fontSize(12)
-                .width(70)
-                .height(18)
-            }
-
-            Column() {
-              Text("白平衡")
-                .fontSize(12)
-              Button(this.whiteBalanceValue)
-                .fontSize(12)
-                .width(70)
-                .height(18)
-            }
-
-            Column() {
-              Text("曝光模式")
-                .fontSize(12)
-              Button(this.exposureProgramValue)
-                .fontSize(12)
-                .height(18)
-                .width(70)
-            }
+          // 第二组：拍摄模式参数（曝光模式、对焦模式）
+          Grid() {
+            GridItem() { this.buildParamButton('曝光模式', this.exposureProgramValue, () =>{this.ExposureMode_DialogController.open() } ) }
+            GridItem() { this.buildParamButton('对焦模式', this.focusModeValue, () => {this.Focus_Mode_DialogController.open() }) }
+            GridItem() { this.buildParamButton('测光模式', this.meterModeValue, () => {this.ExposureMeterMode_DialogController.open() }) }
+            GridItem() { this.buildParamButton('白平衡', this.whiteBalanceValue, () => {this.whiteBalance_DialogController.open() }) }
           }
-          .width("100%")
+          .columnsTemplate('1fr 1fr 1fr 1fr')
+          .columnsGap(8)
           .padding(10)
+          .height(80)  // 固定第二组网格高度
+          .backgroundColor('#f9f9f9')
+          .borderRadius(8)
+          .margin({ top: 8 })  // 两组之间添加间距
+
+
         }
         .width("100%")
+        .padding({ left: 10, right: 10 })  // 左右留边，避免内容贴边
 
+
+
+
+        //预览控制按钮区域
         Row({ space: 10 }) {
           Button('启动预览')
             .enabled(!this.previewRunning)

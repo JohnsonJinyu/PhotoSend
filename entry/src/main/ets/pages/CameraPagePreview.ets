@@ -1,6 +1,6 @@
 // CameraPagePreview.ets
 import { CameraPage } from './CameraPage';
-import { RemoteControl } from './RemoteControl';
+import { RemoteControl } from './RemoteControl/RemoteControl';
 
 
 // 预览专用组件，提供模拟的pageStack

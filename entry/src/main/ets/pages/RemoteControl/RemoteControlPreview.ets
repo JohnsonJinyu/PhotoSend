@@ -1,5 +1,5 @@
 // CameraPagePreview.ets
-import { CameraPage } from './CameraPage';
+import { CameraPage } from '../CameraPage';
 import { RemoteControl } from './RemoteControl';
 
 

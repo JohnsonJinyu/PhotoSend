@@ -1,26 +1,25 @@
-// IsoDialog.ets
+// ExposureMeterModeDialog.ets  测光模式
+
 @CustomDialog
-export struct IsoDialog {
+export struct ExposureMeterModeDialog {
   controller: CustomDialogController //控制器属性
-  @Link selectedISOValue: string // 双向绑定的ISO
-  private IsoOptions: string[] =
-    ['100', '125', '160', '200', '250', '320', '400', '500', '640', '800', '1000', '1250', '1600',
-      '3200', '6400', '51200', '12800', '25600', '512000']
+  @Link selected_ExposureMeterMode_Value: string // 双向绑定的ISO
+  private ExposureMeterMode_Options: string[] = ['平均','中央重点平均','点测光','暗部重点测光']
   // 当前选中的索引（slider绑定的数值）
-  @State currentIndex: number = this.IsoOptions.indexOf(this.selectedISOValue)
+  @State currentIndex: number = this.ExposureMeterMode_Options.indexOf(this.selected_ExposureMeterMode_Value)
 
   build() {
 
     Column() {
       // 自定义滑动提示文本
-      Text(`${this.IsoOptions[this.currentIndex]}`)
+      Text(`${this.ExposureMeterMode_Options[this.currentIndex]}`)
         .fontSize(18)
         .margin({ bottom: 10 })
         .textAlign(TextAlign.Center)
 
       Slider({
         min: 0,
-        max: this.IsoOptions.length - 1,
+        max: this.ExposureMeterMode_Options.length - 1,
         step: 1,
         style: SliderStyle.OutSet,
         value: this.currentIndex
@@ -32,9 +31,9 @@ export struct IsoDialog {
         .trackThickness(5) // 增加滑轨厚度，让刻度更清晰
         .onChange((value: number, mode: SliderChangeMode) => {
           this.currentIndex = Math.round(value)
-          // 滑动结束后，同步到双向绑定的ISO 更新主页面
+          // 滑动结束后，同步到双向绑定的ExposureMeterMode 更新主页面
           if (mode == SliderChangeMode.End) {
-            this.selectedISOValue = this.IsoOptions[this.currentIndex]
+            this.selected_ExposureMeterMode_Value = this.ExposureMeterMode_Options[this.currentIndex]
           }
         })
 

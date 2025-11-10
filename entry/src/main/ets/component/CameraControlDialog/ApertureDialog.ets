@@ -14,13 +14,11 @@ export struct ApertureDialog{
   controller : CustomDialogController //控制器属性
   @Link selectedApertureValue :string // 双向绑定的ISO
 
-  private ApertureOptions:string[]=[ ]
+  private ApertureOptions:string[]=[ "f/2.8", "f/4", "f/5.6"]
 
 
   // 当前选中的索引（slider绑定的数值）
   @State currentIndex:number = this.ApertureOptions.indexOf(this.selectedApertureValue)
-
-
 
 
 

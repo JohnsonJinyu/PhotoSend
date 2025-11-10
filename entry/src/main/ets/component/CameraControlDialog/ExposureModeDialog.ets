@@ -1,26 +1,24 @@
-// IsoDialog.ets
+// ExposureModeDialog.ets
 @CustomDialog
-export struct IsoDialog {
+export struct ExposureModeDialog {
   controller: CustomDialogController //控制器属性
-  @Link selectedISOValue: string // 双向绑定的ISO
-  private IsoOptions: string[] =
-    ['100', '125', '160', '200', '250', '320', '400', '500', '640', '800', '1000', '1250', '1600',
-      '3200', '6400', '51200', '12800', '25600', '512000']
+  @Link selected_ExposureMode_Value: string // 双向绑定的ISO
+  private ExposureMode_Options: string[] = ['M','A','S','P','AUTO']
   // 当前选中的索引（slider绑定的数值）
-  @State currentIndex: number = this.IsoOptions.indexOf(this.selectedISOValue)
+  @State currentIndex: number = this.ExposureMode_Options.indexOf(this.selected_ExposureMode_Value)
 
   build() {
 
     Column() {
       // 自定义滑动提示文本
-      Text(`${this.IsoOptions[this.currentIndex]}`)
+      Text(`${this.ExposureMode_Options[this.currentIndex]}`)
         .fontSize(18)
         .margin({ bottom: 10 })
         .textAlign(TextAlign.Center)
 
       Slider({
         min: 0,
-        max: this.IsoOptions.length - 1,
+        max: this.ExposureMode_Options.length - 1,
         step: 1,
         style: SliderStyle.OutSet,
         value: this.currentIndex
@@ -32,9 +30,9 @@ export struct IsoDialog {
         .trackThickness(5) // 增加滑轨厚度，让刻度更清晰
         .onChange((value: number, mode: SliderChangeMode) => {
           this.currentIndex = Math.round(value)
-          // 滑动结束后，同步到双向绑定的ISO 更新主页面
+          // 滑动结束后，同步到双向绑定的ExposureMode 更新主页面
           if (mode == SliderChangeMode.End) {
-            this.selectedISOValue = this.IsoOptions[this.currentIndex]
+            this.selected_ExposureMode_Value = this.ExposureMode_Options[this.currentIndex]
           }
         })
 
