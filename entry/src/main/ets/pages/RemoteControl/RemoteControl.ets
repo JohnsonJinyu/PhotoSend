@@ -49,6 +49,9 @@ export function RemoteControlBuilder() {
 
 @Component
 export struct RemoteControl {
+
+
+
   // 连接状态检查定时器ID
   private connectionCheckTimer: number = -1;
 
@@ -75,7 +78,7 @@ export struct RemoteControl {
 
   private nativeLibDir: string = '';
   private timerId: number = -1; // 预览定时器ID
-
+  private isProcessingPreview: boolean = false;
 
   // 弹窗控制器
   // ISO 值选择弹窗
@@ -182,6 +185,11 @@ export struct RemoteControl {
   }
 
 
+
+
+  /**
+   * @function 开始检测连接状态
+   * */
   private startConnectionCheck() {
     this.connectionCheckTimer = setInterval(() => {
       if (this.isConnected) {
@@ -190,6 +198,9 @@ export struct RemoteControl {
     }, 3000);
   }
 
+  /**
+   *  @function 停止检测连接状态
+   * */
   private stopConnectionCheck() {
     if (this.connectionCheckTimer !== -1) {
       clearInterval(this.connectionCheckTimer);
@@ -198,9 +209,11 @@ export struct RemoteControl {
   }
 
 
-  private isProcessingPreview: boolean = false;
 
-  // 参数同步逻辑完全保留（仅修改了触发频率，未改内部逻辑）
+
+  /**
+   * @function 同步相机参数到UI
+   * */
   private syncParamToUI() {
     const isoParam = this.paramList.find(p => p.name === 'iso');
     if (isoParam) {
@@ -266,6 +279,9 @@ export struct RemoteControl {
   }
 
 
+  /**
+   * @function 自动检测相机
+   * */
   autoDetectCamera() {
     // 完全保留原有逻辑
     const cameraList = nativeLibGphoto.GetAvailableCameras();
@@ -287,6 +303,9 @@ export struct RemoteControl {
   }
 
 
+  /**
+   * @function 手动连接相机
+   * */
   manualConnect() {
     // 完全保留原有逻辑
     const success = nativeLibGphoto.ConnectCamera("Nikon Zf", "ptpip:192.168.1.1");
@@ -295,6 +314,9 @@ export struct RemoteControl {
     this.connectStatus = success ? '相机已连接' : '连接失败，请检查WiFi';
   }
 
+  /**
+   * @function 连接状态检测
+   * */
   checkConnection() {
     // 完全保留原有逻辑
     const connected = nativeLibGphoto.IsCameraConnected();
@@ -307,7 +329,7 @@ export struct RemoteControl {
 
 
   /**
-   * 启动预览（仅优化定时器稳定性，未改核心逻辑）
+   * @function （仅优化定时器稳定性，未改核心逻辑）
    */
   startPreview() {
     if (this.previewRunning || !this.isConnected) {
@@ -340,6 +362,9 @@ export struct RemoteControl {
   }
 
 
+  /**
+   * @function 停止预览
+   * */
   stopPreview() {
     // 完全保留原有逻辑
     if (!this.previewRunning) {
