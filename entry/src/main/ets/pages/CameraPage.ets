@@ -327,6 +327,9 @@ export struct CameraPage {
         .width(280)
         .height(40)
         .margin({ top: 10 })
+        .onClick(()=>{
+          this.pageStack.pushPathByName('CameraPicturesPage',null,true)
+        })
 
 
 

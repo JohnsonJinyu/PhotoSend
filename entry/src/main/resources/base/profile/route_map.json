@@ -7,6 +7,14 @@
       "data": {
         "description" : "this is RemoteControl"
       }
+    },
+    {
+      "name": "CameraPicturesPage",
+      "pageSourceFile": "src/main/ets/pages/CameraPcituresPage/CameraPicturesPage.ets",
+      "buildFunction": "CameraPicturesPageBuilder",
+      "data": {
+        "description": "this is download picture page"
+      }
     }
   ]
 }
