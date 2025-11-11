@@ -16,7 +16,6 @@ export struct CameraPicturesPage {
   @State menuItems:Array<NavigationMenuItem>=[
     {
       value:'多选',
-      icon:$r('sys.media.ohos_ic_public_select_all'),
       action:()=>{
 
       }

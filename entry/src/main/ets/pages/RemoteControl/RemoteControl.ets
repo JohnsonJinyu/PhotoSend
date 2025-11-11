@@ -279,28 +279,7 @@ export struct RemoteControl {
   }
 
 
-  /**
-   * @function 自动检测相机
-   * */
-  autoDetectCamera() {
-    // 完全保留原有逻辑
-    const cameraList = nativeCamera.GetAvailableCameras();
-    if (cameraList.length === 0) {
-      this.connectStatus = '未连接到相机';
-      cameraParamManager.updateConnectionStatus(false);
-      return;
-    }
-    const GeneratedDestructArray_1 = cameraList[0].split('|');
-    const model = GeneratedDestructArray_1[0];
-    const path = GeneratedDestructArray_1[1];
-    const isConnected = nativeCamera.ConnectCamera(model, path);
-    if (isConnected) {
-      this.connectStatus = '相机连接成功';
-      cameraParamManager.updateConnectionStatus(true);
-    } else {
-      cameraParamManager.updateConnectionStatus(false);
-    }
-  }
+
 
 
   /**
