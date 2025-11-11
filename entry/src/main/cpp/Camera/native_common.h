@@ -46,4 +46,7 @@ extern  napi_value CreateNapiString(napi_env env, const char *str);
 extern napi_value SetGPhotoLibDirs(napi_env env, napi_callback_info info);
 
 
+// 声明：将 C++ bool 转换为 NAPI 布尔值
+napi_value CreateNapiBoolean(napi_env env, bool value);
+
 #endif //PHOTOSEND_NATIVE_COMMON_H

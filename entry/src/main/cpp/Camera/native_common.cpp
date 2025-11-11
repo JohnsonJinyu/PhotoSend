@@ -95,7 +95,17 @@ napi_value SetGPhotoLibDirs(napi_env env, napi_callback_info info) {
 
 
 
-
+// 实现：调用 NAPI 原生接口创建布尔值
+napi_value CreateNapiBoolean(napi_env env, bool value) {
+  napi_value result;
+  // 调用 NAPI 的 napi_get_boolean 接口，根据 value 生成 true/false 的 napi_value
+  napi_status status = napi_get_boolean(env, value, &result);
+  if (status != napi_ok) {
+    // 出错处理（例如返回空值或抛异常，根据业务需求调整）
+    return nullptr;
+  }
+  return result;
+}
 
 
 

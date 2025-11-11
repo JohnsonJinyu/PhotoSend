@@ -32,6 +32,34 @@ typedef struct {
 
 
 
+/*
+// 相机信息结构体（扩展为全面参数）
+typedef struct CameraInfo {
+    bool isSuccess;
+    char batteryLevel[32];    // 电池电量
+    char aperture[32];        // 光圈
+    char shutter[32];         // 快门速度
+    char iso[32];             // ISO
+    char exposureComp[32];    // 曝光补偿
+    char whiteBalance[32];    // 白平衡
+    char focalLength[32];     // 焦距
+    char focusMode[32];       // 对焦模式
+    char shootingMode[32];    // 拍摄模式
+    char imageQuality[32];    // 图像质量
+    char flashMode[32];       // 闪光模式
+    char meteringMode[32];    // 测光模式
+    char driveMode[32];       // 驱动模式（单拍/连拍）
+    char colorSpace[32];      // 色彩空间
+    char sharpness[32];       // 锐度
+    char contrast[32];        // 对比度
+    char saturation[32];      // 饱和度
+    char noiseReduction[32];  // 降噪
+    int remainingPictures;      // 剩余可拍张数
+}CameraInfo;
+*/
+
+
+
 
 
 // 仅声明（不初始化）
