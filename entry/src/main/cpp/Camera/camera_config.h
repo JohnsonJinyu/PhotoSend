@@ -6,7 +6,9 @@
 
 #ifndef PHOTOSEND_CAMERA_CONFIG_H
 #define PHOTOSEND_CAMERA_CONFIG_H
+#include "Camera/native_common.h"
 #include <napi/native_api.h>
+#include <vector>
 
 
 extern napi_value GetCameraConfig(napi_env env, napi_callback_info info);
@@ -32,32 +34,6 @@ typedef struct {
 
 
 
-/*
-// 相机信息结构体（扩展为全面参数）
-typedef struct CameraInfo {
-    bool isSuccess;
-    char batteryLevel[32];    // 电池电量
-    char aperture[32];        // 光圈
-    char shutter[32];         // 快门速度
-    char iso[32];             // ISO
-    char exposureComp[32];    // 曝光补偿
-    char whiteBalance[32];    // 白平衡
-    char focalLength[32];     // 焦距
-    char focusMode[32];       // 对焦模式
-    char shootingMode[32];    // 拍摄模式
-    char imageQuality[32];    // 图像质量
-    char flashMode[32];       // 闪光模式
-    char meteringMode[32];    // 测光模式
-    char driveMode[32];       // 驱动模式（单拍/连拍）
-    char colorSpace[32];      // 色彩空间
-    char sharpness[32];       // 锐度
-    char contrast[32];        // 对比度
-    char saturation[32];      // 饱和度
-    char noiseReduction[32];  // 降噪
-    int remainingPictures;      // 剩余可拍张数
-}CameraInfo;
-*/
-
 
 
 
@@ -67,7 +43,8 @@ extern const float standardShutterSpeeds[];
 extern const char* standardShutterLabels[];
 extern const int numStandardShutters;
 
-
+//  声明储存所有配置信息的全局变量
+extern std::vector<ConfigItem> g_allConfigItems;
 
 /**
  * @brief 内部函数：获取相机所有状态和可调节参数
@@ -94,4 +71,19 @@ extern napi_value GetCameraStatus(napi_env env, napi_callback_info info);
  */
 extern napi_value SetCameraParameter(napi_env env, napi_callback_info info);
 
+
+
+
+
+
+
+
+
+
+
+bool GetAllConfigItems(std::vector<ConfigItem> &items);
+
+
 #endif //PHOTOSEND_CAMERA_CONFIG_H
+
+

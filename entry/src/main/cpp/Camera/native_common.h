@@ -26,8 +26,15 @@ struct ConfigItem {
     std::string name;                 // 参数名（如"aperture"）
     std::string label;                // 显示名称（如"Aperture"）
     std::string type;                 // 参数类型（"choice"|"text"|"range"等）
-    std::string current;              // 当前值
+    std::string current;              // 当前值，对于非文本类型，这里只是临时存储，之后会转换到特定类型变量
     std::vector<std::string> choices; // 可选值列表（仅选项类型）
+
+    // 新增成员变量
+    float floatValue; // 用于GP_WIDGET_RANGE类型的当前值
+    float bottomFloat; // 用于GP_WIDGET_RANGE类型的最小值
+    float topFloat; // 用于GP_WIDGET_RANGE类型的最大值
+    float stepFloat; // 用于GP_WIDGET_RANGE类型的步长
+    int intValue; // 用于GP_WIDGET_TOGGLE类型的当前值
 };
 
 // 声明全局变量（extern表示"在其他文件中定义"，供外部引用）

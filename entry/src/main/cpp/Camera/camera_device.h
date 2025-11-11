@@ -1,4 +1,4 @@
-//
+// camera_device.h
 // Created on 2025/11/5.
 //
 // Node APIs are not fully supported. To solve the compilation error of the interface cannot be found,

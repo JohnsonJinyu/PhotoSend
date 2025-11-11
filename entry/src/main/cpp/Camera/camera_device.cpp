@@ -1,4 +1,4 @@
-//
+// camera_device.cpp
 // Created on 2025/11/5.
 //
 // Node APIs are not fully supported. To solve the compilation error of the interface cannot be found,
@@ -6,7 +6,7 @@
 
 #include "ltdl.h"
 #include "native_common.h"
-
+#include "camera_config.h"
 
 
 #include "hilog/log.h"
@@ -29,8 +29,7 @@
  */
 bool InternalConnectCamera(const char *model, const char *path) {
     // 打印日志：标记连接开始，输出传入的型号和路径（调试用）
-    OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "开始连接相机: model=%{public}s, path=%{public}s", model,
-                 path);
+    OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "开始连接相机: model=%{public}s, path=%{public}s", model, path);
 
     // 第一步：释放已有连接资源（避免重复连接导致内存泄漏）
     if (g_camera || g_context) {
@@ -89,13 +88,10 @@ bool InternalConnectCamera(const char *model, const char *path) {
         OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "ltdl查找驱动无错误");
     }
 
-    // OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "加载相机能力列表成功");
-
     // 第九步：校验能力列表加载结果（失败则释放资源返回）
     if (load_ret != GP_OK) {
         // gp_result_as_string：将libgphoto2错误码转成可读字符串（方便定位问题）
-        OH_LOG_Print(LOG_APP, LOG_ERROR, LOG_DOMAIN, LOG_TAG, "能力列表加载失败！错误码：%{public}d，原因：%{public}s",
-                     load_ret, gp_result_as_string(load_ret));
+        OH_LOG_Print(LOG_APP, LOG_ERROR, LOG_DOMAIN, LOG_TAG, "能力列表加载失败！错误码：%{public}d，原因：%{public}s", load_ret, gp_result_as_string(load_ret));
         // 释放能力列表内存（避免泄漏）
         gp_abilities_list_free(abilities_list);
         return false;
@@ -132,10 +128,8 @@ bool InternalConnectCamera(const char *model, const char *path) {
     // gp_port_info_list_load：从IOLIBS路径加载端口模块，扫描可用端口
     gp_port_info_list_load(port_list);
 
-    // OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "加载端口列表成功");
-    //  打印端口总数（确认端口模块加载正常，PTP/IP需要至少1个IP端口）
-    OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "加载端口列表成功，共发现 %{public}d 个端口",
-                 gp_port_info_list_count(port_list));
+    // 打印端口总数（确认端口模块加载正常，PTP/IP需要至少1个IP端口）
+    OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "加载端口列表成功，共发现 %{public}d 个端口", gp_port_info_list_count(port_list));
 
     // 第十四步：筛选IP类型端口（PTP/IP连接必需，排除USB等其他端口）
     GPPortInfo temp_port_info;                           // 临时存储单个端口的信息
@@ -203,6 +197,26 @@ bool InternalConnectCamera(const char *model, const char *path) {
     // 第十八步：连接成功，更新全局状态
     OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "相机连接成功");
     g_connected = true;
+
+    // 连接成功后查询配置树
+    std::vector<ConfigItem> items;
+    if (GetAllConfigItems(items)) {
+        g_allConfigItems = items;
+        // 打印调试日志
+        for (const auto& item : g_allConfigItems) {
+            OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "Config Item - Name: %{public}s, Label: %{public}s, Type: %{public}s, Current: %{public}s", item.name.c_str(), item.label.c_str(), item.type.c_str(), item.current.c_str());
+            if (!item.choices.empty()) {
+                OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "Choices: ");
+                for (const auto& choice : item.choices) {
+                    OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "%{public}s ", choice.c_str());
+                }
+                OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "\n");
+            }
+        }
+    } else {
+        OH_LOG_Print(LOG_APP, LOG_ERROR, LOG_DOMAIN, LOG_TAG, "获取配置树信息失败");
+    }
+
     return true;
 }
 
