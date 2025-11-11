@@ -86,14 +86,14 @@ export struct RemoteControl {
     builder: IsoDialog({ selectedISOValue: this.ISOValue }),
     customStyle: true,
     alignment: DialogAlignment.Center,
-    offset: { dx: 0, dy: 40 }
+    offset: { dx: 0, dy: 0 }
   });
   // 光圈选择弹窗
   apertureDialogController:CustomDialogController = new CustomDialogController({
     builder:ApertureDialog({selectedApertureValue:this.apertureValue}),
     customStyle:true,
     alignment:DialogAlignment.Center,
-    offset: { dx: 0, dy: 40 }
+    offset: { dx: 0, dy: 0 }
   })
 
   // 快门速度选择弹窗
@@ -101,7 +101,7 @@ export struct RemoteControl {
     builder: ShutterSpeedDialog({ SelectedShutterValue: this.shutterValue }),
     customStyle: true,
     alignment: DialogAlignment.Center,
-    offset: { dx: 0, dy: 40 }
+    offset: { dx: 0, dy: 0 }
   });
 
   // 曝光补偿选项弹窗
@@ -109,7 +109,7 @@ export struct RemoteControl {
     builder:ExposureCompensationDialog({selected_EV_Value:this.exposureCompensationValue}),
     customStyle:true,
     alignment:DialogAlignment.Center,
-    offset: { dx: 0, dy: 40 }
+    offset: { dx: 0, dy: 0 }
   })
 
   // 曝光补偿选项弹窗
@@ -117,7 +117,7 @@ export struct RemoteControl {
     builder:ExposureModeDialog({selected_ExposureMode_Value:this.exposureProgramValue}),
     customStyle:true,
     alignment:DialogAlignment.Center,
-    offset: { dx: 0, dy: 40 }
+    offset: { dx: 0, dy: 0 }
   })
 
   // 对焦模式选择弹窗
@@ -125,7 +125,7 @@ export struct RemoteControl {
     builder:FocusModeDialog({selected_Focus_Mode_Value:$focusModeValue}),
     customStyle: true,
     alignment: DialogAlignment.Center,
-    offset: { dx: 0, dy: 40 }
+    offset: { dx: 0, dy: 0 }
   })
 
   // 测光模式选择弹窗
@@ -133,7 +133,7 @@ export struct RemoteControl {
     builder:ExposureMeterModeDialog({selected_ExposureMeterMode_Value:this.meterModeValue}),
     customStyle: true,
     alignment: DialogAlignment.Center,
-    offset: { dx: 0, dy: 40 }
+    offset: { dx: 0, dy: 0 }
   })
 
   // 白平衡选择弹窗
@@ -141,7 +141,7 @@ export struct RemoteControl {
     builder:WhiteBalanceDialog({selectedI_WB_Value:this.whiteBalanceValue}),
     customStyle: true,
     alignment: DialogAlignment.Center,
-    offset: { dx: 0, dy: 40 }
+    offset: { dx: 0, dy: 0 }
   })
 
 
