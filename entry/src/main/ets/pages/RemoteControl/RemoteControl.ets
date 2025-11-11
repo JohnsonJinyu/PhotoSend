@@ -1,3 +1,4 @@
+//RemoteControl.ets
 import nativeCamera from 'libentry.so'
 import { IsoDialog } from 'ets/component/CameraControlDialog/IsoDialog'
 import { ShutterSpeedDialog } from 'ets/component/CameraControlDialog/ShutterSpeedDialog'

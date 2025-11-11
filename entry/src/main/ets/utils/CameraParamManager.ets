@@ -1,3 +1,4 @@
+// CameraParamManager.ets
 import nativeCamera from 'libentry.so'
 /**
  * 相机参数管理

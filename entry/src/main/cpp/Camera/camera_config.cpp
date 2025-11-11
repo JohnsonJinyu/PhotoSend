@@ -10,7 +10,7 @@
 #include "hilog/log.h"
 #include "camera_config.h"
 
-#define LOG_DOMAIN 0x0002      // 日志域（自定义标识，区分不同模块日志）
+#define LOG_DOMAIN 0x0002       // 日志域（自定义标识，区分不同模块日志）
 #define LOG_TAG "Camera_Config" // 日志标签（日志中显示的模块名）
 
 
@@ -43,14 +43,6 @@ const char *standardShutterLabels[] = {
 
 // 标准档位数量（需与上面数组长度一致）
 const int numStandardShutters = sizeof(standardShutterSpeeds) / sizeof(standardShutterSpeeds[0]);
-
-
-
-
-
-
-
-
 
 
 /**
@@ -108,9 +100,14 @@ static void TraverseConfigTree(CameraWidget *widget, std::vector<ConfigItem> &it
             int choiceCount = gp_widget_count_choices(widget);
             for (int i = 0; i < choiceCount; i++) {
                 const char *choice;
-                if (gp_widget_get_choice(widget, i, &choice) == GP_OK) {
+                if (gp_widget_get_choice(widget, i, &choice) == GP_OK && choice != nullptr) {
                     item.choices.push_back(choice);
+                } else {
+                    item.choices.push_back(""); // 用空字符串替代null
                 }
+                OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, 
+            "配置项: %{public}s, 当前值: %{public}s, 选项数: %{public}zu", 
+            item.name.c_str(), item.current.c_str(), item.choices.size());
             }
         }
 
@@ -126,8 +123,6 @@ static void TraverseConfigTree(CameraWidget *widget, std::vector<ConfigItem> &it
         }
     }
 }
-
-
 
 
 /**
@@ -277,18 +272,6 @@ static void RecursiveFindWidget(CameraWidget *root, const char *targetName, Came
 }
 
 
-
-
-
-
-
-
-
-
-
-
-
-
 /**
  * @brief 内部函数：获取相机所有状态和可调节参数
  * @return CameraInfo 存储所有信息的结构体
@@ -320,7 +303,7 @@ CameraInfo InternalGetCameraInfo() {
     if (targetWidget) {
         CameraWidgetType type;
         gp_widget_get_type(targetWidget, &type);
-        //OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "电量节点类型：%{public}d", type); // 调试：打印实际类型
+        // OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "电量节点类型：%{public}d", type); // 调试：打印实际类型
 
         if (type == GP_WIDGET_TOGGLE) { // 正确类型：整数（如80=80%）
             int batteryVal = 0;
@@ -340,7 +323,7 @@ CameraInfo InternalGetCameraInfo() {
     if (targetWidget) {
         CameraWidgetType type;
         gp_widget_get_type(targetWidget, &type);
-        //OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "光圈节点类型：%{public}d", type);
+        // OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "光圈节点类型：%{public}d", type);
 
         if (type == GP_WIDGET_RADIO || type == GP_WIDGET_MENU) { // 枚举类型，值为选项名
             const char *apertureStr = nullptr;
@@ -416,7 +399,7 @@ CameraInfo InternalGetCameraInfo() {
     if (targetWidget) {
         CameraWidgetType type;
         gp_widget_get_type(targetWidget, &type);
-        //OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "ISO节点类型：%{public}d", type);
+        // OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "ISO节点类型：%{public}d", type);
 
         if (type == GP_WIDGET_RADIO || type == GP_WIDGET_MENU) {
             const char *isoStr = nullptr;
@@ -433,7 +416,7 @@ CameraInfo InternalGetCameraInfo() {
     if (targetWidget) {
         CameraWidgetType type;
         gp_widget_get_type(targetWidget, &type);
-        //OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "曝光补偿节点类型：%{public}d", type);
+        // OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "曝光补偿节点类型：%{public}d", type);
 
         if (type == GP_WIDGET_RADIO || type == GP_WIDGET_MENU) {
             const char *ecStr = nullptr;
@@ -460,9 +443,9 @@ CameraInfo InternalGetCameraInfo() {
             else
                 strncpy(info.whiteBalance, wbVal, sizeof(info.whiteBalance) - 1);
         }
-        //OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "白平衡：%{public}s", info.whiteBalance);
+        // OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "白平衡：%{public}s", info.whiteBalance);
     } else {
-        //OH_LOG_Print(LOG_APP, LOG_WARN, LOG_DOMAIN, LOG_TAG, "未找到白平衡节点（whitebalance）");
+        // OH_LOG_Print(LOG_APP, LOG_WARN, LOG_DOMAIN, LOG_TAG, "未找到白平衡节点（whitebalance）");
     }
 
     // 3.7 拍摄模式（正确类型：GP_WIDGET_RADIO，值为选项名）
@@ -471,7 +454,7 @@ CameraInfo InternalGetCameraInfo() {
     if (targetWidget) {
         CameraWidgetType type;
         gp_widget_get_type(targetWidget, &type);
-        //OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "拍摄模式节点类型：%{public}d", type);
+        // OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "拍摄模式节点类型：%{public}d", type);
 
         if (type == GP_WIDGET_RADIO || type == GP_WIDGET_MENU) {
             const char *modeStr = nullptr;
