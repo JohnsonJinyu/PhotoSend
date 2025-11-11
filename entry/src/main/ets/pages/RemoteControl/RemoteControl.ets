@@ -547,7 +547,14 @@ export struct RemoteControl {
 
 
 
-  // 在RemoteControl组件内添加参数按钮构建方法
+  /**
+   * @description 构建相机参数控制按钮的UI组件
+   * 用于统一渲染相机各项参数（如ISO、光圈、快门等）的控制按钮，包含参数标签和当前值展示
+   * @param {string} label - 参数标签文本（如"ISO"、"光圈"，用于标识参数类型）
+   * @param {string} value - 参数当前值（如"100"、"F2.8"，展示当前参数的设定值）
+   * @param {() => void} onClick - 点击按钮时的回调函数（通常用于打开对应参数的设置弹窗）
+   * @returns 包含标签文本和参数值按钮的Column布局组件，统一参数控制按钮的样式和交互逻辑
+   */
   @Builder
   private buildParamButton(label: string, value: string, onClick: () => void) {
     Column({ space: 4 }) {
@@ -561,7 +568,7 @@ export struct RemoteControl {
         .fontSize(14)
         .height(36)
         .width('100%') // 自适应网格宽度
-        .backgroundColor('#f5f5f5')
+      //  .backgroundColor('#f5f5f5')
         .fontColor('#333')
         .borderRadius(6)
         .onClick(onClick)
@@ -588,28 +595,17 @@ export struct RemoteControl {
                 this.getCameraInfo()
               })
 
-            Button('检测相机')
-              .onClick(() => {
-                this.checkConnection()
-              })
-          }
 
-          Row({ space: 10 }) {
             Button('手动连接相机')
               .onClick(() => {
                 this.manualConnect();
               })
               .enabled(!this.isConnected)
 
-            Button('IP测试')
-              .onClick(async () => {
-                /*let camIP = await scanner.getLocalSubnet()
-                if (camIP!=null) {
-                  scanner.getCameraName(camIP)
-                }*/
-              })
           }
 
+
+          // 连接状态指示
           Row({ space: 10 }) {
             Text(this.connectStatus)
               .fontSize(18)
@@ -632,7 +628,9 @@ export struct RemoteControl {
 
 
 
-        // 预览画面显示区域
+        /**
+         * @description 预览画面显示区域
+         * */
         Column() {
           if (this.previewPixelMap) {
             Image(this.previewPixelMap)
@@ -693,7 +691,9 @@ export struct RemoteControl {
 
 
 
-        //预览控制按钮区域
+        /**
+         * @function 预览按钮区域
+         * */
         Row({ space: 10 }) {
           Button('启动预览')
             .enabled(!this.previewRunning)
@@ -705,6 +705,10 @@ export struct RemoteControl {
         }
         .margin({ top: 10 })
 
+
+        /**
+         *@function 拍照按钮区域
+         * */
         Row({ space: 10 }) {
           Button('图库')
           Button('拍照')
