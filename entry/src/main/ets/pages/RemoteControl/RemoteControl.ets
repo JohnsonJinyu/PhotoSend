@@ -1,4 +1,4 @@
-import nativeLibGphoto from 'libentry.so'
+import nativeCamera from 'libentry.so'
 import { IsoDialog } from 'ets/component/CameraControlDialog/IsoDialog'
 import { ShutterSpeedDialog } from 'ets/component/CameraControlDialog/ShutterSpeedDialog'
 import { image } from '@kit.ImageKit';
@@ -61,7 +61,7 @@ export struct RemoteControl {
   @State previewPixelMap: PixelMap | null = null; // 预览帧
   @State previewRunning: boolean = false; // 预览运行状态
   @State previewImage: string = '';
-  @State photoList: nativeLibGphoto.PhotoPathInfo[] = [];
+  @State photoList: nativeCamera.PhotoPathInfo[] = [];
   @State currentPreviewInterval: number = 0;
   @State statusMessage: string = '请连接相机';
 
@@ -284,7 +284,7 @@ export struct RemoteControl {
    * */
   autoDetectCamera() {
     // 完全保留原有逻辑
-    const cameraList = nativeLibGphoto.GetAvailableCameras();
+    const cameraList = nativeCamera.GetAvailableCameras();
     if (cameraList.length === 0) {
       this.connectStatus = '未连接到相机';
       cameraParamManager.updateConnectionStatus(false);
@@ -293,7 +293,7 @@ export struct RemoteControl {
     const GeneratedDestructArray_1 = cameraList[0].split('|');
     const model = GeneratedDestructArray_1[0];
     const path = GeneratedDestructArray_1[1];
-    const isConnected = nativeLibGphoto.ConnectCamera(model, path);
+    const isConnected = nativeCamera.ConnectCamera(model, path);
     if (isConnected) {
       this.connectStatus = '相机连接成功';
       cameraParamManager.updateConnectionStatus(true);
@@ -308,7 +308,7 @@ export struct RemoteControl {
    * */
   manualConnect() {
     // 完全保留原有逻辑
-    const success = nativeLibGphoto.ConnectCamera("Nikon Zf", "ptpip:192.168.1.1");
+    const success = nativeCamera.ConnectCamera("Nikon Zf", "ptpip:192.168.1.1");
     cameraParamManager.updateConnectionStatus(success);
     this.isConnected = success;
     this.connectStatus = success ? '相机已连接' : '连接失败，请检查WiFi';
@@ -319,7 +319,7 @@ export struct RemoteControl {
    * */
   checkConnection() {
     // 完全保留原有逻辑
-    const connected = nativeLibGphoto.IsCameraConnected();
+    const connected = nativeCamera.IsCameraConnected();
     if (connected !== this.isConnected) {
       cameraParamManager.updateConnectionStatus(connected);
       this.isConnected = connected;
@@ -395,14 +395,14 @@ export struct RemoteControl {
     const startTime = Date.now();
     this.isProcessingPreview = true;
     try {
-      if (!nativeLibGphoto.IsCameraConnected()) {
+      if (!nativeCamera.IsCameraConnected()) {
         console.warn('相机已断开连接，停止预览');
         this.stopPreview();
         return;
       }
 
       // 获取预览数据（保留原有逻辑）
-      const arrayBuffer: ArrayBuffer = nativeLibGphoto.GetPreview();
+      const arrayBuffer: ArrayBuffer = nativeCamera.GetPreview();
       if (!arrayBuffer || !(arrayBuffer instanceof ArrayBuffer)) {
         console.error('GetPreview返回无效的ArrayBuffer');
         return;
@@ -456,7 +456,7 @@ export struct RemoteControl {
   takeAndDownloadKnown() {
     // 完全保留原有逻辑
     try {
-      const ok = nativeLibGphoto.TakePhoto();
+      const ok = nativeCamera.TakePhoto();
       if (!ok) {
         this.statusMessage = '拍照失败';
         return;
@@ -464,7 +464,7 @@ export struct RemoteControl {
 
       const folder = "DCIM/100CANON";
       const filename = "IMG_0001.JPG";
-      const arrBuf: ArrayBuffer = nativeLibGphoto.DownloadPhoto(folder, filename);
+      const arrBuf: ArrayBuffer = nativeCamera.DownloadPhoto(folder, filename);
       if (!arrBuf) {
         this.statusMessage = '下载失败';
         return;
@@ -496,7 +496,7 @@ export struct RemoteControl {
   getCameraInfo() {
     // 完全保留原有逻辑
     try {
-      const camInfo = nativeLibGphoto.GetCameraStatus();
+      const camInfo = nativeCamera.GetCameraStatus();
       console.log("相机连接状态：", camInfo.isSuccess);
       console.log("电量：", camInfo.batteryLevel);
       console.log("当前光圈：", camInfo.aperture);
