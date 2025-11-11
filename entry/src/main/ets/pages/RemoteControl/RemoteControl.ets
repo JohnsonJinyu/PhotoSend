@@ -544,7 +544,7 @@ export struct RemoteControl {
         .textAlign(TextAlign.Center)
 
       Button(value)
-        .fontSize(14)
+        .fontSize(6)
         .height(36)
         .width('100%') // 自适应网格宽度
       //  .backgroundColor('#f5f5f5')
