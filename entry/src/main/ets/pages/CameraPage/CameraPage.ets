@@ -2,7 +2,7 @@ import { promptAction } from "@kit.ArkUI"
 import { common, Want } from '@kit.AbilityKit'
 
 import { BusinessError } from '@ohos.base'
-import { camConnectionManager } from '../utils/CamConnectManager';
+import { camConnectionManager } from '../../utils/CamConnectManager';
 
 // 定义具体的连接模式类型
 type ConnectionMode = '蓝牙' | 'WiFi-AP' | 'WiFi-STA';

@@ -1,6 +1,6 @@
-import { CameraPage } from './CameraPage';
+import { CameraPage } from './CameraPage/CameraPage';
 import { PicturesPage } from './PicturesPage';
-import { MinePage } from './MinePage';
+import { MinePage } from './MinePage/MinePage';
 
 
 @Preview

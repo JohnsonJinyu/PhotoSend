@@ -32,19 +32,14 @@ export struct MinePage {
         }
         .border({ width: { bottom: 1 }, color: '#F1F3F5' })
 
+
         ListItem() {
-          this.menuItem($r('app.media.ic_about'), '关于我们', () => {
+          this.menuItem($r('app.media.ic_about'), '关于', () => {
             // 跳转关于页逻辑
           })
         }
         .border({ width: { bottom: 1 }, color: '#F1F3F5' })
 
-        ListItem() {
-          this.menuItem($r('app.media.ic_privacy'), '隐私政策', () => {
-            // 跳转隐私页逻辑
-          })
-        }
-        .border({ width: { bottom: 1 }, color: '#F1F3F5' })
 
         ListItem() {
           this.menuItem($r('app.media.ic_feedback'), '意见反馈', () => {
@@ -53,6 +48,7 @@ export struct MinePage {
         }
       }
       .width('100%')
+      .height('auto')
       .divider({ strokeWidth: 1, color: '#F1F3F5' })
       .margin({ top: 12 })
     }
