@@ -43,6 +43,16 @@ extern const float standardShutterSpeeds[];
 extern const char* standardShutterLabels[];
 extern const int numStandardShutters;
 
+
+// 在camera_config.h中添加
+extern const std::vector<std::string> DEFAULT_PARAMS_TO_EXTRACT;
+
+// 定义回调函数类型：接收napi_value类型的参数（推送的参数可选值对象）
+typedef void (*ParamCallback)(napi_value);  // 关键：补充类型定义
+
+// 之后再声明全局回调指针
+extern ParamCallback g_paramCallback;
+
 //  声明储存所有配置信息的全局变量
 extern std::vector<ConfigItem> g_allConfigItems;
 
@@ -78,7 +88,8 @@ extern napi_value SetCameraParameter(napi_env env, napi_callback_info info);
 extern napi_value GetParamOptions(napi_env env, napi_callback_info info);
 
 
-
+// 声明注册回调的NAPI接口
+extern napi_value RegisterParamCallback(napi_env env, napi_callback_info info);
 
 
 bool GetAllConfigItems(std::vector<ConfigItem> &items);

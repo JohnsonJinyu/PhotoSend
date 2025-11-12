@@ -24,6 +24,20 @@
 // 定义全局变量（包含相机所有可选配置的），简言之这个变量就是配置树
 std::vector<ConfigItem> g_allConfigItems;
 
+// 全局回调函数指针（需在camera_config.h中声明）
+ParamCallback g_paramCallback = nullptr;
+
+
+// 定义结构体保存回调需要的状态（env和ArkTS回调的引用）
+struct CallbackState {
+    napi_env env;         // NAPI环境
+    napi_ref callbackRef; // ArkTS层回调函数的引用
+};
+
+// 全局变量保存状态（简单处理，实际项目可考虑更安全的管理方式）
+static CallbackState g_callbackState;
+
+
 
 // 标准快门档位（单位：秒），按从小到大排序
 const float standardShutterSpeeds[] = {
@@ -49,7 +63,15 @@ const int numStandardShutters = sizeof(standardShutterSpeeds) / sizeof(standardS
 
 
 
-
+// 在camera_config.cpp中添加
+const std::vector<std::string> DEFAULT_PARAMS_TO_EXTRACT = {
+    "iso",               // ISO
+    "shutterspeed",      // 快门速度
+    "f-number",          // 光圈
+    "whitebalance",      // 白平衡
+    "focusmode",         // 对焦模式
+    "expprogram"         // 曝光程序
+};
 
 
 
@@ -193,12 +215,69 @@ static void TraverseConfigTree(CameraWidget* widget, std::vector<ConfigItem>& it
 
 
 
+/**
+ * 通用工具函数：批量提取指定参数的可选值
+ * @param paramNames 需要提取的参数名列表（如{"iso", "shutterspeed", "whitebalance"}）
+ * @return 键值对：参数名 → 可选值数组
+ */
+std::unordered_map<std::string, std::vector<std::string>> ExtractParamOptions(const std::vector<std::string>& paramNames) {
+    std::unordered_map<std::string, std::vector<std::string>> result;
+    if (g_allConfigItems.empty()) {
+        OH_LOG_Print(LOG_APP, LOG_WARN, LOG_DOMAIN, LOG_TAG, "配置树为空，无法提取可选值");
+        return result;
+    }
+
+    // 遍历配置树，匹配目标参数并提取可选值
+    for (const auto& item : g_allConfigItems) {
+        // 检查当前参数是否在需要提取的列表中
+        if (std::find(paramNames.begin(), paramNames.end(), item.name) != paramNames.end()) {
+            result[item.name] = item.choices; // 存储可选值数组
+            OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "提取参数[%s]的可选值，共%d项", 
+                        item.name.c_str(), (int)item.choices.size());
+        }
+    }
+    return result;
+}
+
+
+
 
 
 /**
- * 获取所有配置项（优化核心）
- * 优化点：去除重复遍历，简化流程，加强资源管理
+ * 将提取的参数可选值转换为NAPI格式并推送
  */
+void PushParamOptionsToArkTS(const std::unordered_map<std::string, std::vector<std::string>>& options) {
+    napi_env env = napi_env(); // 获取当前NAPI环境（根据实际框架调整）
+    if (!env || g_paramCallback == nullptr) return;
+
+    // 创建NAPI对象存储所有参数的可选值
+    napi_value resultObj;
+    napi_create_object(env, &resultObj);
+
+    // 遍历可选值map，转换为NAPI数组并设置到对象中
+    for (const auto& pair : options) {
+        const std::string& paramName = pair.first;
+        const std::vector<std::string>& choices = pair.second;
+
+        // 创建可选值数组
+        napi_value choicesArray;
+        napi_create_array(env, &choicesArray);
+        for (size_t i = 0; i < choices.size(); ++i) {
+            napi_value choiceStr = CreateNapiString(env, choices[i].c_str());
+            napi_set_element(env, choicesArray, i, choiceStr);
+        }
+
+        // 将数组绑定到参数名对应的属性
+        napi_value key = CreateNapiString(env, paramName.c_str());
+        napi_set_property(env, resultObj, key, choicesArray);
+    }
+
+    // 通过回调推送给ArkTS（需确保回调能处理对象类型）
+    g_paramCallback(resultObj); // 注意：需修改ParamCallback类型支持napi_value
+}
+
+
+
 bool GetAllConfigItems(std::vector<ConfigItem>& items) {
     items.clear();
     // 1. 连接检查（前置校验）
@@ -217,7 +296,21 @@ bool GetAllConfigItems(std::vector<ConfigItem>& items) {
 
     // 3. 遍历配置树（仅一次遍历，去除冗余的map构建）
     TraverseConfigTree(root, items, "");
-    g_allConfigItems = items; // 缓存结果
+    
+    
+    ///////////////////////////////////////
+    // 配置树加载成功后，提取可选值并推送
+    if (g_paramCallback != nullptr) {
+        // 调用通用工具函数提取目标参数的可选值
+        auto paramOptions = ExtractParamOptions(DEFAULT_PARAMS_TO_EXTRACT);
+        // 将提取结果转换为可通过NAPI传递的格式（见步骤3）
+        PushParamOptionsToArkTS(paramOptions);
+    }
+    //////////////////////////////////
+    
+    
+    
+    
 
     // 4. 释放资源（确保无论成败都释放）
     gp_widget_free(root);
@@ -686,6 +779,26 @@ CameraInfo InternalGetCameraInfo() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 // camera_config.cpp 新增NAPI接口
 napi_value GetParamOptions(napi_env env, napi_callback_info info) {
     size_t argc = 1;
@@ -759,6 +872,36 @@ napi_value GetCameraStatus(napi_env env, napi_callback_info info) {
 
     return result;
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -843,4 +986,59 @@ napi_value SetCameraParameter(napi_env env, napi_callback_info info) {
     napi_value result;
     napi_get_boolean(env, success, &result);
     return result;
+}
+
+
+
+
+
+
+
+
+
+
+
+// 静态函数，符合ParamCallback的类型
+static void StaticParamCallback(napi_value params) {
+    // 从全局状态中获取env和callbackRef
+    napi_env env = g_callbackState.env;
+    napi_ref callbackRef = g_callbackState.callbackRef;
+
+    if (env == nullptr || callbackRef == nullptr) {
+        return; // 状态无效，直接返回
+    }
+
+    // 调用ArkTS层的回调函数（与之前lambda中的逻辑一致）
+    napi_value callback;
+    napi_get_reference_value(env, callbackRef, &callback);
+
+    napi_value global;
+    napi_get_global(env, &global);
+
+    napi_value result;
+    napi_call_function(env, global, callback, 1, &params, &result);
+}
+
+
+
+
+
+// 实现注册回调：保存ArkTS层传递的回调函数
+napi_value RegisterParamCallback(napi_env env, napi_callback_info info) {
+    size_t argc = 1;
+    napi_value args[1];
+    napi_get_cb_info(env, info, &argc, args, nullptr, nullptr);
+
+    // 创建ArkTS回调的引用（与之前一致）
+    napi_ref callbackRef;
+    napi_create_reference(env, args[0], 1, &callbackRef);
+
+    // 保存状态到全局结构体
+    g_callbackState.env = env;
+    g_callbackState.callbackRef = callbackRef;
+
+    // 赋值静态函数（符合ParamCallback类型）
+    g_paramCallback = StaticParamCallback;
+
+    return nullptr;
 }

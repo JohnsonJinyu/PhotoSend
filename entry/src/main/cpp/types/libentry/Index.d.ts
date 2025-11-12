@@ -4,6 +4,7 @@
 interface CameraDevice {
   /** 相机型号名称（如"Nikon D850"） */
   name: string;
+
   /** 相机连接路径（如"usb:001,005"） */
   path: string;
 }
@@ -14,6 +15,7 @@ interface CameraDevice {
 interface PhotoPathInfo {
   /** 照片所在文件夹路径 */
   folder: string;
+
   /** 照片文件名 */
   name: string;
 }
@@ -24,30 +26,42 @@ interface PhotoPathInfo {
 interface CameraStatus {
   /** 是否成功获取信息 */
   isSuccess: boolean;
+
   /** 电量状态（如"Full"、"50%"、"Low"） */
   batteryLevel: string;
+
   /** 光圈值（如"2.8"、"5.6"、"Auto"） */
   aperture: string;
+
   /** 快门速度（如"1/1000"、"0.001"、"Auto"） */
   shutter: string;
+
   /** ISO值（如"400"、"800"、"Auto"） */
   iso: string;
+
   /** 曝光补偿（如"0.3"、"-1.0"，单位EV） */
   exposureCompensation: string;
+
   /** 白平衡模式（如"Auto"、"Daylight"、"Tungsten"） */
   whiteBalance: string;
+
   /** 拍摄模式（如"Program"、"Aperture Priority"、"Manual"） */
   captureMode: string;
+
   /** 剩余存储空间（单位：字节，大整数） */
   freeSpaceBytes: bigint;
+
   /** 剩余可拍摄张数 */
   remainingPictures: number;
+
   /** 曝光模式 */
-  exposureProgram:string;
+  exposureProgram: string;
+
   /** 对焦模式*/
-  focusMode:string;
+  focusMode: string;
+
   /** 测光模式 */
-  exposureMeterMode:string;
+  exposureMeterMode: string;
 }
 
 
@@ -57,12 +71,16 @@ interface CameraStatus {
 interface ConfigItem {
   /** 参数名（如"aperture"、"shutter-speed"） */
   name: string;
+
   /** 参数显示名称（如"Aperture"、"Shutter Speed"） */
   label: string;
+
   /** 参数类型（如"choice"表示选项类型、"text"表示文本类型、"range"表示范围类型） */
   type: string;
+
   /** 参数当前值（如"f/5.6"、"1/100"） */
   current: string;
+
   /** 参数可选值列表（仅类型为"choice"时有效，如["f/2.8", "f/4", "f/5.6"]） */
   choices: string[];
 }
@@ -93,7 +111,6 @@ export const GetCameraStatus: () => CameraStatus;
  * @returns 设置成功返回 true
  */
 export const SetGPhotoLibDirs: (camlibDir: string) => boolean;
-
 
 
 /**
@@ -140,7 +157,7 @@ export const DownloadPhoto: (folder: string, name: string) => ArrayBuffer;
 export const Disconnect: () => boolean;
 
 
-export const IsCameraConnected:()=>boolean
+export const IsCameraConnected: () => boolean
 
 
 /**
@@ -149,3 +166,6 @@ export const IsCameraConnected:()=>boolean
  * @returns 参数的可选值列表（如光圈返回["f/2.8", "f/4", "f/5.6"]，无可选值或参数不存在时返回空数组）
  */
 export const GetParamOptions: (paramName: string) => string[];
+
+
+export const RegisterParamCallback: () => null;

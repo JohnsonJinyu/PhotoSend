@@ -312,7 +312,8 @@ static napi_value Init(napi_env env, napi_value exports) {
         {"GetCameraStatus", nullptr, GetCameraStatus, nullptr, nullptr, nullptr, napi_default, nullptr}, // 新增这行
         {"GetCameraConfig", nullptr, GetCameraConfig, nullptr, nullptr, nullptr, napi_default, nullptr},
         {"GetParamOptions", nullptr, GetParamOptions, nullptr, nullptr, nullptr, napi_default, nullptr},
-
+        {"RegisterParamCallback", nullptr, RegisterParamCallback, nullptr, nullptr, nullptr, napi_default, nullptr},
+        
     };
 
     // 将接口映射表挂载到exports对象（ArkTS侧通过import获取这些函数）
