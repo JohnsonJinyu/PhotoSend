@@ -85,6 +85,29 @@ interface ConfigItem {
   choices: string[];
 }
 
+
+
+
+
+
+
+/**
+ * 回调函数接收的参数类型，包含参数的可选值
+ */
+interface ParamOptions {
+  iso: string[];
+  shutterspeed?: string[];
+  // 这里可以根据实际情况添加其他可能的参数
+}
+
+
+
+
+
+
+
+
+
 /**
  * 获取相机所有配置参数（包含参数名、显示名、类型、当前值及可选值）
  * @returns 配置参数列表，每个元素为符合ConfigItem接口的对象
@@ -168,4 +191,8 @@ export const IsCameraConnected: () => boolean
 export const GetParamOptions: (paramName: string) => string[];
 
 
-export const RegisterParamCallback: () => null;
+/**
+ * 注册参数回调函数
+ * @param callback 回调函数，接收一个ParamOptions类型的参数
+ */
+export const RegisterParamCallback: (callback: (params: ParamOptions) => void) => void;

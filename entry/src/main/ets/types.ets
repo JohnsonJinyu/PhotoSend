@@ -17,3 +17,9 @@ interface Dimension {
   width: number;
   height: number;
 }
+
+export interface ParamOptions {
+  iso: string[];
+  shutterspeed?: string[];
+  // 这里可以根据实际情况添加其他可能的参数
+}

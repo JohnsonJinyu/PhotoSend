@@ -1,23 +1,48 @@
 // IsoDialog.ets
+import { CameraHelper } from 'ets/utils/CameraHelper';
+
+import Log from '@ohos.hilog';
+
+const TAG = 'IsoDialog';
+const domain = 1
+
 @CustomDialog
 export struct IsoDialog {
-  controller: CustomDialogController //控制器属性
-  @Link selectedISOValue: string // 双向绑定的ISO
-  private IsoOptions: string[] =
-    ['100', '125', '160', '200', '250', '320', '400', '500', '640', '800', '1000', '1250', '1600',
-      '3200', '6400', '51200', '12800', '25600', '512000']
-  // 当前选中的索引（slider绑定的数值）
-  @State currentIndex: number = this.IsoOptions.indexOf(this.selectedISOValue)
+  controller: CustomDialogController
+  @Link selectedISOValue: string
+  private IsoOptions: string[] = [];
+  @State currentIndex: number = 0;
+
+  constructor(controller: CustomDialogController, selectedISOValue: string) {
+    super();
+    this.controller = controller;
+    this.selectedISOValue = selectedISOValue;
+    this.initIsoOptions();
+  }
+
+  async initIsoOptions() {
+    const cameraHelper = CameraHelper.getInstance();
+    const options = cameraHelper.getIsoOptions();
+    if (options.length === 0) {
+      cameraHelper.onIsoOptionsUpdate = (newOptions) => {
+        this.IsoOptions = newOptions;
+        this.currentIndex = this.IsoOptions.indexOf(this.selectedISOValue);
+        Log.info(1,TAG, 'IsoOptions received in IsoDialog: %{public}s', this.IsoOptions.join(','));
+      };
+    } else {
+      this.IsoOptions = options;
+      this.currentIndex = this.IsoOptions.indexOf(this.selectedISOValue);
+      Log.info(1,TAG, 'IsoOptions received in IsoDialog: %{public}s', this.IsoOptions.join(','));
+    }
+  }
 
   build() {
-
     Column() {
-      // 自定义滑动提示文本
       Text(`${this.IsoOptions[this.currentIndex]}`)
         .fontSize(18)
         .margin({ bottom: 10 })
         .textAlign(TextAlign.Center)
-        .fontColor("#FFFFFF")
+        .fontColor("#FFFFFF");
 
       Slider({
         min: 0,
@@ -32,19 +57,16 @@ export struct IsoDialog {
         .trackColor("#666666")
         .selectedColor("#666666")
         .blockColor("#FFFFFF")
-        //.blockSize({ width: 4, height: 20 }) // 关键：滑块宽窄高长，形成竖条
-        .enableHapticFeedback(true) // 触感反馈， 需要配置vibrate权限
-        .trackThickness(5) // 增加滑轨厚度，让刻度更清晰
+        .enableHapticFeedback(true)
+        .trackThickness(5)
         .onChange((value: number, mode: SliderChangeMode) => {
-          this.currentIndex = Math.round(value)
-          // 滑动结束后，同步到双向绑定的ISO 更新主页面
+          this.currentIndex = Math.round(value);
           if (mode == SliderChangeMode.End) {
-            this.selectedISOValue = this.IsoOptions[this.currentIndex]
+            this.selectedISOValue = this.IsoOptions[this.currentIndex];
           }
-        })
-
+        });
     }
     .width("100%")
-    .padding(30)
+    .padding(30);
   }
 }
