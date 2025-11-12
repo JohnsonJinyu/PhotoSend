@@ -59,7 +59,7 @@ export class CameraParamManager {
     if (this.paramRefreshTimer === -1) {
       this.paramRefreshTimer = setInterval(() => {
         this.refreshAllParams();
-      }, 2000); // 2秒刷新一次
+      }, 1000); // 2秒刷新一次
     }
   }
 

@@ -215,67 +215,54 @@ export struct RemoteControl {
   /**
    * @function 同步相机参数到UI
    * */
+  // 简化 syncParamToUI 方法，仅保留参数提取和直接赋值
   private syncParamToUI() {
+    // ISO：直接用原始值（如"ISO 320"）
     const isoParam = this.paramList.find(p => p.name === 'iso');
     if (isoParam) {
       this.ISOValue = isoParam.currentValue;
     }
 
-    const shutterParam = this.paramList.find(p => p.name === 'shutter');
-    if (shutterParam) {
-      const currentShutterSec = this.parseShutterToSeconds(shutterParam.currentValue);
-      if (currentShutterSec === null) {
-        console.warn('快门值解析失败，原始值:', shutterParam.currentValue);
-        return;
-      }
-
-      const shutterOptionsSec = shutterParam.options.map<ShutterOptionSec>(option => ({
-        original: option,
-        sec: this.parseShutterToSeconds(option)
-      })).filter(item => item.sec !== null);
-
-      const matchedOption = shutterOptionsSec.find(item =>
-      Math.abs(item.sec as number - currentShutterSec) < 0.001
-      );
-
-      if (matchedOption) {
-        this.shutterValue = matchedOption.original;
-      } else {
-        this.shutterValue = shutterParam.currentValue;
-      }
-    }
-
+    // 光圈：直接用原始值（如"f/1"），移除 replace 格式化
     const apertureParam = this.paramList.find(p => p.name === 'aperture');
     if (apertureParam) {
-      const apertureDisplay = apertureParam.currentValue.replace(/f\//i, 'F');
-      this.apertureValue = apertureDisplay;
+      this.apertureValue = apertureParam.currentValue; // 不再替换为"F1"，直接显示"f/1"
     }
 
+    // 快门：直接用原始值（如"1/125s"），移除解析匹配逻辑
+    const shutterParam = this.paramList.find(p => p.name === 'shutter');
+    if (shutterParam) {
+      this.shutterValue = shutterParam.currentValue; // 不再处理，直接显示
+    }
+
+    // 曝光补偿：直接用原始值（如"0.0 档"），移除 formatExposureCompensation 转换
     const evParam = this.paramList.find(p => p.name === 'exposureCompensation');
     if (evParam) {
-      this.exposureCompensationValue = this.formatExposureCompensation(evParam.currentValue);
+      this.exposureCompensationValue = evParam.currentValue;
     }
 
+    // 曝光模式：直接用原始值（如"S（快门优先）"）
+    const exposureProgramParam = this.paramList.find(p => p.name === 'exposureProgram');
+    if (exposureProgramParam) {
+      this.exposureProgramValue = exposureProgramParam.currentValue;
+    }
+
+    // 对焦模式：直接用原始值（如"连续自动对焦（AF-C）"）
+    const focusModeParam = this.paramList.find(p => p.name === 'focusMode');
+    if (focusModeParam) {
+      this.focusModeValue = focusModeParam.currentValue; // 移除正则提取逻辑
+    }
+
+    // 测光模式：直接用原始值（如"点测光"）
     const meterModeParam = this.paramList.find(p => p.name === 'exposureMeterMode');
     if (meterModeParam) {
       this.meterModeValue = meterModeParam.currentValue;
     }
 
+    // 白平衡：直接用原始值（如"自动"）
     const wbParam = this.paramList.find(p => p.name === 'whiteBalance');
     if (wbParam) {
       this.whiteBalanceValue = wbParam.currentValue;
-    }
-
-    const focusModeParam = this.paramList.find(p => p.name === 'focusMode');
-    if (focusModeParam) {
-      const match = focusModeParam.currentValue.match(/[（(](.*?)[）)]/);
-      this.focusModeValue = match ? match[1] : focusModeParam.currentValue.slice(-4).trim();
-    }
-
-    const exposureProgramParam = this.paramList.find(p => p.name === 'exposureProgram');
-    if (exposureProgramParam) {
-      const programAbbr = exposureProgramParam.currentValue.split('（')[0];
-      this.exposureProgramValue = programAbbr;
     }
   }
 
