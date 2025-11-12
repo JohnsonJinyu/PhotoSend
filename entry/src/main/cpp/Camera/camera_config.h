@@ -95,6 +95,19 @@ extern napi_value RegisterParamCallback(napi_env env, napi_callback_info info);
 bool GetAllConfigItems(std::vector<ConfigItem> &items);
 
 
+
+
+/**
+ * 通用工具函数：批量提取指定参数的可选值
+ * @param paramNames 需要提取的参数名列表（如{"iso", "shutterspeed", "whitebalance"}）
+ * @return 键值对：参数名 → 可选值数组
+ */
+std::unordered_map<std::string, std::vector<std::string>> ExtractParamOptions(const std::vector<std::string>& paramNames);
+
+
+
+void PushParamOptionsToArkTS(const std::unordered_map<std::string, std::vector<std::string>>& options);
+
 #endif //PHOTOSEND_CAMERA_CONFIG_H
 
 

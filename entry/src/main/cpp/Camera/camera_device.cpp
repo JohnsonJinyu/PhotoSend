@@ -198,7 +198,7 @@ bool InternalConnectCamera(const char *model, const char *path) {
     OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "相机连接成功");
     g_connected = true;
 
-    // 连接成功后查询配置树
+    /*// 连接成功后查询配置树
     std::vector<ConfigItem> items;
     if (GetAllConfigItems(items)) {
         g_allConfigItems = items;
@@ -215,8 +215,22 @@ bool InternalConnectCamera(const char *model, const char *path) {
         }
     } else {
         OH_LOG_Print(LOG_APP, LOG_ERROR, LOG_DOMAIN, LOG_TAG, "获取配置树信息失败");
-    }
+    }*/
 
+    
+    // 1. 获取完整的配置树
+    std::vector<ConfigItem> allConfigItems;
+    if (!GetAllConfigItems(allConfigItems)) {
+        OH_LOG_Print(LOG_APP, LOG_ERROR, LOG_DOMAIN, LOG_TAG, "获取配置树信息失败");
+        return false;
+    }
+    g_allConfigItems = allConfigItems;
+
+    // 2. 获取可选值
+    auto paramOptions = ExtractParamOptions(DEFAULT_PARAMS_TO_EXTRACT);
+    PushParamOptionsToArkTS(paramOptions);
+    
+    
     return true;
 }
 

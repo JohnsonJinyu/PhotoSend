@@ -3,6 +3,7 @@ import { common, Want } from '@kit.AbilityKit'
 
 import { BusinessError } from '@ohos.base'
 import { camConnectionManager } from '../../utils/CamConnectManager';
+import { CameraHelper } from 'ets/utils/CameraHelper';
 
 // 定义具体的连接模式类型
 type ConnectionMode = '蓝牙' | 'WiFi-AP' | 'WiFi-STA';
@@ -301,6 +302,10 @@ export struct CameraPage {
           .height(40)
           .enabled(!this.deviceConnectState)
           .onClick(() => {
+
+            // 提前实例化CameraHelper
+            const cameraHelper = CameraHelper.getInstance();
+
             // 仅当未连接时才触发连接并显示加载
             if (!this.deviceConnectState) {
               this.isLoading = true; // 显示加载控件

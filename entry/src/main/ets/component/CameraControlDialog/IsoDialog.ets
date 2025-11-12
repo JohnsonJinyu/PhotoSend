@@ -6,6 +6,10 @@ import Log from '@ohos.hilog';
 const TAG = 'IsoDialog';
 const domain = 1
 
+
+
+
+
 @CustomDialog
 export struct IsoDialog {
   controller: CustomDialogController
@@ -19,6 +23,13 @@ export struct IsoDialog {
     this.selectedISOValue = selectedISOValue;
     this.initIsoOptions();
   }
+
+
+
+  aboutToAppear(): void {
+    Log.info(domain, TAG, '在build函数中，IsoOptions的值为: %{public}s', this.IsoOptions.join(','));
+  }
+
 
   async initIsoOptions() {
     const cameraHelper = CameraHelper.getInstance();
@@ -37,6 +48,7 @@ export struct IsoDialog {
   }
 
   build() {
+
     Column() {
       Text(`${this.IsoOptions[this.currentIndex]}`)
         .fontSize(18)
