@@ -21,7 +21,7 @@
 
 
 
-// 定义全局变量（包含相机所有可选配置的）
+// 定义全局变量（包含相机所有可选配置的），简言之这个变量就是配置树
 std::vector<ConfigItem> g_allConfigItems;
 
 
@@ -44,6 +44,45 @@ const char *standardShutterLabels[] = {
 
 // 标准档位数量（需与上面数组长度一致）
 const int numStandardShutters = sizeof(standardShutterSpeeds) / sizeof(standardShutterSpeeds[0]);
+
+
+
+
+
+
+
+
+
+
+
+// 常用参数节点名映射（文字节点名 → 数字节点名，用于fallback）
+const std::map<std::string, std::string> COMMON_PARAM_NODE_MAP = {
+    {"batterylevel", "5001"},    // 电量
+    {"f-number", "5007"},        // 光圈
+    {"shutterspeed", "500d"},    // 快门
+    {"iso", "500f"},             // ISO
+    {"exposurecompensation", "5010"}, // 曝光补偿
+    {"focusmode", "500a"},       // 对焦模式
+    {"expprogram", "500e"},      // 曝光程序
+    {"exposuremetermode", "500b"}, // 测光模式
+    {"whitebalance", "5005"},    // 白平衡
+    {"capturemode", "5013"}      // 拍摄模式
+};
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 /**
@@ -307,313 +346,334 @@ static void RecursiveFindWidget(CameraWidget *root, const char *targetName, Came
 CameraInfo InternalGetCameraInfo() {
     CameraInfo info = {0};
     info.isSuccess = false;
+    memset(&info, 0, sizeof(CameraInfo)); // 初始化结构体，避免随机值
 
-    // 1. 检查相机是否已连接
+    // 1. 前置检查：相机必须连接
     if (!g_connected || !g_camera || !g_context) {
-        OH_LOG_Print(LOG_APP, LOG_ERROR, LOG_DOMAIN, LOG_TAG, "获取相机信息失败：相机未连接");
+        OH_LOG_Print(LOG_APP, LOG_ERROR, LOG_DOMAIN, LOG_TAG, "获取相机状态失败：相机未连接");
         return info;
     }
 
-    // 2. 获取配置树根节点（核心：所有参数都在这个树里）
+    // 2. 获取配置树根节点（仅一次，后续所有参数查找基于此根节点）
     CameraWidget *root = nullptr;
     int ret = gp_camera_get_config(g_camera, &root, g_context);
     if (ret != GP_OK || !root) {
-        OH_LOG_Print(LOG_APP, LOG_ERROR, LOG_DOMAIN, LOG_TAG, "获取配置树失败，错误码：%{public}d", ret);
+        OH_LOG_Print(LOG_APP, LOG_ERROR, LOG_DOMAIN, LOG_TAG, "获取配置树失败，错误码：%d", ret);
         return info;
     }
 
-    // 3. 逐个查找目标节点并读取值（按信息类型处理）
-    CameraWidget *targetWidget = nullptr;
+    // ------------------------------
+    // 工具函数：查找参数节点（文字节点优先，失败试数字节点）
+    // ------------------------------
+    auto FindParamWidget = [&](const std::string& textNodeName) -> CameraWidget* {
+        CameraWidget* widget = nullptr;
+        // 1. 先查文字节点（如"f-number"）
+        RecursiveFindWidget(root, textNodeName.c_str(), &widget, "");
+        if (widget) return widget;
 
-    // 3.1 电量（正确类型：GP_WIDGET_TOGGLE）
-    targetWidget = nullptr;
-    RecursiveFindWidget(root, "batterylevel", &targetWidget, "");
+        // 2. 文字节点查不到，试数字节点（如"5007"）
+        auto it = COMMON_PARAM_NODE_MAP.find(textNodeName);
+        if (it != COMMON_PARAM_NODE_MAP.end()) {
+            const std::string& numNodeName = it->second;
+            RecursiveFindWidget(root, numNodeName.c_str(), &widget, "");
+            if (widget) {
+                OH_LOG_Print(LOG_APP, LOG_WARN, LOG_DOMAIN, LOG_TAG, "文字节点%s未找到，使用数字节点%s", 
+                    textNodeName.c_str(), numNodeName.c_str());
+            }
+        }
+        return widget;
+    };
+
+    // ------------------------------
+    // 3. 逐个获取所有常用参数当前值（按表格顺序）
+    // ------------------------------
+    CameraWidget* targetWidget = nullptr;
+
+    // 3.1 电量（batterylevel / 5001）
+    targetWidget = FindParamWidget("batterylevel");
     if (targetWidget) {
         CameraWidgetType type;
         gp_widget_get_type(targetWidget, &type);
-        // OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "电量节点类型：%{public}d", type); // 调试：打印实际类型
-
-        if (type == GP_WIDGET_TOGGLE) { // 正确类型：整数（如80=80%）
+        if (type == GP_WIDGET_TOGGLE) { // 数字节点：1~100（对应百分比）
             int batteryVal = 0;
-            gp_widget_get_value(targetWidget, &batteryVal); // 获取整数
-            snprintf(info.batteryLevel, sizeof(info.batteryLevel) - 1, "%d%%", batteryVal);
-        } else if (type == GP_WIDGET_TEXT) { // 兼容文本类型（如"Full"）
-            const char *batteryStr = nullptr;
-            gp_widget_get_value(targetWidget, &batteryStr);
-            if (batteryStr)
-                strncpy(info.batteryLevel, batteryStr, sizeof(info.batteryLevel) - 1);
-        }
-    }
-
-    // 3.2 光圈（正确类型：GP_WIDGET_RADIO，值为字符串）
-    targetWidget = nullptr;
-    RecursiveFindWidget(root, "f-number", &targetWidget, "");
-    if (targetWidget) {
-        CameraWidgetType type;
-        gp_widget_get_type(targetWidget, &type);
-        // OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "光圈节点类型：%{public}d", type);
-
-        if (type == GP_WIDGET_RADIO || type == GP_WIDGET_MENU) { // 枚举类型，值为选项名
-            const char *apertureStr = nullptr;
-            gp_widget_get_value(targetWidget, &apertureStr); // 获取字符串（如"f/1.8"）
-            if (apertureStr)
-                strncpy(info.aperture, apertureStr, sizeof(info.aperture) - 1);
-        } else if (type == GP_WIDGET_RANGE) { // 兼容范围类型（部分相机）
-            float apertureVal = 0.0f;
-            gp_widget_get_value(targetWidget, &apertureVal);
-            snprintf(info.aperture, sizeof(info.aperture) - 1, "f/%.1f", apertureVal);
-        }
-    }
-
-// 3.3 快门速度（修正：匹配标准档位，解决偏差问题）
-    targetWidget = nullptr;
-    RecursiveFindWidget(root, "shutterspeed", &targetWidget, "");
-    if (targetWidget) {
-        CameraWidgetType type;
-        gp_widget_get_type(targetWidget, &type);
-        if (type == GP_WIDGET_RADIO || type == GP_WIDGET_MENU) {
-            const char *shutterStr = nullptr;
-            gp_widget_get_value(targetWidget, &shutterStr);
-            if (shutterStr) {
-                // 1. 处理Auto模式
-                if (strcmp(shutterStr, "Auto") == 0 || strcmp(shutterStr, "auto") == 0) {
-                    strncpy(info.shutter, "Auto", sizeof(info.shutter) - 1);
-                    info.shutter[sizeof(info.shutter) - 1] = '\0';
-                    // continue; // 跳过后续计算
-                }
-
-                // 2. 解析原始快门值（单位：秒）
-                char shutterValStr[32] = {0};
-                // 处理两种格式："0.0015s"（小数）或"1/640s"（分数，部分相机可能返回）
-                if (strstr(shutterStr, "/") != nullptr) {
-                    // 若原始值是分数格式（如"1/640s"），直接提取
-                    strncpy(shutterValStr, shutterStr, strlen(shutterStr));
-                } else {
-                    // 若原始值是小数格式（如"0.0015s"），去掉"s"并转换为浮点数
-                    strncpy(shutterValStr, shutterStr, strlen(shutterStr) - 1); // 去掉末尾的"s"
-                }
-                float shutterSec = atof(shutterValStr); // 转换为秒数（如0.0015625）
-
-                // 3. 找到与原始值最接近的标准档位
-                if (shutterSec > 0) { // 确保值有效
-                    int bestMatchIndex = 0;
-                    float minDiff = fabsf(shutterSec - standardShutterSpeeds[0]);
-
-                    // 遍历所有标准档位，找差值最小的
-                    for (int i = 1; i < numStandardShutters; i++) {
-                        float diff = fabsf(shutterSec - standardShutterSpeeds[i]);
-                        if (diff < minDiff) {
-                            minDiff = diff;
-                            bestMatchIndex = i;
-                        }
-                    }
-
-                    // 4. 使用标准档位的标签作为显示值
-                    strncpy(info.shutter, standardShutterLabels[bestMatchIndex], sizeof(info.shutter) - 1);
-                    info.shutter[sizeof(info.shutter) - 1] = '\0';
-                } else {
-                    // 无效值处理
-                    strncpy(info.shutter, "未知", sizeof(info.shutter) - 1);
-                    info.shutter[sizeof(info.shutter) - 1] = '\0';
-                }
+            if (gp_widget_get_value(targetWidget, &batteryVal) == GP_OK) {
+                snprintf(info.batteryLevel, sizeof(info.batteryLevel)-1, "%d%%", batteryVal);
+            }
+        } else if (type == GP_WIDGET_TEXT) { // 文字节点：如"100%"
+            const char* batteryStr = nullptr;
+            if (gp_widget_get_value(targetWidget, &batteryStr) == GP_OK && batteryStr) {
+                strncpy(info.batteryLevel, batteryStr, sizeof(info.batteryLevel)-1);
             }
         }
-    }
-
-
-    // 3.4 ISO（正确类型：GP_WIDGET_RADIO，值为选项名）
-    targetWidget = nullptr;
-    RecursiveFindWidget(root, "iso", &targetWidget, "");
-    if (targetWidget) {
-        CameraWidgetType type;
-        gp_widget_get_type(targetWidget, &type);
-        // OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "ISO节点类型：%{public}d", type);
-
-        if (type == GP_WIDGET_RADIO || type == GP_WIDGET_MENU) {
-            const char *isoStr = nullptr;
-            gp_widget_get_value(targetWidget, &isoStr); // 获取字符串（如"ISO 800"）
-            if (isoStr)
-                strncpy(info.iso, isoStr, sizeof(info.iso) - 1);
-        }
-    }
-
-
-    // 3.5 曝光补偿（正确类型：GP_WIDGET_RADIO，值为选项名）
-    targetWidget = nullptr;
-    RecursiveFindWidget(root, "exposurecompensation", &targetWidget, "");
-    if (targetWidget) {
-        CameraWidgetType type;
-        gp_widget_get_type(targetWidget, &type);
-        // OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "曝光补偿节点类型：%{public}d", type);
-
-        if (type == GP_WIDGET_RADIO || type == GP_WIDGET_MENU) {
-            const char *ecStr = nullptr;
-            gp_widget_get_value(targetWidget, &ecStr); // 获取字符串（如"0.0 stops"）
-            if (ecStr)
-                strncpy(info.exposureComp, ecStr, sizeof(info.exposureComp) - 1);
-        }
-    }
-
-    // 3.6 白平衡（字符串枚举型，如"Auto"、"Daylight"）
-    targetWidget = nullptr;
-    RecursiveFindWidget(root, "whitebalance", &targetWidget, "");
-    if (targetWidget) {
-        const char *wbVal = nullptr;
-        gp_widget_get_value(targetWidget, &wbVal);
-        if (wbVal) {
-            // 转换Nikon的枚举值为可读名称（如2→Automatic，4→Cloudy，从summary提取对应关系）
-            if (strcmp(wbVal, "2") == 0)
-                strncpy(info.whiteBalance, "Automatic", sizeof(info.whiteBalance) - 1);
-            else if (strcmp(wbVal, "4") == 0)
-                strncpy(info.whiteBalance, "Cloudy", sizeof(info.whiteBalance) - 1);
-            else if (strcmp(wbVal, "5") == 0)
-                strncpy(info.whiteBalance, "Daylight", sizeof(info.whiteBalance) - 1);
-            else
-                strncpy(info.whiteBalance, wbVal, sizeof(info.whiteBalance) - 1);
-        }
-        // OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "白平衡：%{public}s", info.whiteBalance);
     } else {
-        // OH_LOG_Print(LOG_APP, LOG_WARN, LOG_DOMAIN, LOG_TAG, "未找到白平衡节点（whitebalance）");
+        strncpy(info.batteryLevel, "未知", sizeof(info.batteryLevel)-1);
     }
 
-    // 3.7 拍摄模式（正确类型：GP_WIDGET_RADIO，值为选项名）
-    targetWidget = nullptr;
-    RecursiveFindWidget(root, "capturemode", &targetWidget, "");
+    // 3.2 光圈（f-number / 5007）
+    targetWidget = FindParamWidget("f-number");
     if (targetWidget) {
         CameraWidgetType type;
         gp_widget_get_type(targetWidget, &type);
-        // OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "拍摄模式节点类型：%{public}d", type);
-
         if (type == GP_WIDGET_RADIO || type == GP_WIDGET_MENU) {
-            const char *modeStr = nullptr;
-            gp_widget_get_value(targetWidget, &modeStr); // 获取字符串（如"Single Shot"）
-            if (modeStr) {
-                // 映射为中文描述
-                if (strcmp(modeStr, "Single Shot") == 0) {
-                    strncpy(info.captureMode, "单拍", sizeof(info.captureMode) - 1);
-                } else if (strcmp(modeStr, "Continuous") == 0) {
-                    strncpy(info.captureMode, "连拍", sizeof(info.captureMode) - 1);
-                } else if (strcmp(modeStr, "Burst") == 0) {
-                    strncpy(info.captureMode, "高速连拍", sizeof(info.captureMode) - 1);
-                } else {
-                    strncpy(info.captureMode, modeStr, sizeof(info.captureMode) - 1);
+            const char* apertureStr = nullptr;
+            if (gp_widget_get_value(targetWidget, &apertureStr) == GP_OK && apertureStr) {
+                // 文字节点：直接用"f/4"；数字节点：400→f/4
+                if (strstr(apertureStr, "f/") != nullptr) { // 文字节点值（如"f/4"）
+                    strncpy(info.aperture, apertureStr, sizeof(info.aperture)-1);
+                } else { // 数字节点值（如"400"→f/4）
+                    int apertureVal = atoi(apertureStr);
+                    snprintf(info.aperture, sizeof(info.aperture)-1, "f/%.1f", apertureVal / 100.0f);
                 }
             }
         }
+    } else {
+        strncpy(info.aperture, "未知", sizeof(info.aperture)-1);
     }
 
-    // 3.8 剩余空间（可能是文本或整数）
-    targetWidget = nullptr;
-    RecursiveFindWidget(root, "freespace", &targetWidget, "");
+    // 3.3 快门速度（shutterspeed / 500d）
+    targetWidget = FindParamWidget("shutterspeed");
     if (targetWidget) {
         CameraWidgetType type;
         gp_widget_get_type(targetWidget, &type);
-        if (type == GP_WIDGET_TEXT) { // 文本类型（如"120861491200"）
-            const char *spaceStr = nullptr;
-            gp_widget_get_value(targetWidget, &spaceStr);
-            if (spaceStr)
-                info.freeSpaceBytes = atoll(spaceStr); // 转换为长整数
-        } else if (type == GP_WIDGET_TOGGLE) {         // 整数类型
-            long long spaceVal = 0;
-            gp_widget_get_value(targetWidget, &spaceVal);
-            info.freeSpaceBytes = spaceVal;
+        if (type == GP_WIDGET_RADIO || type == GP_WIDGET_MENU) {
+            const char* shutterStr = nullptr;
+            if (gp_widget_get_value(targetWidget, &shutterStr) == GP_OK && shutterStr) {
+                if (strcmp(shutterStr, "Auto") == 0 || strcmp(shutterStr, "auto") == 0) {
+                    strncpy(info.shutter, "Auto", sizeof(info.shutter)-1);
+                } else {
+                    // 解析原始值（如"0.0040s"→0.004秒→1/250s）
+                    char shutterValStr[32] = {0};
+                    if (strstr(shutterStr, "/") != nullptr) {
+                        strncpy(shutterValStr, shutterStr, strlen(shutterStr));
+                    } else {
+                        strncpy(shutterValStr, shutterStr, strlen(shutterStr)-1); // 去掉"s"
+                    }
+                    float shutterSec = atof(shutterValStr);
+                    if (shutterSec > 0) {
+                        // 匹配标准快门标签（如0.004→1/250s）
+                        int bestIdx = 0;
+                        float minDiff = fabsf(shutterSec - standardShutterSpeeds[0]);
+                        for (int i=1; i<numStandardShutters; i++) {
+                            float diff = fabsf(shutterSec - standardShutterSpeeds[i]);
+                            if (diff < minDiff) { minDiff = diff; bestIdx = i; }
+                        }
+                        strncpy(info.shutter, standardShutterLabels[bestIdx], sizeof(info.shutter)-1);
+                    } else {
+                        strncpy(info.shutter, "未知", sizeof(info.shutter)-1);
+                    }
+                }
+            }
         }
+    } else {
+        strncpy(info.shutter, "未知", sizeof(info.shutter)-1);
     }
 
-    // 3.9 剩余可拍张数（同理）
-    targetWidget = nullptr;
-    RecursiveFindWidget(root, "freespaceimages", &targetWidget, "");
+    // 3.4 ISO（iso / 500f）
+    targetWidget = FindParamWidget("iso");
+    if (targetWidget) {
+        CameraWidgetType type;
+        gp_widget_get_type(targetWidget, &type);
+        if (type == GP_WIDGET_RADIO || type == GP_WIDGET_MENU) {
+            const char* isoStr = nullptr;
+            if (gp_widget_get_value(targetWidget, &isoStr) == GP_OK && isoStr) {
+                // 文字/数字节点值一致（如"100"），直接拼接"ISO "
+                snprintf(info.iso, sizeof(info.iso)-1, "ISO %s", isoStr);
+            }
+        }
+    } else {
+        strncpy(info.iso, "未知", sizeof(info.iso)-1);
+    }
+
+    // 3.5 曝光补偿（exposurecompensation / 5010）
+    targetWidget = FindParamWidget("exposurecompensation");
+    if (targetWidget) {
+        CameraWidgetType type;
+        gp_widget_get_type(targetWidget, &type);
+        if (type == GP_WIDGET_RADIO || type == GP_WIDGET_MENU) {
+            const char* ecStr = nullptr;
+            if (gp_widget_get_value(targetWidget, &ecStr) == GP_OK && ecStr) {
+                // 文字节点：如"0.333"→0.3档；数字节点：333→0.3档
+                float ecVal = atof(ecStr);
+                if (ecVal > 100 || ecVal < -100) { // 数字节点（千倍映射：333→0.333）
+                    ecVal /= 1000.0f;
+                }
+                snprintf(info.exposureComp, sizeof(info.exposureComp)-1, "%.1f 档", ecVal);
+            }
+        }
+    } else {
+        strncpy(info.exposureComp, "未知", sizeof(info.exposureComp)-1);
+    }
+
+    // 3.6 对焦模式（focusmode / 500a）
+    targetWidget = FindParamWidget("focusmode");
+    if (targetWidget) {
+        CameraWidgetType type;
+        gp_widget_get_type(targetWidget, &type);
+        if (type == GP_WIDGET_RADIO || type == GP_WIDGET_MENU) {
+            const char* focusStr = nullptr;
+            if (gp_widget_get_value(targetWidget, &focusStr) == GP_OK && focusStr) {
+                // 映射数字节点值→中文（如32785→AF-C）
+                std::map<std::string, std::string> focusMap = {
+                    {"1", "手动对焦（MF）"}, {"32784", "单次自动对焦（AF-S）"},
+                    {"32785", "连续自动对焦（AF-C）"}, {"32787", "自动自动对焦（AF-F）"},
+                    {"AF-S", "单次自动对焦（AF-S）"}, {"AF-C", "连续自动对焦（AF-C）"},
+                    {"AF-F", "自动自动对焦（AF-F）"}, {"Manual", "手动对焦（MF）"}
+                };
+                auto it = focusMap.find(focusStr);
+                if (it != focusMap.end()) {
+                    strncpy(info.focusMode, it->second.c_str(), sizeof(info.focusMode)-1);
+                } else {
+                    strncpy(info.focusMode, focusStr, sizeof(info.focusMode)-1);
+                }
+            }
+        }
+    } else {
+        strncpy(info.focusMode, "未知", sizeof(info.focusMode)-1);
+    }
+
+    // 3.7 曝光程序（expprogram / 500e）
+    targetWidget = FindParamWidget("expprogram");
+    if (targetWidget) {
+        CameraWidgetType type;
+        gp_widget_get_type(targetWidget, &type);
+        if (type == GP_WIDGET_RADIO || type == GP_WIDGET_MENU) {
+            const char* expProgStr = nullptr;
+            if (gp_widget_get_value(targetWidget, &expProgStr) == GP_OK && expProgStr) {
+                std::map<std::string, std::string> expProgMap = {
+                    {"1", "M（手动）"}, {"2", "P（程序自动）"}, {"3", "A（光圈优先）"},
+                    {"4", "S（快门优先）"}, {"32784", "AUTO（自动）"},
+                    {"M", "M（手动）"}, {"P", "P（程序自动）"}, {"A", "A（光圈优先）"},
+                    {"S", "S（快门优先）"}, {"Auto", "AUTO（自动）"}
+                };
+                auto it = expProgMap.find(expProgStr);
+                if (it != expProgMap.end()) {
+                    strncpy(info.exposureProgram, it->second.c_str(), sizeof(info.exposureProgram)-1);
+                } else {
+                    strncpy(info.exposureProgram, expProgStr, sizeof(info.exposureProgram)-1);
+                }
+            }
+        }
+    } else {
+        strncpy(info.exposureProgram, "未知", sizeof(info.exposureProgram)-1);
+    }
+
+    // 3.8 测光模式（exposuremetermode / 500b）
+    targetWidget = FindParamWidget("exposuremetermode");
+    if (targetWidget) {
+        CameraWidgetType type;
+        gp_widget_get_type(targetWidget, &type);
+        if (type == GP_WIDGET_RADIO || type == GP_WIDGET_MENU) {
+            const char* meterStr = nullptr;
+            if (gp_widget_get_value(targetWidget, &meterStr) == GP_OK && meterStr) {
+                std::map<std::string, std::string> meterMap = {
+                    {"2", "中央重点测光"}, {"3", "多点测光"}, {"4", "点测光"},
+                    {"32784", "矩阵测光（Unknown 8010）"}, {"8010", "矩阵测光"},
+                    {"Center Weighted", "中央重点测光"}, {"Multi Spot", "多点测光"},
+                    {"Center Spot", "点测光"}, {"Unknown value 8010", "矩阵测光"}
+                };
+                auto it = meterMap.find(meterStr);
+                if (it != meterMap.end()) {
+                    strncpy(info.exposureMeterMode, it->second.c_str(), sizeof(info.exposureMeterMode)-1);
+                } else {
+                    strncpy(info.exposureMeterMode, meterStr, sizeof(info.exposureMeterMode)-1);
+                }
+            }
+        }
+    } else {
+        strncpy(info.exposureMeterMode, "未知", sizeof(info.exposureMeterMode)-1);
+    }
+
+    // 3.9 白平衡（whitebalance / 5005）
+    targetWidget = FindParamWidget("whitebalance");
+    if (targetWidget) {
+        CameraWidgetType type;
+        gp_widget_get_type(targetWidget, &type);
+        if (type == GP_WIDGET_RADIO || type == GP_WIDGET_MENU) {
+            const char* wbStr = nullptr;
+            if (gp_widget_get_value(targetWidget, &wbStr) == GP_OK && wbStr) {
+                std::map<std::string, std::string> wbMap = {
+                    {"2", "自动（Automatic）"}, {"4", "阴天（Cloudy）"}, {"5", "日光（Daylight）"},
+                    {"6", "钨丝灯（Tungsten）"}, {"7", "闪光灯（Flash）"},
+                    {"32784", "色温（Color Temperature）"}, {"32785", "预设（Preset）"},
+                    {"32786", "阴影（Shade）"}, {"32787", "荧光灯（Fluorescent）"},
+                    {"Automatic", "自动"}, {"Daylight", "日光"}, {"Cloudy", "阴天"},
+                    {"Tungsten", "钨丝灯"}, {"Flash", "闪光灯"}
+                };
+                auto it = wbMap.find(wbStr);
+                if (it != wbMap.end()) {
+                    strncpy(info.whiteBalance, it->second.c_str(), sizeof(info.whiteBalance)-1);
+                } else {
+                    strncpy(info.whiteBalance, wbStr, sizeof(info.whiteBalance)-1);
+                }
+            }
+        }
+    } else {
+        strncpy(info.whiteBalance, "未知", sizeof(info.whiteBalance)-1);
+    }
+
+    // 3.10 拍摄模式（capturemode / 5013）
+    targetWidget = FindParamWidget("capturemode");
+    if (targetWidget) {
+        CameraWidgetType type;
+        gp_widget_get_type(targetWidget, &type);
+        if (type == GP_WIDGET_RADIO || type == GP_WIDGET_MENU) {
+            const char* modeStr = nullptr;
+            if (gp_widget_get_value(targetWidget, &modeStr) == GP_OK && modeStr) {
+                std::map<std::string, std::string> modeMap = {
+                    {"1", "单拍（Single Shot）"}, {"2", "连拍（Burst）"},
+                    {"32784", "低速连拍（Continuous Low Speed）"}, {"32785", "定时（Timer）"},
+                    {"Single Shot", "单拍"}, {"Burst", "连拍"}, {"Continuous Low Speed", "低速连拍"},
+                    {"Timer", "定时"}
+                };
+                auto it = modeMap.find(modeStr);
+                if (it != modeMap.end()) {
+                    strncpy(info.captureMode, it->second.c_str(), sizeof(info.captureMode)-1);
+                } else {
+                    strncpy(info.captureMode, modeStr, sizeof(info.captureMode)-1);
+                }
+            }
+        }
+    } else {
+        strncpy(info.captureMode, "未知", sizeof(info.captureMode)-1);
+    }
+
+    // 3.11 剩余空间（freespace）
+    targetWidget = FindParamWidget("freespace");
     if (targetWidget) {
         CameraWidgetType type;
         gp_widget_get_type(targetWidget, &type);
         if (type == GP_WIDGET_TEXT) {
-            const char *picStr = nullptr;
-            gp_widget_get_value(targetWidget, &picStr);
-            if (picStr)
+            const char* spaceStr = nullptr;
+            if (gp_widget_get_value(targetWidget, &spaceStr) == GP_OK && spaceStr) {
+                info.freeSpaceBytes = atoll(spaceStr); // 转字节数
+            }
+        } else if (type == GP_WIDGET_TOGGLE) {
+            long long spaceVal = 0;
+            if (gp_widget_get_value(targetWidget, &spaceVal) == GP_OK) {
+                info.freeSpaceBytes = spaceVal;
+            }
+        }
+    }
+
+    // 3.12 剩余可拍张数（freespaceimages）
+    targetWidget = FindParamWidget("freespaceimages");
+    if (targetWidget) {
+        CameraWidgetType type;
+        gp_widget_get_type(targetWidget, &type);
+        if (type == GP_WIDGET_TEXT) {
+            const char* picStr = nullptr;
+            if (gp_widget_get_value(targetWidget, &picStr) == GP_OK && picStr) {
                 info.remainingPictures = atoi(picStr);
+            }
         } else if (type == GP_WIDGET_TOGGLE) {
             int picCount = 0;
-            gp_widget_get_value(targetWidget, &picCount);
-            info.remainingPictures = picCount;
-        }
-    }
-
-
-    // 3.10：曝光模式（M/A/S/P/AUTO）
-    targetWidget = nullptr;
-    RecursiveFindWidget(root, "expprogram", &targetWidget, ""); // 对应日志中的"expprogram"节点
-    if (targetWidget) {
-        const char *expProgStr = nullptr;
-        gp_widget_get_value(targetWidget, &expProgStr);
-        if (expProgStr) {
-            // 映射为专业档位（根据相机返回值调整，日志中为"A"）
-            if (strcmp(expProgStr, "A") == 0) {
-                strncpy(info.exposureProgram, "A（光圈优先）", sizeof(info.exposureProgram) - 1);
-            } else if (strcmp(expProgStr, "M") == 0) {
-                strncpy(info.exposureProgram, "M（手动）", sizeof(info.exposureProgram) - 1);
-            } else if (strcmp(expProgStr, "S") == 0) {
-                strncpy(info.exposureProgram, "S（快门优先）", sizeof(info.exposureProgram) - 1);
-            } else if (strcmp(expProgStr, "P") == 0) {
-                strncpy(info.exposureProgram, "P（程序自动）", sizeof(info.exposureProgram) - 1);
-            } else if (strcmp(expProgStr, "Auto") == 0) {
-                strncpy(info.exposureProgram, "AUTO（自动）", sizeof(info.exposureProgram) - 1);
-            } else {
-                strncpy(info.exposureProgram, expProgStr, sizeof(info.exposureProgram) - 1); // 未知值直接显示
+            if (gp_widget_get_value(targetWidget, &picCount) == GP_OK) {
+                info.remainingPictures = picCount;
             }
         }
     }
 
-    // 3.11：对焦模式（focusmode节点）
-    targetWidget = nullptr;
-    RecursiveFindWidget(root, "focusmode", &targetWidget, ""); // 节点名称与日志一致
-    if (targetWidget) {
-        const char *focusStr = nullptr;
-        gp_widget_get_value(targetWidget, &focusStr);
-        if (focusStr) {
-            // 映射为中文描述（根据相机实际返回值补充，以下为常见映射）
-            if (strcmp(focusStr, "AF-S") == 0) {
-                strncpy(info.focusMode, "单次自动对焦（AF-S）", sizeof(info.focusMode) - 1);
-            } else if (strcmp(focusStr, "AF-C") == 0) {
-                strncpy(info.focusMode, "连续自动对焦（AF-C）", sizeof(info.focusMode) - 1);
-            } else if (strcmp(focusStr, "AF-A") == 0) {
-                strncpy(info.focusMode, "自动自动对焦（AF-A）", sizeof(info.focusMode) - 1);
-            } else if (strcmp(focusStr, "MF") == 0) {
-                strncpy(info.focusMode, "手动对焦（MF）", sizeof(info.focusMode) - 1);
-            } else {
-                // 未知值直接显示原始值（如“AF-F”等）
-                snprintf(info.focusMode, sizeof(info.focusMode) - 1, "%s", focusStr);
-            }
-            info.focusMode[sizeof(info.focusMode) - 1] = '\0'; // 手动加结束符
-        }
-    }
-
-
-    // 新增：测光模式（exposuremetermode节点）
-    targetWidget = nullptr;
-    RecursiveFindWidget(root, "exposuremetermode", &targetWidget, ""); // 节点名称与日志一致
-    if (targetWidget) {
-        const char *meterStr = nullptr;
-        gp_widget_get_value(targetWidget, &meterStr);
-        if (meterStr) {
-            // 处理两种情况：1. 数值字符串（如"8010"）；2. 直接描述（如"Matrix"）
-            // 以下为Nikon相机数值映射（参考官方文档）
-            if (strcmp(meterStr, "8010") == 0) {
-                strncpy(info.exposureMeterMode, "亮部重点测光", sizeof(info.exposureMeterMode) - 1);
-            } else if (strcmp(meterStr, "8011") == 0) {
-                strncpy(info.exposureMeterMode, "中央重点测光", sizeof(info.exposureMeterMode) - 1);
-            } else if (strcmp(meterStr, "8012") == 0) {
-                strncpy(info.exposureMeterMode, "点测光", sizeof(info.exposureMeterMode) - 1);
-            } else if (strcmp(meterStr, "8013") == 0) {
-                strncpy(info.exposureMeterMode, "平均测光", sizeof(info.exposureMeterMode) - 1);
-            } else {
-                // 未知值显示原始值（如日志中的"Unknown value 8010"）
-                snprintf(info.exposureMeterMode, sizeof(info.exposureMeterMode) - 1, "%s", meterStr);
-            }
-            info.exposureMeterMode[sizeof(info.exposureMeterMode) - 1] = '\0'; // 手动加结束符
-        }
-    }
-
-    // 4. 释放配置树资源（避免内存泄漏）
+    // 4. 资源释放+状态标记
     gp_widget_free(root);
     info.isSuccess = true;
     return info;
@@ -624,6 +684,31 @@ CameraInfo InternalGetCameraInfo() {
 
 
 
+
+
+// camera_config.cpp 新增NAPI接口
+napi_value GetParamOptions(napi_env env, napi_callback_info info) {
+    size_t argc = 1;
+    napi_value args[1];
+    napi_get_cb_info(env, info, &argc, args, nullptr, nullptr);
+
+    char paramName[128] = {0};
+    napi_get_value_string_utf8(env, args[0], paramName, sizeof(paramName)-1, nullptr);
+
+    napi_value resultArray;
+    napi_create_array(env, &resultArray);
+
+    // 遍历g_allConfigItems，找到指定参数的可选值
+    for (const auto& item : g_allConfigItems) {
+        if (item.name == paramName) {
+            for (size_t i=0; i<item.choices.size(); ++i) {
+                napi_set_element(env, resultArray, i, CreateNapiString(env, item.choices[i].c_str()));
+            }
+            break;
+        }
+    }
+    return resultArray;
+}
 
 
 

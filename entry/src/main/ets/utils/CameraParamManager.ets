@@ -90,8 +90,10 @@ export class CameraParamManager {
         this.updateParamCurrentValue('exposureProgram', status.exposureProgram); // 同步曝光模式
 
         // 刷新可选值（实际应从相机接口获取，这里模拟）
+        console.log('CameraParamManager: 参数更新完成，准备通知UI');
         await this.refreshParamOptions();
         this.notifyListeners();
+        console.log('CameraParamManager: 已通知所有 listeners');
         //console.log('参数更新成功，当前参数:', JSON.stringify(Array.from(this.params.values())));
       }
     } catch (error) {
@@ -101,13 +103,20 @@ export class CameraParamManager {
 
   // 刷新参数可选值（实际项目中需调用相机接口获取）
   private async refreshParamOptions() {
-    this.updateParamOptions('aperture', ['2.8', '4.0', '5.6', '8.0', 'Auto']);
-    this.updateParamOptions('shutter', ['1/1000', '1/500', '1/250', 'Auto']);
-    this.updateParamOptions('iso', ['100', '200', '400', '800', 'Auto']);
-    this.updateParamOptions('whiteBalance', ['Auto', 'Daylight', 'Tungsten']);
-    this.updateParamOptions('exposureCompensation', ['-2.0', '-1.0', '0', '1.0', '2.0']);
+    // 从C++层获取真实可选值（替换模拟数据）
+    const apertureOpts = await nativeCamera.GetParamOptions('f-number'); // 光圈
+    const shutterOpts = await nativeCamera.GetParamOptions('shutterspeed'); // 快门
+    const isoOpts = await nativeCamera.GetParamOptions('iso'); // ISO
+    const wbOpts = await nativeCamera.GetParamOptions('whitebalance'); // 白平衡
+    const evOpts = await nativeCamera.GetParamOptions('exposurecompensation'); // 曝光补偿
 
-    // 标记为可编辑
+    // 更新参数可选值
+    this.updateParamOptions('aperture', apertureOpts);
+    this.updateParamOptions('shutter', shutterOpts);
+    this.updateParamOptions('iso', isoOpts);
+    this.updateParamOptions('whiteBalance', wbOpts);
+    this.updateParamOptions('exposureCompensation', evOpts);
+
     this.params.forEach(param => param.isEditable = true);
   }
 

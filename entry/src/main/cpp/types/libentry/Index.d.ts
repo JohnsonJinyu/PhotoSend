@@ -141,3 +141,11 @@ export const Disconnect: () => boolean;
 
 
 export const IsCameraConnected:()=>boolean
+
+
+/**
+ * 获取指定相机参数的可选值列表（从配置树缓存中读取，避免重复通信）
+ * @param paramName 参数名（需与相机配置树中的节点名一致，如"f-number"=光圈、"shutterspeed"=快门、"iso"=ISO）
+ * @returns 参数的可选值列表（如光圈返回["f/2.8", "f/4", "f/5.6"]，无可选值或参数不存在时返回空数组）
+ */
+export const GetParamOptions: (paramName: string) => string[];

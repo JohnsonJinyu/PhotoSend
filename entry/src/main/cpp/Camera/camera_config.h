@@ -75,7 +75,7 @@ extern napi_value SetCameraParameter(napi_env env, napi_callback_info info);
 
 
 
-
+extern napi_value GetParamOptions(napi_env env, napi_callback_info info);
 
 
 
