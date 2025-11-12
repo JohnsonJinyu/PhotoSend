@@ -248,7 +248,10 @@ std::unordered_map<std::string, std::vector<std::string>> ExtractParamOptions(co
  */
 void PushParamOptionsToArkTS(const std::unordered_map<std::string, std::vector<std::string>>& options) {
     napi_env env = napi_env(); // 获取当前NAPI环境（根据实际框架调整）
-    if (!env || g_paramCallback == nullptr) return;
+    if (!env || g_paramCallback == nullptr) {
+        OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "环境或回调为空，无法推送参数选项");
+        return;
+    }
 
     // 创建NAPI对象存储所有参数的可选值
     napi_value resultObj;
@@ -271,6 +274,8 @@ void PushParamOptionsToArkTS(const std::unordered_map<std::string, std::vector<s
         napi_value key = CreateNapiString(env, paramName.c_str());
         napi_set_property(env, resultObj, key, choicesArray);
     }
+    
+     OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "准备推送参数选项到ArkTS");
 
     // 通过回调推送给ArkTS（需确保回调能处理对象类型）
     g_paramCallback(resultObj); // 注意：需修改ParamCallback类型支持napi_value
@@ -314,7 +319,7 @@ bool GetAllConfigItems(std::vector<ConfigItem>& items) {
 
     // 4. 释放资源（确保无论成败都释放）
     gp_widget_free(root);
-    OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "配置树获取完成，共%d个参数", (int)items.size());
+    OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "配置树获取完成，共%{public}d个参数", (int)items.size());
     return true;
 }
 
@@ -1005,8 +1010,11 @@ static void StaticParamCallback(napi_value params) {
     napi_ref callbackRef = g_callbackState.callbackRef;
 
     if (env == nullptr || callbackRef == nullptr) {
+        OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "回调状态无效，env或callbackRef为空");
         return; // 状态无效，直接返回
     }
+    
+    
 
     // 调用ArkTS层的回调函数（与之前lambda中的逻辑一致）
     napi_value callback;
@@ -1039,6 +1047,7 @@ napi_value RegisterParamCallback(napi_env env, napi_callback_info info) {
 
     // 赋值静态函数（符合ParamCallback类型）
     g_paramCallback = StaticParamCallback;
-
+    
+    OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "回调注册成功");
     return nullptr;
 }
