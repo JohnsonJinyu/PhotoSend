@@ -47,165 +47,108 @@ const int numStandardShutters = sizeof(standardShutterSpeeds) / sizeof(standardS
 
 
 /**
- * 递归遍历配置树节点，收集参数信息
- * @param widget 配置树节点
- * @param items 存储结果的数组
- * @param level 当前节点层级，初始为0
- * @param parentPath 当前节点的父路径，初始为空字符串
+ * 递归遍历配置树节点，收集参数信息（精简版）
+ * 功能：只做必要的节点信息提取，减少冗余日志和重复操作
  */
-static void TraverseConfigTree(CameraWidget *widget, std::vector<ConfigItem> &items, int level = 0, const std::string& parentPath = "") {
-    // 记录当前处理的节点地址
-    OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "开始处理配置树节点，地址: %{public}p", (void *)widget);
+static void TraverseConfigTree(CameraWidget* widget, std::vector<ConfigItem>& items, const std::string& parentPath) {
+    if (!widget) return; // 空节点直接返回
 
-    if (!widget) {
-        OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "遇到空节点，直接返回");
+    // 1. 获取节点基础信息（名称、类型）
+    const char* name = nullptr;
+    if (gp_widget_get_name(widget, &name) != GP_OK || !name) {
+        OH_LOG_Print(LOG_APP, LOG_WARN, LOG_DOMAIN, LOG_TAG, "节点名称获取失败");
         return;
     }
+    std::string fullPath = parentPath.empty() ? name : parentPath + "/" + name;
 
-    // 获取节点类型（如GP_WIDGET_MENU=选项，GP_WIDGET_TEXT=文本等）
     CameraWidgetType type;
-    int getTypeRet = gp_widget_get_type(widget, &type);
-    if (getTypeRet != GP_OK) {
-        OH_LOG_Print(LOG_APP, LOG_ERROR, LOG_DOMAIN, LOG_TAG, "获取节点类型失败: %{public}s，错误码: %{public}d",
-                     gp_result_as_string(getTypeRet), getTypeRet);
+    if (gp_widget_get_type(widget, &type) != GP_OK) {
+        OH_LOG_Print(LOG_APP, LOG_WARN, LOG_DOMAIN, LOG_TAG, "节点类型获取失败：%s", fullPath.c_str());
         return;
     }
-    OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "节点类型获取成功，类型值: %{public}d", type);
 
-    // 打印节点名称及层级，并带上父节点路径
-    const char *name_ptr = nullptr;
-    int getNameRet = gp_widget_get_name(widget, &name_ptr);
-    if (getNameRet != GP_OK) {
-        OH_LOG_Print(LOG_APP, LOG_ERROR, LOG_DOMAIN, LOG_TAG, "获取参数名称失败: %{public}s，错误码: %{public}d",
-                     gp_result_as_string(getNameRet), getNameRet);
-        return;
-    }
-    std::string indent(level * 2,' ');
-    std::string fullPath = parentPath.empty()? name_ptr : parentPath + "/" + name_ptr;
-    OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "%{public}s参数名称: %{public}s (路径: %{public}s)", indent.c_str(), name_ptr, fullPath.c_str());
-
-    // 只处理可设置的参数节点（跳过文件夹类型）
-    if (type != GP_WIDGET_SECTION && type != GP_WIDGET_WINDOW) {
-        ConfigItem item;
-
-        // 获取参数名称和显示标签
-        item.name = name_ptr? name_ptr : "";
-
-        const char *label_ptr = nullptr;
-        int getLabelRet = gp_widget_get_label(widget, &label_ptr);
-        if (getLabelRet != GP_OK) {
-            OH_LOG_Print(LOG_APP, LOG_ERROR, LOG_DOMAIN, LOG_TAG, "获取参数标签失败: %{public}s，错误码: %{public}d",
-                         gp_result_as_string(getLabelRet), getLabelRet);
-            return;
-        }
-        item.label = label_ptr? label_ptr : "";
-
-        // 转换类型为字符串
-        switch (type) {
-        case GP_WIDGET_MENU:
-        case GP_WIDGET_RADIO:
-            item.type = "choice";
-            break;
-        case GP_WIDGET_TEXT:
-            item.type = "text";
-            break;
-        case GP_WIDGET_RANGE:
-            item.type = "range";
-            break;
-        case GP_WIDGET_TOGGLE:
-            item.type = "toggle";
-            break;
-        default:
-            item.type = "unknown";
-        }
-
-        // 获取当前值
-        void *value = nullptr;
-        int getValueRet = gp_widget_get_value(widget, value);
-        if (getValueRet == GP_OK) {
-            switch (type) {
-            case GP_WIDGET_TEXT: {
-                const char *textValue;
-                textValue = *(const char **)value;
-                item.current = textValue;
-                break;
+    // 2. 跳过文件夹类型节点（只处理参数节点）
+    if (type == GP_WIDGET_SECTION || type == GP_WIDGET_WINDOW) {
+        // 递归处理子节点（只传必要参数）
+        int childCount = gp_widget_count_children(widget);
+        for (int i = 0; i < childCount; ++i) {
+            CameraWidget* child = nullptr;
+            if (gp_widget_get_child(widget, i, &child) == GP_OK) {
+                TraverseConfigTree(child, items, fullPath);
             }
-            case GP_WIDGET_RANGE: {
-                float rangeValue;
-                rangeValue = *(float *)value;
-                item.floatValue = rangeValue;
-                // 获取RANGE类型节点的Bottom、Top和Step值
-                float bottom, top, increment;
-                int getRangeRet = gp_widget_get_range(widget, &bottom, &top, &increment);
-                if (getRangeRet == GP_OK) {
+        }
+        return;
+    }
+
+    // 3. 提取参数节点信息（核心逻辑）
+    ConfigItem item;
+    item.name = name;
+    item.label = [&]() { // 简化标签获取逻辑
+        const char* label = nullptr;
+        gp_widget_get_label(widget, &label);
+        return label ? label : "";
+    }();
+
+    // 3.1 转换类型为字符串
+    switch (type) {
+        case GP_WIDGET_MENU: case GP_WIDGET_RADIO: item.type = "choice"; break;
+        case GP_WIDGET_TEXT: item.type = "text"; break;
+        case GP_WIDGET_RANGE: item.type = "range"; break;
+        case GP_WIDGET_TOGGLE: item.type = "toggle"; break;
+        default: item.type = "unknown";
+    }
+
+    // 3.2 提取当前值（修正指针类型处理）
+    switch (type) {
+        case GP_WIDGET_TEXT:
+        case GP_WIDGET_MENU:
+        case GP_WIDGET_RADIO: {
+            const char* val = nullptr; // 正确类型：const char*
+            if (gp_widget_get_value(widget, &val) == GP_OK) { // 传递const char*的地址
+                item.current = val ? val : ""; // 避免nullptr解引用
+            }
+            break;
+        }
+        case GP_WIDGET_RANGE: {
+            float val = 0.0f; // 正确类型：float
+            if (gp_widget_get_value(widget, &val) == GP_OK) { // 传递float的地址
+                item.floatValue = val;
+                item.current = std::to_string(val);
+                // 提取范围参数
+                float bottom, top, step;
+                if (gp_widget_get_range(widget, &bottom, &top, &step) == GP_OK) {
                     item.bottomFloat = bottom;
                     item.topFloat = top;
-                    item.stepFloat = increment;
-                } else {
-                    OH_LOG_Print(LOG_APP, LOG_ERROR, LOG_DOMAIN, LOG_TAG,
-                                 "获取RANGE类型节点范围值失败: %{public}s，错误码: %{public}d",
-                                 gp_result_as_string(getRangeRet), getRangeRet);
+                    item.stepFloat = step;
                 }
-                break;
             }
-            case GP_WIDGET_TOGGLE: {
-                int toggleValue;
-                toggleValue = *(int *)value;
-                item.intValue = toggleValue;
-                break;
-            }
-            case GP_WIDGET_MENU:
-            case GP_WIDGET_RADIO: {
-                const char *menuValue;
-                menuValue = *(const char **)value;
-                item.current = menuValue;
-                // 获取RADIO或MENU类型节点的所有选项
-                int choiceCount = gp_widget_count_choices(widget);
-                for (int i = 0; i < choiceCount; i++) {
-                    const char *choice = nullptr;
-                    int getChoiceRet = gp_widget_get_choice(widget, i, &choice);
-                    if (getChoiceRet == GP_OK && choice) {
-                        item.choices.push_back(choice);
-                    } else {
-                        OH_LOG_Print(LOG_APP, LOG_ERROR, LOG_DOMAIN, LOG_TAG,
-                                     "获取选项值失败或选项值为空，错误码: %{public}d", getChoiceRet);
-                    }
-                }
-                break;
-            }
-            default:
-                break;
-            }
-            OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "当前值获取成功");
-        } else {
-            OH_LOG_Print(LOG_APP, LOG_ERROR, LOG_DOMAIN, LOG_TAG, "获取当前值失败: %{public}s，错误码: %{public}d",
-                         gp_result_as_string(getValueRet), getValueRet);
+            break;
         }
-
-        items.push_back(item);
-        OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "将配置项添加到结果数组");
+        case GP_WIDGET_TOGGLE: {
+            int val = 0; // 正确类型：int
+            if (gp_widget_get_value(widget, &val) == GP_OK) { // 传递int的地址
+                item.intValue = val;
+                item.current = std::to_string(val);
+            }
+            break;
+        }
+        default:
+            item.current = "";
+            break;
     }
 
-    // 递归处理子节点
-    int childCount = gp_widget_count_children(widget);
-    OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "当前节点子节点数量: %{public}d", childCount);
-    for (int i = 0; i < childCount; i++) {
-        CameraWidget *child = nullptr;
-        int getChildRet = gp_widget_get_child(widget, i, &child);
-        if (getChildRet == GP_OK && child) {
-            OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "获取子节点成功，子节点地址: %{public}p",
-                         (void *)child);
-            std::string childPath = fullPath;
-            const char *childName = nullptr;
-            if (gp_widget_get_name(child, &childName) == GP_OK && childName) {
-                childPath += "/" + std::string(childName);
+    // 3.3 提取可选值（仅针对choice类型）
+    if (item.type == "choice") {
+        int choiceCount = gp_widget_count_choices(widget);
+        for (int i = 0; i < choiceCount; ++i) {
+            const char* choice = nullptr;
+            if (gp_widget_get_choice(widget, i, &choice) == GP_OK && choice) {
+                item.choices.push_back(choice);
             }
-            TraverseConfigTree(child, items, level + 1, childPath);
-        } else {
-            OH_LOG_Print(LOG_APP, LOG_ERROR, LOG_DOMAIN, LOG_TAG, "获取子节点失败: %{public}s，错误码: %{public}d",
-                         gp_result_as_string(getChildRet), getChildRet);
         }
     }
+
+    items.push_back(item); // 加入结果集
 }
 
 
@@ -214,118 +157,75 @@ static void TraverseConfigTree(CameraWidget *widget, std::vector<ConfigItem> &it
 
 
 /**
- * 内部函数：获取所有相机配置参数
- * @param items 输出参数：存储配置参数的数组
- * @return 是否成功
+ * 获取所有配置项（优化核心）
+ * 优化点：去除重复遍历，简化流程，加强资源管理
  */
-bool GetAllConfigItems(std::vector<ConfigItem> &items) {
-    // 检查相机连接状态并记录日志
-    if (!g_connected ||!g_camera ||!g_context) {
+bool GetAllConfigItems(std::vector<ConfigItem>& items) {
+    items.clear();
+    // 1. 连接检查（前置校验）
+    if (!g_connected || !g_camera || !g_context) {
         OH_LOG_Print(LOG_APP, LOG_ERROR, LOG_DOMAIN, LOG_TAG, "相机未连接，无法获取配置");
         return false;
     }
-    OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "相机连接状态正常，准备获取配置树");
 
-    // 获取配置树根节点并记录日志
-    CameraWidget *root = nullptr;
+    // 2. 获取配置树根节点（核心资源）
+    CameraWidget* root = nullptr;
     int ret = gp_camera_get_config(g_camera, &root, g_context);
-    if (ret != GP_OK) {
-        OH_LOG_Print(LOG_APP, LOG_ERROR, LOG_DOMAIN, LOG_TAG, "获取配置树失败: %{public}s", gp_result_as_string(ret));
+    if (ret != GP_OK || !root) {
+        OH_LOG_Print(LOG_APP, LOG_ERROR, LOG_DOMAIN, LOG_TAG, "获取配置树失败：%s", gp_result_as_string(ret));
         return false;
     }
-    OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "成功获取配置树根节点");
 
-    // 记录配置树根节点的地址（有助于检查是否为空指针）
-    OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "配置树根节点地址: %{public}p", (void *)root);
+    // 3. 遍历配置树（仅一次遍历，去除冗余的map构建）
+    TraverseConfigTree(root, items, "");
+    g_allConfigItems = items; // 缓存结果
 
-    // 用于存储配置树节点的map
-    std::map<int, std::vector<std::string>> configTreeMap;
-    // 遍历配置树
-    std::function<void(CameraWidget *, int)> traverse = [&](CameraWidget *widget, int level) {
-        if (!widget) return;
-
-        const char *name_ptr = nullptr;
-        int getNameRet = gp_widget_get_name(widget, &name_ptr);
-        if (getNameRet == GP_OK && name_ptr) {
-            configTreeMap[level].push_back(name_ptr);
-        }
-
-        int childCount = gp_widget_count_children(widget);
-        for (int i = 0; i < childCount; i++) {
-            CameraWidget *child = nullptr;
-            int getChildRet = gp_widget_get_child(widget, i, &child);
-            if (getChildRet == GP_OK && child) {
-                traverse(child, level + 1);
-            }
-        }
-    };
-    traverse(root, 0);
-
-    // 打印map中的内容，可根据需要调整
-    for (const auto &entry : configTreeMap) {
-        OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "Level %{public}d:", entry.first);
-        for (const std::string &name : entry.second) {
-            OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "  %{public}s", name.c_str());
-        }
-    }
-
-    TraverseConfigTree(root, items);
-    g_allConfigItems = items; // 将获取的配置信息保存到全局变量
-    OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "配置树遍历完成，已保存配置信息到全局变量");
-
-    // 释放配置树并记录日志
+    // 4. 释放资源（确保无论成败都释放）
     gp_widget_free(root);
-    OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "成功释放配置树根节点资源");
-
+    OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "配置树获取完成，共%d个参数", (int)items.size());
     return true;
 }
 
 
+
 /**
- * NAPI接口：获取相机所有配置参数（含可选值和当前值）
- * @return ArkTS数组，每个元素为{name, label, type, current, choices}
+ * NAPI接口：获取配置树（保持与上层交互的兼容性）
  */
 napi_value GetCameraConfig(napi_env env, napi_callback_info info) {
     std::vector<ConfigItem> items;
     bool success = GetAllConfigItems(items);
 
-    // 创建ArkTS数组
     napi_value resultArray;
     napi_create_array(env, &resultArray);
 
     if (success) {
-        for (size_t i = 0; i < items.size(); i++) {
-            const ConfigItem &item = items[i];
-            // 创建单个参数对象
+        for (size_t i = 0; i < items.size(); ++i) {
+            const ConfigItem& item = items[i];
             napi_value obj;
             napi_create_object(env, &obj);
 
-            // 设置name属性
+            // 只设置必要的属性（与ConfigItem对应）
             napi_set_named_property(env, obj, "name", CreateNapiString(env, item.name.c_str()));
-            // 设置label属性
             napi_set_named_property(env, obj, "label", CreateNapiString(env, item.label.c_str()));
-            // 设置type属性
             napi_set_named_property(env, obj, "type", CreateNapiString(env, item.type.c_str()));
-            // 设置current属性
             napi_set_named_property(env, obj, "current", CreateNapiString(env, item.current.c_str()));
 
-            // 创建choices数组
-            napi_value choicesArray;
-            napi_create_array(env, &choicesArray);
-            for (size_t j = 0; j < item.choices.size(); j++) {
-                napi_value choice = CreateNapiString(env, item.choices[j].c_str());
-                napi_set_element(env, choicesArray, j, choice);
+            // 可选值列表（仅当有值时添加）
+            if (!item.choices.empty()) {
+                napi_value choicesArray;
+                napi_create_array(env, &choicesArray);
+                for (size_t j = 0; j < item.choices.size(); ++j) {
+                    napi_set_element(env, choicesArray, j, CreateNapiString(env, item.choices[j].c_str()));
+                }
+                napi_set_named_property(env, obj, "choices", choicesArray);
             }
-            napi_set_named_property(env, obj, "choices", choicesArray);
 
-            // 将对象添加到结果数组
             napi_set_element(env, resultArray, i, obj);
         }
     }
 
     return resultArray;
 }
-
 
 
 
