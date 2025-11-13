@@ -228,7 +228,7 @@ std::unordered_map<std::string, std::vector<std::string>> ExtractParamOptions(co
         return result;
     }
 
-    // 遍历配置树，匹配目标参数并提取可选值
+    /*// 遍历配置树，匹配目标参数并提取可选值
     for (const auto& item : g_allConfigItems) {
         // 检查当前参数是否在需要提取的列表中
         if (std::find(paramNames.begin(), paramNames.end(), item.name) != paramNames.end()) {
@@ -236,7 +236,23 @@ std::unordered_map<std::string, std::vector<std::string>> ExtractParamOptions(co
             OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "提取参数[%{public}s]的可选值，共%{public}d项", 
                         item.name.c_str(), (int)item.choices.size());
         }
+    }*/
+    
+    // 遍历配置树，匹配目标参数并提取可选值
+    for (const auto& item : g_allConfigItems) {
+        // 检查当前参数是否在需要提取的列表中
+        if (std::find(paramNames.begin(), paramNames.end(), item.name) != paramNames.end()) {
+            result[item.name] = item.choices; // 存储可选值数组
+            OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "提取参数[%{public}s]的可选值，共%{public}d项",
+                item.name.c_str(), (int)item.choices.size());
+            // 新增：遍历并打印每个可选值
+            OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "参数[%{public}s]的可选值如下:", item.name.c_str());
+            for (const auto& choice : item.choices) {
+                OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, " - %{public}s", choice.c_str());
+            }
+        }
     }
+    
     return result;
 }
 
@@ -296,7 +312,7 @@ bool GetAllConfigItems(std::vector<ConfigItem>& items) {
     CameraWidget* root = nullptr;
     int ret = gp_camera_get_config(g_camera, &root, g_context);
     if (ret != GP_OK ||!root) {
-        OH_LOG_Print(LOG_APP, LOG_ERROR, LOG_DOMAIN, LOG_TAG, "获取配置树失败：%s", gp_result_as_string(ret));
+        OH_LOG_Print(LOG_APP, LOG_ERROR, LOG_DOMAIN, LOG_TAG, "获取配置树失败：%s{public}", gp_result_as_string(ret));
         return false;
     }
 
@@ -310,16 +326,7 @@ bool GetAllConfigItems(std::vector<ConfigItem>& items) {
         return false;
     }
 
-   
-    ///////////////////////////////////////
-    // 配置树加载成功后，提取可选值并推送
-    /*if (g_paramCallback != nullptr) {
-        // 调用通用工具函数提取目标参数的可选值
-        auto paramOptions = ExtractParamOptions(DEFAULT_PARAMS_TO_EXTRACT);
-        // 将提取结果转换为可通过NAPI传递的格式（见步骤3）
-        PushParamOptionsToArkTS(paramOptions);
-    }*/
-    //////////////////////////////////
+    
 
     // 4. 释放资源（确保无论成败都释放）
     gp_widget_free(root);
@@ -460,7 +467,7 @@ CameraInfo InternalGetCameraInfo() {
     CameraWidget *root = nullptr;
     int ret = gp_camera_get_config(g_camera, &root, g_context);
     if (ret != GP_OK || !root) {
-        OH_LOG_Print(LOG_APP, LOG_ERROR, LOG_DOMAIN, LOG_TAG, "获取配置树失败，错误码：%d", ret);
+        OH_LOG_Print(LOG_APP, LOG_ERROR, LOG_DOMAIN, LOG_TAG, "获取配置树失败，错误码：%{public}d", ret);
         return info;
     }
 
@@ -479,7 +486,7 @@ CameraInfo InternalGetCameraInfo() {
             const std::string& numNodeName = it->second;
             RecursiveFindWidget(root, numNodeName.c_str(), &widget, "");
             if (widget) {
-                OH_LOG_Print(LOG_APP, LOG_WARN, LOG_DOMAIN, LOG_TAG, "文字节点%s未找到，使用数字节点%s", 
+                OH_LOG_Print(LOG_APP, LOG_WARN, LOG_DOMAIN, LOG_TAG, "文字节点%{public}s未找到，使用数字节点%{public}s", 
                     textNodeName.c_str(), numNodeName.c_str());
             }
         }

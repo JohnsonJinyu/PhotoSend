@@ -17,6 +17,8 @@ export struct IsoDialog {
   private IsoOptions: string[] = [];
   @State currentIndex: number = 0;
 
+
+
   constructor(controller: CustomDialogController, selectedISOValue: string) {
     super();
     this.controller = controller;
@@ -28,6 +30,10 @@ export struct IsoDialog {
 
   aboutToAppear(): void {
     Log.info(domain, TAG, '在build函数中，IsoOptions的值为: %{public}s', this.IsoOptions.join(','));
+    // 遍历打印IsoOptions数组内容
+    this.IsoOptions.forEach((option, index) => {
+      Log.info(domain, TAG, 'IsoOptions[%d]: %s', index, option);
+    });
   }
 
 

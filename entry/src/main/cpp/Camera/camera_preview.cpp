@@ -107,7 +107,7 @@ static bool GetCameraPreview(uint8_t **data, size_t *length) {
     // 捕获预览帧
     ret = gp_camera_capture_preview(g_camera, file, ctx);
     if (ret != GP_OK) {
-        OH_LOG_Print(LOG_APP, LOG_ERROR, LOG_DOMAIN, LOG_TAG, "捕获预览失败: %s", gp_result_as_string(ret));
+        OH_LOG_Print(LOG_APP, LOG_ERROR, LOG_DOMAIN, LOG_TAG, "捕获预览失败: %{public}s", gp_result_as_string(ret));
         gp_file_unref(file);
         stopLiveview(g_camera, ctx);
         if (is_temp_ctx) gp_context_unref(ctx);
