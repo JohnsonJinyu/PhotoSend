@@ -10,6 +10,69 @@ export function CameraPicturesPageBuilder() {
   CameraPicturesPage();
 }
 
+// 子组件：仅显示图片（无文件名）
+@Component
+struct PhotoGridItem {
+  // 接收缩略图的二进制数据
+  @Prop thumbnailBuffer: ArrayBuffer;
+
+  // 内部状态：当前图片的PixelMap和解码状态
+  @State pixelMap: image.PixelMap | null = null;
+  @State isLoading: boolean = true;
+
+  // 组件初始化时解码图片
+  aboutToAppear() {
+    this.decodeThumbnail();
+  }
+
+  // 解码缩略图（ArrayBuffer → PixelMap）
+  private async decodeThumbnail() {
+    try {
+      const imageSource = image.createImageSource(this.thumbnailBuffer);
+      this.pixelMap = await imageSource.createPixelMap();
+    } catch (err) {
+      console.error(`图片解码失败：${err.message}`);
+      this.pixelMap = null;
+    } finally {
+      this.isLoading = false;
+    }
+  }
+
+  build() {
+    Column() {
+      // 加载中状态
+      if (this.isLoading) {
+        Column(){
+          LoadingProgress()
+            .size({ width: 24, height: 24 });
+        }
+        .width('100%')
+        .height(150) // 固定高度，避免布局抖动
+        .backgroundColor('#f0f0f0')
+        .borderRadius(8)
+        .justifyContent(FlexAlign.Center)
+        .alignItems(HorizontalAlign.Center)
+      }
+      // 解码失败（显示默认图）
+      else if (this.pixelMap === null) {
+        Image($r('sys.media.ohos_app_icon'))
+          .width('100%')
+          .height(150)
+          .objectFit(ImageFit.Cover)
+          .borderRadius(8);
+      }
+      // 解码成功（显示缩略图）
+      else {
+        Image(this.pixelMap)
+          .width('100%')
+          .height(150) // 固定高度，确保网格整齐
+          .objectFit(ImageFit.Cover) // 裁剪适配
+          .borderRadius(8);
+      }
+    }
+    .padding(5); // 网格项之间的间距
+  }
+}
 
 @Component
 export struct CameraPicturesPage {
@@ -136,31 +199,21 @@ export struct CameraPicturesPage {
            // .fontColor($r('sys.color.secondary_text'))
             .padding({ left: 16, top: 10 });
 
-          WaterFlow(){
-            ForEach(
-              this.thumbnails,
-              (item:ThumbnailInfo)=>{
-               FlowItem(){
-                 Column(){
-                   // 缩略图显示（核心）
-                   Image(this.pixelMap) // 失败时显示默认图标
-                     .width('100%')        // 宽度占满列
-                     .height('auto')       // 高度自适应图片比例（瀑布流关键）
-                     .objectFit(ImageFit.Cover) // 图片裁剪适配
-                     .borderRadius(8);     // 圆角美化
-
-                   // 可选：显示文件名（底部文字）
-                   Text(item.filename)
-                     .fontSize(12)
-                     .padding({ top: 5 })
-                     .maxLines(1)          // 文件名过长时截断
-                     .textOverflow({ overflow: TextOverflow.Ellipsis });
-                 }
-                 .padding(5)
-               }
+          Grid(){
+            ForEach(this.thumbnails,(item:ThumbnailInfo)=>{
+              GridItem(){
+                // 每个网格项使用子组件显示
+                PhotoGridItem({ thumbnailBuffer: item.thumbnail })
               }
+            }
+
             )
           }
+          .columnsTemplate(`repeat(3, 1fr)`) // 补充网格列数配置（例如3列）
+          .rowsGap(10)
+          .columnsGap(10)
+          .padding(16)
+          .width('100%');
 
         }
       }
