@@ -1,5 +1,5 @@
 import { CameraPage } from './CameraPage/CameraPage';
-import { PicturesPage } from './PicturesPage';
+import { PhoneLocalPictures } from './PhoneLocalPictures';
 import { MinePage } from './MinePage/MinePage';
 
 
@@ -29,7 +29,7 @@ struct HomePage {
 
           TabContent(){
             NavDestination(){
-              PicturesPage()
+              PhoneLocalPictures()
             }
             .title('相册')
             .hideBackButton(true)
