@@ -3,6 +3,7 @@
  * */
 
 import nativeCamera, { ThumbnailInfo } from 'libentry.so'
+import { image } from '@kit.ImageKit';
 
 @Builder
 export function CameraPicturesPageBuilder() {
@@ -13,7 +14,7 @@ export function CameraPicturesPageBuilder() {
 @Component
 export struct CameraPicturesPage {
   // 状态管理
-  @State isSelectMode: boolean = false
+
   @State selectedPhotos: number[] = []
   //@State photos:photoItem[]=[]
   @State isMoreMenuShow: boolean = false
@@ -24,6 +25,14 @@ export struct CameraPicturesPage {
   @State isLoading: boolean = true;
   // 错误信息（获取失败时显示）
   @State errorMsg: string = '';
+
+  @State isSelectMode: boolean = false
+  @State selectedIndices: number[] = [];  // 选中的图片索引
+
+  // 瀑布流配置
+  private columnCount: number = 2; // 2列布局
+  private spacing: number = 10;    // 列间距和行间距
+  @State pixelMap: image.PixelMap | null = null; // 存储解码后的PixelMap
 
 
   @State menuItems:Array<NavigationMenuItem>=[
@@ -42,13 +51,31 @@ export struct CameraPicturesPage {
     }
   ]
 
+
+
   aboutToAppear(): void{
 
+    this.loadThumbnails()
+
+  }
 
 
+  // 异步解码缩略图
+  /*private async decodeThumbnail() {
+    try {
+      this.pixelMap = await this.bufferToPixelMap(this.thumbnail);
+    } catch (err) {
+      console.error(`解码失败：${(err as BusinessError).message}`);
+      this.pixelMap = null;
+    } finally {
+      this.isLoading = false;
+    }
+  }*/
+
+
+  // 加载缩略图列表（复用原有异步逻辑）
+  private loadThumbnails(): void {
     this.isLoading = true;
-    this.errorMsg = '';
-    // 调用C++异步接口，传入回调函数（与类型声明匹配）
     nativeCamera.GetThumbnailList((err: string | null, result: ThumbnailInfo[]) => {
       if (err) {
         this.errorMsg = `获取失败：${err}`;
@@ -59,8 +86,22 @@ export struct CameraPicturesPage {
       }
       this.isLoading = false;
     });
-
   }
+
+
+  // 将缩略图的ArrayBuffer转为PixelMap（供Image组件显示）
+  private async bufferToPixelMap(buffer: ArrayBuffer): Promise<image.PixelMap | null> {
+    try {
+      const imageSource = image.createImageSource(buffer); // 创建图片源
+      const pixelMap = await imageSource.createPixelMap(); // 解码为PixelMap
+      return pixelMap;
+    } catch (err) {
+      console.error(`缩略图解码失败：${err.message}`);
+      return null; // 失败时返回null，显示默认图
+    }
+  }
+
+
 
 
   build() {
@@ -95,30 +136,32 @@ export struct CameraPicturesPage {
            // .fontColor($r('sys.color.secondary_text'))
             .padding({ left: 16, top: 10 });
 
-          // 用List展示照片信息（文件名+路径）
-          List({ space: 10 }) {
-            ForEach(this.thumbnails, (item: ThumbnailInfo, index: number) => {
-              ListItem() {
-                Column({ space: 5 }) {
-                  // 文件名
-                  Text(`照片名：${item.filename}`)
-                    .fontSize(16)
-                    .fontWeight(FontWeight.Medium);
-                  // 文件路径（可选，调试用）
-                  Text(`路径：${item.folder}`)
-                    .fontSize(12)
-                    //.fontColor($r('sys.color.secondary_text'));
-                }
-                .padding(16)
-                //.backgroundColor($r('sys.color.background'))
-                .borderRadius(10)
-                .width('100%');
+          WaterFlow(){
+            ForEach(
+              this.thumbnails,
+              (item:ThumbnailInfo)=>{
+               FlowItem(){
+                 Column(){
+                   // 缩略图显示（核心）
+                   Image(this.pixelMap) // 失败时显示默认图标
+                     .width('100%')        // 宽度占满列
+                     .height('auto')       // 高度自适应图片比例（瀑布流关键）
+                     .objectFit(ImageFit.Cover) // 图片裁剪适配
+                     .borderRadius(8);     // 圆角美化
+
+                   // 可选：显示文件名（底部文字）
+                   Text(item.filename)
+                     .fontSize(12)
+                     .padding({ top: 5 })
+                     .maxLines(1)          // 文件名过长时截断
+                     .textOverflow({ overflow: TextOverflow.Ellipsis });
+                 }
+                 .padding(5)
+               }
               }
-            }, (item:ThumbnailInfo) => item.filename + item.folder); // 唯一键
+            )
           }
-          .padding(16)
-          .width('100%')
-          .flexGrow(1); // 占满剩余空间
+
         }
       }
       .width('100%')
