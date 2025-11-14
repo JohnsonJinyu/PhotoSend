@@ -102,6 +102,20 @@ interface ParamOptions {
 
 
 
+/**
+ * 缩略图信息接口，包含照片在相机中的路径、文件名及缩略图二进制数据
+ */
+interface ThumbnailInfo {
+  /** 照片在相机中的文件夹路径（如"/DCIM/100NIKON"） */
+  folder: string;
+
+  /** 照片文件名（如"DSC_0001.NEF"） */
+  filename: string;
+
+  /** 缩略图二进制数据（ArrayBuffer格式，可直接用于Image组件显示） */
+  thumbnail: ArrayBuffer;
+}
+
 
 
 
@@ -196,3 +210,11 @@ export const GetParamOptions: (paramName: string) => string[];
  * @param callback 回调函数，接收一个ParamOptions类型的参数
  */
 export const RegisterParamCallback: (callback: (params: ParamOptions) => void) => void;
+
+
+
+/**
+ * 获取相机内所有照片的缩略图列表（包含路径、文件名和缩略图数据）
+ * @returns 缩略图列表，每个元素为符合ThumbnailInfo接口的对象
+ */
+export const GetThumbnailList: () => ThumbnailInfo[];

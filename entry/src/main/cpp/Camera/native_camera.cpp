@@ -12,6 +12,7 @@
 // NAPI头文件：ArkTS与C++交互的核心接口（定义数据类型、函数调用规则）
 #include <napi/native_api.h>
 #include "Camera/camera_device.h"
+#include "Camera/camera_download.h"
 #include "napi/native_api.h"
 // libgphoto2头文件：相机操作核心接口（相机对象、文件、配置、端口管理）
 #include <gphoto2/gphoto2.h>
@@ -313,6 +314,8 @@ static napi_value Init(napi_env env, napi_value exports) {
         {"GetCameraConfig", nullptr, GetCameraConfig, nullptr, nullptr, nullptr, napi_default, nullptr},
         {"GetParamOptions", nullptr, GetParamOptions, nullptr, nullptr, nullptr, napi_default, nullptr},
         {"RegisterParamCallback", nullptr, RegisterParamCallback, nullptr, nullptr, nullptr, napi_default, nullptr},
+        {"GetThumbnailList", nullptr, GetThumbnailList, nullptr, nullptr, nullptr, napi_default, nullptr},
+        
         
     };
 
