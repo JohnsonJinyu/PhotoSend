@@ -114,6 +114,8 @@ interface ThumbnailInfo {
 
   /** 缩略图二进制数据（ArrayBuffer格式，可直接用于Image组件显示） */
   thumbnail: ArrayBuffer;
+
+  dataPtr: number;      // 关键：C++层thumbData的内存指针（供释放用）
 }
 
 
