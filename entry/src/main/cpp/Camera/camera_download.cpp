@@ -21,7 +21,6 @@ struct ThumbnailInfo {
     std::string fileName; // 文件名
     uint8_t *thumbData;   // 缩略图二进制数据
     size_t thumbSize;     // 缩略图大小
-    
 };
 
 // 存储异步任务所需数据（输入参数、结果、回调）
@@ -62,14 +61,63 @@ static void CompleteAsyncWork(napi_env env, napi_status status, void *data) {
             napi_set_named_property(env, thumbObj, "folder", CreateNapiString(env, info.folder.c_str()));
             napi_set_named_property(env, thumbObj, "filename", CreateNapiString(env, info.fileName.c_str()));
 
-            napi_value thumbBuffer;
-            napi_create_buffer_copy(env, info.thumbSize, info.thumbData, nullptr, &thumbBuffer);
+            napi_value thumbBuffer = nullptr; // 显式初始化为nullptr
+
+            OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG,
+                         "文件 %{public}s 的thumbData地址：%{public}p，准备包装为外部缓冲区", 
+                         info.fileName.c_str(), info.thumbData);
+            
+            // 关键修改：使用napi_create_external_buffer包装已有内存
+            // 定义finalize回调函数：当ArkTS层不再使用该缓冲区时释放内存
+            auto finalize = [](napi_env env, void *data, void *hint) {
+                OH_LOG_PrintMsg(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "自动释放缩略图内存");
+                free(data); // 释放malloc分配的内存
+            };
+            
+            // 创建外部缓冲区（不复制数据，直接包装info.thumbData）
+            napi_status createStatus = napi_create_external_buffer(
+                env,
+                info.thumbSize,       // 数据长度
+                info.thumbData,       // 已分配的内存指针（malloc的结果）
+                finalize,             // 内存释放回调
+                nullptr,              // 回调参数（无需求时为nullptr）
+                &thumbBuffer          // 输出的Buffer对象
+            );
+            
+            // 检查创建是否成功
+            if (createStatus != napi_ok) {
+                OH_LOG_Print(LOG_APP, LOG_ERROR, LOG_DOMAIN, LOG_TAG,
+                             "文件 %{public}s 的外部缓冲区创建失败，状态码：%{public}d", 
+                             info.fileName.c_str(), createStatus);
+                free(info.thumbData); // 若创建失败，手动释放内存
+                continue;
+            }
+            
+            // 设置缩略图属性
             napi_set_named_property(env, thumbObj, "thumbnail", thumbBuffer);
+            napi_set_element(env, resultArray, i, thumbObj);
+
+
+            // napi_create_buffer_copy(env, info.thumbSize, info.thumbData, nullptr, &thumbBuffer);
+            /*napi_status copyStatus =
+                napi_create_buffer_copy(env, info.thumbSize, info.thumbData, nullptr, &thumbBuffer);
+
+            // 关键：检查复制是否成功
+            if (copyStatus != napi_ok) {
+                OH_LOG_Print(LOG_APP, LOG_ERROR, LOG_DOMAIN, LOG_TAG,
+                             "文件 %{public}s 的缩略图复制失败，状态码：%{public}d", info.fileName.c_str(), copyStatus);
+                free(info.thumbData); // 释放原内存
+                continue;             // 跳过当前文件，避免无效数据污染结果
+            }
+
+            // 仅在复制成功后设置属性
+            napi_set_named_property(env, thumbObj, "thumbnail", thumbBuffer);
+
 
             napi_set_element(env, resultArray, i, thumbObj);
 
             // 释放malloc的内存（避免泄漏）
-            free(info.thumbData);
+            free(info.thumbData);*/
         }
         args[1] = resultArray;
     } else {
@@ -82,7 +130,13 @@ static void CompleteAsyncWork(napi_env env, napi_status status, void *data) {
     napi_value callback;
     napi_get_reference_value(env, asyncData->callback, &callback);
     napi_value global;
-    napi_get_global(env, &global);
+    // napi_get_global(env, &global);
+    napi_status envStatus = napi_get_global(env, &global);
+    if (envStatus != napi_ok) {
+        OH_LOG_PrintMsg(LOG_APP, LOG_ERROR, LOG_DOMAIN, LOG_TAG, "env已失效！");
+        return;
+    }
+
     napi_make_callback(env, nullptr, global, callback, 2, args, nullptr);
 
     // 5. 释放资源
@@ -269,8 +323,9 @@ found_dcim:
         const char *thumbData;
         unsigned long thumbSize;
         gp_file_get_data_and_size(thumbFile, &thumbData, &thumbSize);
-        if (thumbSize == 0) {
-            OH_LOG_Print(LOG_APP, LOG_WARN, LOG_DOMAIN, LOG_TAG, "%{public}s 的缩略图为空", fileName);
+        if (thumbData == nullptr || thumbSize == 0) {
+            OH_LOG_Print(LOG_APP, LOG_WARN, LOG_DOMAIN, LOG_TAG, "%{public}s 的缩略图数据无效（指针为空或大小为0）",
+                         fileName);
             gp_file_unref(thumbFile);
             continue;
         }
@@ -288,11 +343,18 @@ found_dcim:
         info.thumbData = (uint8_t *)malloc(thumbSize); // 分配内存存储缩略图数据
 
         if (info.thumbData == nullptr) {
-            //OH_LOG_Print(...);
+            OH_LOG_Print(LOG_APP, LOG_ERROR, LOG_DOMAIN, LOG_TAG,
+                         "文件 %{public}s 分配缩略图内存失败（大小：%{public}lu）", fileName, thumbSize);
             continue;
         }
 
         memcpy(info.thumbData, thumbData, thumbSize);
+
+        if (thumbSize >= 2) {
+            OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG,
+                         "文件 %{public}s 复制后的数据头：0x%{public}02X%{public}02X", fileName, info.thumbData[0],
+                         info.thumbData[1]);
+        }
 
         // 验证JPEG格式（关键：避免无效数据传入ArkTS）
         if (thumbSize < 2 || info.thumbData[0] != 0xFF || info.thumbData[1] != 0xD8) {
@@ -316,6 +378,7 @@ static void ExecuteAsyncWork(napi_env env, void *data) {
     try {
         // 执行耗时操作（获取缩略图列表）
         asyncData->result = InternalGetThumbnailList();
+
         asyncData->errorCode = 0;
     } catch (const std::exception &e) {
         // 捕获异常，记录错误信息
