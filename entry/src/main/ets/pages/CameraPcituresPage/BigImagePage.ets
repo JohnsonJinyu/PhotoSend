@@ -45,6 +45,7 @@ struct BigImagePage {
           .height('calc(100% - 56px)')
           .objectFit(ImageFit.Contain)
           .padding(20)
+
       }
       .width('100%')
       .height('100%')

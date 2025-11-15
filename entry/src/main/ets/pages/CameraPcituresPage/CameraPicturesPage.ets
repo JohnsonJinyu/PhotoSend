@@ -19,6 +19,8 @@ export function CameraPicturesPageBuilder() {
 
 @Component
 export struct CameraPicturesPage {
+  @Consume('pageStack') pageStack: NavPathStack;
+
   @State thumbnails: ThumbnailInfo[] = [];
   @State imageInfos: ImageInfoWithPixelMap[] = [];
   @State isLoading: boolean = true;
@@ -115,13 +117,8 @@ export struct CameraPicturesPage {
 
   // 点击图片跳转到大图页面
   openBigImage(index: number) {
-    router.pushUrl({
-      url: 'pages/CameraPicturePage', // 确保路由配置正确
-      params: {
-        imageInfos: this.imageInfos,
-        currentIndex: index
-      }
-    });
+
+    this.pageStack.pushPathByName('BigImagePage',null,true)
   }
 
   build() {
