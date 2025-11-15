@@ -15,6 +15,12 @@
       "data": {
         "description": "this is download picture page"
       }
+    },
+    {
+      "name": "BigImagePage",
+      "pageSourceFile": "src/main/ets/pages/CameraPcituresPage/BigImagePage.ets",
+      "buildFunction": "BigImagePageBuilder",
+      "data": { "description": "this is big image preview page" }
     }
   ]
 }
