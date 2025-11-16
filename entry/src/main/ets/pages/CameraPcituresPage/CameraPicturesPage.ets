@@ -178,16 +178,7 @@ export struct CameraPicturesPage {
 
 
 
-  // 点击图片跳转到大图页面
-  openBigImage(index: number) {
-    const currentImage = this.imageInfos[index];
-    // 显式声明参数类型为 BigImageParams
-    const params: BigImageParams = {
-      imageInfo: currentImage
-    };
-    // 传递参数到 BigImagePage（第三个参数为 params）
-    this.pageStack.pushPathByName('BigImagePage', params, true);
-  }
+
 
 
 
@@ -254,6 +245,7 @@ export struct CameraPicturesPage {
     // 新增：注销转场、节点下树
     .onDisAppear(() => {
       CustomTransition.getInstance().unRegisterNavParam(this.pageId);
+
       if (this.myNodeController) {
         this.myNodeController.onRemove();
       }

@@ -57,9 +57,11 @@ struct BigImagePage {
       return true;
     }
     // 正常返回流程
-    CustomTransition.getInstance().unRegisterNavParam(this.pageId);
+    /*CustomTransition.getInstance().unRegisterNavParam(this.pageId);
     this.pageInfos.pop();
     this.prePageDoFinishTransition(this.myNodeController!);
+    return true;*/
+    this.pageInfos.pop();
     return true;
   }
 
@@ -70,35 +72,46 @@ struct BigImagePage {
         // 内层Stack：承载图片和转场载体，避免布局偏移
         Stack({ alignContent: Alignment.TopStart }) {
           Column() {
-            // 大图展示（绑定动画过程中的尺寸适配）
-            Image(this.params.imageInfo.pixelMap || $r('app.media.ic_placeholder'))
-              .width('100%')
-              .height('100%')
-              .objectFit(ImageFit.Contain) // 大图用Contain，适配全屏
-              .padding(20)
-
-            // 转场载体：NodeContainer无子类，与图片完全重叠（转场核心）
             NodeContainer(this.myNodeController)
-              .width('100%')
-              .height('100%')
-              .position({ x: 0, y: 0 })
+            // 大图展示（绑定动画过程中的尺寸适配）
+            if (this.animationProperties.showDetailContent){
+              //Image(this.params.imageInfo.pixelMap )
+              Image(this.params.imageInfo.pixelMap || $r('app.media.ic_placeholder'))
+                //.width('100%')
+                //.height('100%')
+                .objectFit(ImageFit.Cover) // 大图用Contain，适配全屏
+                .transition(TransitionEffect.OPACITY)
+                .padding(20)
+            }
           }
-          .width('100%')
-          .height('100%')
+          .alignItems(HorizontalAlign.Start)
+
         }
         .position({ y: this.animationProperties.positionValue }) // 绑定动画Y轴位移
       }
       // 绑定转场动画属性（缩放、位移、尺寸、圆角）
-      .scale({ x: this.animationProperties.scaleValue, y: this.animationProperties.scaleValue })
+      /*.scale({ x: this.animationProperties.scaleValue, y: this.animationProperties.scaleValue })
       .translate({ x: this.animationProperties.translateX, y: this.animationProperties.translateY })
       .width(this.animationProperties.clipWidth)
       .height(this.animationProperties.clipHeight)
       .borderRadius(this.animationProperties.radius)
       .expandSafeArea([SafeAreaType.SYSTEM]) // 沉浸式，适配状态栏/导航条
       .clip(true) // 裁切动画过程中的多余部分
+      // 关键：仅扩展底部安全区，不扩展顶部导航栏区域
+      .expandSafeArea([SafeAreaType.SYSTEM])*/
+      .scale({ x: this.animationProperties.scaleValue, y: this.animationProperties.scaleValue })
+      .translate({ x: this.animationProperties.translateX, y: this.animationProperties.translateY })
+      .width(this.animationProperties.clipWidth)
+      .height(this.animationProperties.clipHeight)
+      .borderRadius(this.animationProperties.radius)
+      // expandSafeArea使得Stack做沉浸式效果，向上扩到状态栏，向下扩到导航条
+      .expandSafeArea([SafeAreaType.SYSTEM])
+      // 对高度进行裁切
+      .clip(true)
     }
+    .title(this.params.imageInfo.filename)
     .backgroundColor('#000000') // 大图页黑色背景
-    .hideTitleBar(true) // 隐藏标题栏，适配一镜到底视觉
+    //.hideTitleBar(true) // 隐藏标题栏，适配一镜到底视觉
     .onReady((context: NavDestinationContext) => {
       // 1. 获取导航栈和页面ID
       this.pageInfos = context.pathStack;

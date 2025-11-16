@@ -23,7 +23,7 @@ struct HomePage {
     if ((this.allowedCustomTransitionFromPageName.includes(fromName)
       && this.allowedCustomTransitionToPageName.includes(toName)) ||
       this.allowedCustomTransitionFromPageName.includes(toName)
-        && this.allowedCustomTransitionFromPageName.includes(fromName)) {
+        && this.allowedCustomTransitionToPageName.includes(fromName)) {
       return true
     }
     return false
