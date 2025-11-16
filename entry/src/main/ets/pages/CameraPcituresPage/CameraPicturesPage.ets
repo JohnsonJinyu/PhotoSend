@@ -1,6 +1,9 @@
 import nativeCamera, { ThumbnailInfo } from 'libentry.so'
 import image from '@ohos.multimedia.image';
-import { router } from '@kit.ArkUI';
+import { createMyNode, getMyNode, MyNodeController } from '../../NodeContainer/CustomComponent';
+import { CustomTransition } from '../../CustomTransition/CustomNavigationUtils';
+import { ComponentAttrUtils, RectInfoInPx } from '../../utils/ComponentAttrUtils';
+import { WindowUtils } from '../../utils/WindowUtils';
 
 export interface ImageInfoWithPixelMap {
   folder: string;
@@ -25,6 +28,10 @@ export function CameraPicturesPageBuilder() {
 @Component
 export struct CameraPicturesPage {
   @Consume('pageStack') pageStack: NavPathStack;
+
+  private pageId:number=-1
+  @State myNodeController:MyNodeController|undefined= new MyNodeController(false)
+
   @State thumbnails: ThumbnailInfo[] = [];
   @State imageInfos: ImageInfoWithPixelMap[] = [];
   @State isLoading: boolean = true;
@@ -42,7 +49,57 @@ export struct CameraPicturesPage {
 
   aboutToAppear(): void {
     this.loadThumbnails();
+
+    let node = getMyNode()
+    if (node == undefined) {
+      // 新建自定义节点
+      createMyNode(this.getUIContext())
+    }
+    this.myNodeController =getMyNode()
   }
+
+  private doFinishTransition():void{
+    // pageTwo 结束转场时，将节点从pageTwo迁回PageOne
+    this.myNodeController = getMyNode()
+  }
+
+  private registerCustomTransition(): void {
+    // 注册自定义动画协议
+    CustomTransition.getInstance().registerNavParam(this.pageId,
+      (isPush: boolean, isExit: boolean, transitionProxy: NavigationTransitionProxy) => {}, 500);
+  }
+
+
+  private onGridItemClicked(index: number): void {
+    // 1. 获取当前点击的图片数据
+    const currentImage = this.imageInfos[index];
+    if (!currentImage) return;
+
+    // 2. 获取点击图片元素的位置信息（需给Image设置唯一id）
+    const imageRect: RectInfoInPx = ComponentAttrUtils.getRectInfoById(
+      WindowUtils.window.getUIContext(),
+      `shared-image-${index}` // 与GridItem中Image的id对应
+    );
+
+    // 3. 构建转场参数（包含图片数据、位置信息、转场回调）
+    const param: Record<string, Object> = {
+      "imageInfo": currentImage,
+      "cardItemInfo": imageRect,
+      "doDefaultTransition": (myController: MyNodeController) => {
+        this.doFinishTransition(); // 转场结束后迁回节点
+      }
+    };
+
+    // 4. 跳转大图页并触发转场
+    this.pageStack.pushPath({ name: 'BigImagePage', param: param });
+
+    // 5. 自定义节点从当前页面下树（转场过程中节点迁移到目标页）
+    if (this.myNodeController) {
+      this.myNodeController.onRemove();
+    }
+  }
+
+
 
   // 加载缩略图数据
   loadThumbnails() {
@@ -149,22 +206,25 @@ export struct CameraPicturesPage {
           Grid() {
             ForEach(this.imageInfos, (item: ImageInfoWithPixelMap, index: number) => {
               GridItem() {
-                // 单个图片项：填充网格，添加点击效果
-                Column() {
-                  Image(item.pixelMap || $r('app.media.ic_placeholder')) // 占位图需自行准备
+                // 用 Stack 让图片和 NodeContainer 重叠（视觉上还是图片，NodeContainer 是转场载体）
+                Stack() {
+                  // 图片组件（独立存在，不嵌套在 NodeContainer 内）
+                  Column() {
+                    Image(item.pixelMap || $r('app.media.ic_placeholder'))
+                      .width('100%')
+                      .height('100%')
+                      .objectFit(ImageFit.Cover)
+                      .id(`shared-image-${index}`) // 唯一ID，用于获取位置
+                  }
+
+                  // NodeContainer 独立存在，无子类，仅作为转场载体
+                  NodeContainer(this.myNodeController)
                     .width('100%')
                     .height('100%')
-                    .objectFit(ImageFit.Cover) // 填充裁剪，保持比例
-                  // 新增：共享元素转场配置（起点）
-
                 }
-                //.backgroundColor('#f9f9f9') // 背景色，区分图片边界
-                .onClick(() => this.openBigImage(index)) // 点击查看大图
-
-                .gesture(
-                  TapGesture()
-                    .onAction(() => this.openBigImage(index))
-                );
+                // 点击事件绑定到 Stack（触发转场）
+                .onClick(() => this.onGridItemClicked(index))
+                // 移除冗余的 TapGesture（避免重复触发）
               }
               .aspectRatio(1)
 
@@ -180,6 +240,23 @@ export struct CameraPicturesPage {
           .width('100%')
         }
       }.width('100%').height('100%');
-    }.title('机内照片').menus(this.menuItems).width('100%').height('100%');
+    }
+    .title('机内照片')
+    .menus(this.menuItems)
+    .width('100%')
+    .height('100%')
+    // 新增：注册转场、获取页面信息
+    .onReady((context: NavDestinationContext) => {
+      this.pageStack = context.pathStack;
+      this.pageId = this.pageStack.getAllPathName().length - 1;
+      this.registerCustomTransition();
+    })
+    // 新增：注销转场、节点下树
+    .onDisAppear(() => {
+      CustomTransition.getInstance().unRegisterNavParam(this.pageId);
+      if (this.myNodeController) {
+        this.myNodeController.onRemove();
+      }
+    });
   }
 }
