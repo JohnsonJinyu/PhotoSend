@@ -2,13 +2,18 @@ import nativeCamera, { ThumbnailInfo } from 'libentry.so'
 import image from '@ohos.multimedia.image';
 import { router } from '@kit.ArkUI';
 
-interface ImageInfoWithPixelMap {
+export interface ImageInfoWithPixelMap {
   folder: string;
   filename: string;
   pixelMap: image.PixelMap | null;
-
   // 新增：保存原始buffer用于大图（可选，根据需要）
   thumbnail: ArrayBuffer;
+}
+
+
+// 定义跳转到大图页的参数接口
+export interface BigImageParams {
+  imageInfo: ImageInfoWithPixelMap; // 包含要传递的图片信息
 }
 
 @Builder
@@ -20,7 +25,6 @@ export function CameraPicturesPageBuilder() {
 @Component
 export struct CameraPicturesPage {
   @Consume('pageStack') pageStack: NavPathStack;
-
   @State thumbnails: ThumbnailInfo[] = [];
   @State imageInfos: ImageInfoWithPixelMap[] = [];
   @State isLoading: boolean = true;
@@ -115,11 +119,20 @@ export struct CameraPicturesPage {
     return pixelMap;
   }
 
+
+
   // 点击图片跳转到大图页面
   openBigImage(index: number) {
-
-    this.pageStack.pushPathByName('BigImagePage',null,true)
+    const currentImage = this.imageInfos[index];
+    // 显式声明参数类型为 BigImageParams
+    const params: BigImageParams = {
+      imageInfo: currentImage
+    };
+    // 传递参数到 BigImagePage（第三个参数为 params）
+    this.pageStack.pushPathByName('BigImagePage', params, true);
   }
+
+
 
   build() {
     NavDestination() {
@@ -142,7 +155,8 @@ export struct CameraPicturesPage {
                     .width('100%')
                     .height('100%')
                     .objectFit(ImageFit.Cover) // 填充裁剪，保持比例
-                  //.borderRadius(4); // 轻微圆角
+                  // 新增：共享元素转场配置（起点）
+
                 }
                 //.backgroundColor('#f9f9f9') // 背景色，区分图片边界
                 .onClick(() => this.openBigImage(index)) // 点击查看大图
