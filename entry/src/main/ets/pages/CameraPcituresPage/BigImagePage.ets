@@ -56,11 +56,6 @@ struct BigImagePage {
       this.shouldDoDefaultTransition = false;
       return true;
     }
-    // 正常返回流程
-    /*CustomTransition.getInstance().unRegisterNavParam(this.pageId);
-    this.pageInfos.pop();
-    this.prePageDoFinishTransition(this.myNodeController!);
-    return true;*/
     this.pageInfos.pop();
     return true;
   }
@@ -73,32 +68,22 @@ struct BigImagePage {
         Stack({ alignContent: Alignment.TopStart }) {
           Column() {
             NodeContainer(this.myNodeController)
-            // 大图展示（绑定动画过程中的尺寸适配）
+            // 绑定动画属性的透明度：转场结束后透明度变为0，隐藏占位图
+              .opacity(this.animationProperties.showDetailContent ? 0 : 1)
+              .visibility(this.animationProperties.showDetailContent ? Visibility.None : Visibility.Visible)
+              .transition(TransitionEffect.OPACITY) // 增加透明度过渡，避免突兀
             if (this.animationProperties.showDetailContent){
-              //Image(this.params.imageInfo.pixelMap )
               Image(this.params.imageInfo.pixelMap || $r('app.media.ic_placeholder'))
-                //.width('100%')
-                //.height('100%')
-                .objectFit(ImageFit.Cover) // 大图用Contain，适配全屏
-                .transition(TransitionEffect.OPACITY)
+                .objectFit(ImageFit.Contain)
                 .padding(20)
             }
+
           }
           .alignItems(HorizontalAlign.Start)
 
         }
         .position({ y: this.animationProperties.positionValue }) // 绑定动画Y轴位移
       }
-      // 绑定转场动画属性（缩放、位移、尺寸、圆角）
-      /*.scale({ x: this.animationProperties.scaleValue, y: this.animationProperties.scaleValue })
-      .translate({ x: this.animationProperties.translateX, y: this.animationProperties.translateY })
-      .width(this.animationProperties.clipWidth)
-      .height(this.animationProperties.clipHeight)
-      .borderRadius(this.animationProperties.radius)
-      .expandSafeArea([SafeAreaType.SYSTEM]) // 沉浸式，适配状态栏/导航条
-      .clip(true) // 裁切动画过程中的多余部分
-      // 关键：仅扩展底部安全区，不扩展顶部导航栏区域
-      .expandSafeArea([SafeAreaType.SYSTEM])*/
       .scale({ x: this.animationProperties.scaleValue, y: this.animationProperties.scaleValue })
       .translate({ x: this.animationProperties.translateX, y: this.animationProperties.translateY })
       .width(this.animationProperties.clipWidth)
