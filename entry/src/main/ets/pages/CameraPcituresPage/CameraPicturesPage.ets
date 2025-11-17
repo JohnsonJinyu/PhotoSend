@@ -1,6 +1,7 @@
+//CameraPicturesPage.ets
 import nativeCamera, { ThumbnailInfo } from 'libentry.so'
 import image from '@ohos.multimedia.image';
-import { createMyNode, getMyNode, MyNodeController } from '../../NodeContainer/CustomComponent';
+import { createMyNode, getMyNode, clearAllMyNodes } from '../../NodeContainer/CustomComponent';
 import { CustomTransition } from '../../CustomTransition/CustomNavigationUtils';
 import { ComponentAttrUtils, RectInfoInPx } from '../../utils/ComponentAttrUtils';
 import { WindowUtils } from '../../utils/WindowUtils';
@@ -30,7 +31,11 @@ export struct CameraPicturesPage {
   @Consume('pageStack') pageStack: NavPathStack;
 
   private pageId:number=-1
-  @State myNodeController:MyNodeController|undefined= new MyNodeController(false)
+  //@State myNodeController:MyNodeController|undefined= new MyNodeController(false)
+
+  // 🔥 1. 删除单例nodeController，改为动态获取（不再初始化单例）
+  private currentNodeKey: string = ''; // 记录当前点击的GridItem唯一标识
+
 
   @State thumbnails: ThumbnailInfo[] = [];
   @State imageInfos: ImageInfoWithPixelMap[] = [];
@@ -50,18 +55,28 @@ export struct CameraPicturesPage {
   aboutToAppear(): void {
     this.loadThumbnails();
 
-    let node = getMyNode()
+    // 🔥 2. 移除单例创建逻辑，改为在GridItem循环时动态创建
+    /*let node = getMyNode()
     if (node == undefined) {
       // 新建自定义节点
       createMyNode(this.getUIContext())
     }
-    this.myNodeController =getMyNode()
+    this.myNodeController =getMyNode()*/
   }
 
-  private doFinishTransition():void{
+  // 🔥 3. 修改转场回调：接收唯一标识，精准归位节点
+  /*private doFinishTransition():void{
     // pageTwo 结束转场时，将节点从pageTwo迁回PageOne
     this.myNodeController = getMyNode()
+  }*/
+  private doFinishTransition(uniqueKey: string): void {
+    // 回退时，通过key获取对应的节点，重新绑定到GridItem
+    const node = getMyNode(uniqueKey);
+    if (node) {
+      // 无需重新赋值给全局变量，GridItem会通过key获取最新节点
+    }
   }
+
 
   private registerCustomTransition(): void {
     // 注册自定义动画协议
@@ -70,10 +85,15 @@ export struct CameraPicturesPage {
   }
 
 
+  // 🔥 4. 修改GridItem点击逻辑：传递唯一标识（index）
   private onGridItemClicked(index: number): void {
     // 1. 获取当前点击的图片数据
     const currentImage = this.imageInfos[index];
     if (!currentImage) return;
+
+
+    // 唯一标识：用index转字符串（和GridItem中的key一致）
+    this.currentNodeKey = index.toString();
 
     // 2. 获取点击图片元素的位置信息（需给Image设置唯一id）
     const imageRect: RectInfoInPx = ComponentAttrUtils.getRectInfoById(
@@ -81,21 +101,27 @@ export struct CameraPicturesPage {
       `shared-image-${index}` // 与GridItem中Image的id对应
     );
 
-    // 3. 构建转场参数（包含图片数据、位置信息、转场回调）
+    // 3. 构建转场参数（包含图片数据、位置信息、转场回调） 新增传递uniqueKey（唯一标识）
     const param: Record<string, Object> = {
       "imageInfo": currentImage,
       "cardItemInfo": imageRect,
-      "doDefaultTransition": (myController: MyNodeController) => {
-        this.doFinishTransition(); // 转场结束后迁回节点
+      "uniqueKey": this.currentNodeKey, // 传递给BigImagePage，用于获取对应节点
+      "doDefaultTransition": () => {
+        this.doFinishTransition(this.currentNodeKey); // 回退时归位当前节点
       }
     };
 
     // 4. 跳转大图页并触发转场
     this.pageStack.pushPath({ name: 'BigImagePage', param: param });
 
-    // 5. 自定义节点从当前页面下树（转场过程中节点迁移到目标页）
+    /*// 5. 自定义节点从当前页面下树（转场过程中节点迁移到目标页）
     if (this.myNodeController) {
       this.myNodeController.onRemove();
+    }*/
+    // 🔥 获取当前点击的节点并下树（不再操作全局单例）
+    const currentNode = getMyNode(this.currentNodeKey);
+    if (currentNode) {
+      currentNode.onRemove();
     }
   }
 
@@ -196,6 +222,9 @@ export struct CameraPicturesPage {
           Text(`共找到 ${this.imageInfos.length} 张照片`).fontSize(14).padding({ left: 16, top: 10 });
           Grid() {
             ForEach(this.imageInfos, (item: ImageInfoWithPixelMap, index: number) => {
+
+
+
               GridItem() {
                 // 用 Stack 让图片和 NodeContainer 重叠（视觉上还是图片，NodeContainer 是转场载体）
                 Stack() {
@@ -208,10 +237,17 @@ export struct CameraPicturesPage {
                       .id(`shared-image-${index}`) // 唯一ID，用于获取位置
                   }
 
-                  // NodeContainer 独立存在，无子类，仅作为转场载体
-                  NodeContainer(this.myNodeController)
+                  // 🔥 动态创建当前GridItem的NodeController并绑定
+                  // 🔥 直接用index.toString()作为uniqueKey，无需单独声明变量
+                  NodeContainer(getMyNode(index.toString()))   // 通过key获取专属节点
                     .width('100%')
                     .height('100%')
+                    .onAppear(() => {
+                      // 节点显示时，若不存在则创建（懒加载，避免一次性创建所有节点）
+                      if (!getMyNode(index.toString())) {
+                        createMyNode(this.getUIContext(), index.toString(), item.pixelMap);
+                      }
+                    })
                 }
                 // 点击事件绑定到 Stack（触发转场）
                 .onClick(() => this.onGridItemClicked(index))
@@ -246,9 +282,11 @@ export struct CameraPicturesPage {
     .onDisAppear(() => {
       CustomTransition.getInstance().unRegisterNavParam(this.pageId);
 
-      if (this.myNodeController) {
+      /*if (this.myNodeController) {
         this.myNodeController.onRemove();
-      }
+      }*/
+      // 🔥 页面卸载时，清空所有NodeController，避免内存泄漏
+      clearAllMyNodes();
     });
   }
 }

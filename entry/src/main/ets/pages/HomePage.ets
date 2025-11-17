@@ -1,3 +1,5 @@
+//HomePage.ets
+
 import { CameraPage } from './CameraPage/CameraPage';
 import { PhoneLocalPictures } from './PhoneLocalPictures';
 import { MinePage } from './MinePage/MinePage';
@@ -13,7 +15,7 @@ struct HomePage {
   private tabsController: TabsController = new TabsController();
   @State currentIndex: number = 0;
   @Provide('pageStack') pageStack: NavPathStack = new NavPathStack();
-  // 定义允许自定义转场的页面名称
+
   // 允许进行自定义转场的页面名称
   private allowedCustomTransitionFromPageName: string[] = ['CameraPicturesPage'];
   private allowedCustomTransitionToPageName: string[] = ['BigImagePage'];
