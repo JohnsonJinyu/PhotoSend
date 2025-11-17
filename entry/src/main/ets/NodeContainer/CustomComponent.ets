@@ -16,6 +16,7 @@ function CardBuilder(params: CardParams) {
     .objectFit(ImageFit.Cover)
     .borderRadius(0) // 和GridItem图片圆角一致（你的GridItem没设圆角，这里设0）
     .clip(true)
+    .zIndex(999) // 提高层级，避免被其他组件遮挡
 }
 
 // 单个NodeController（对应一个GridItem）

@@ -36,7 +36,8 @@ export struct CameraPicturesPage {
   // 🔥 1. 删除单例nodeController，改为动态获取（不再初始化单例）
   private currentNodeKey: string = ''; // 记录当前点击的GridItem唯一标识
 
-
+  // 1. 新增状态：记录当前正在转场的index（初始为-1，代表无转场）
+  @State transitioningIndex: number = -1;
   @State thumbnails: ThumbnailInfo[] = [];
   @State imageInfos: ImageInfoWithPixelMap[] = [];
   @State isLoading: boolean = true;
@@ -86,6 +87,7 @@ export struct CameraPicturesPage {
 
 
   // 🔥 4. 修改GridItem点击逻辑：传递唯一标识（index）
+  // 3. 修改onGridItemClicked：开始转场时记录index，转场结束后重置
   private onGridItemClicked(index: number): void {
     // 1. 获取当前点击的图片数据
     const currentImage = this.imageInfos[index];
@@ -94,7 +96,8 @@ export struct CameraPicturesPage {
 
     // 唯一标识：用index转字符串（和GridItem中的key一致）
     this.currentNodeKey = index.toString();
-
+    // 🔥 开始转场：标记当前转场的index，隐藏原图片
+    this.transitioningIndex = index;
     // 2. 获取点击图片元素的位置信息（需给Image设置唯一id）
     const imageRect: RectInfoInPx = ComponentAttrUtils.getRectInfoById(
       WindowUtils.window.getUIContext(),
@@ -118,6 +121,12 @@ export struct CameraPicturesPage {
     if (this.myNodeController) {
       this.myNodeController.onRemove();
     }*/
+
+    // 4. 跳转后，延迟重置（确保转场动画结束后再显示原图片，避免回退时异常）
+    setTimeout(() => {
+      this.transitioningIndex = -1;
+    }, 500); // 时长和转场动画一致（CustomTransition里的500ms）
+
     // 🔥 获取当前点击的节点并下树（不再操作全局单例）
     const currentNode = getMyNode(this.currentNodeKey);
     if (currentNode) {
@@ -229,12 +238,16 @@ export struct CameraPicturesPage {
                 // 用 Stack 让图片和 NodeContainer 重叠（视觉上还是图片，NodeContainer 是转场载体）
                 Stack() {
                   // 图片组件（独立存在，不嵌套在 NodeContainer 内）
+                  // 2. GridItem内的原图片组件，添加visibility控制
                   Column() {
                     Image(item.pixelMap || $r('app.media.ic_placeholder'))
                       .width('100%')
                       .height('100%')
                       .objectFit(ImageFit.Cover)
                       .id(`shared-image-${index}`) // 唯一ID，用于获取位置
+                      // 🔥 转场时隐藏原图片（transitioningIndex === index时隐藏）
+                      .visibility(this.transitioningIndex === index ? Visibility.None : Visibility.Visible)
+                      .zIndex(1) // 原图片层级低于NodeContainer，转场时不冲突
                   }
 
                   // 🔥 动态创建当前GridItem的NodeController并绑定

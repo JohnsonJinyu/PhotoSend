@@ -9,7 +9,8 @@ export interface AnimateCallback {
 const customTransitionMap: Map<number, AnimateCallback> = new Map();
 
 export class CustomTransition {
-  private constructor() {};
+  private constructor() {
+  };
 
   static delegate = new CustomTransition();
 
