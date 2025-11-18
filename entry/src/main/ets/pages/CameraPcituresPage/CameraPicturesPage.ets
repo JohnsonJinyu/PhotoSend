@@ -10,6 +10,7 @@ export interface ImageInfoWithPixelMap {
   folder: string;
   filename: string;
   pixelMap: image.PixelMap | null;
+
   // 新增：保存原始buffer用于大图（可选，根据需要）
   thumbnail: ArrayBuffer;
 }
@@ -29,13 +30,11 @@ export function CameraPicturesPageBuilder() {
 @Component
 export struct CameraPicturesPage {
   @Consume('pageStack') pageStack: NavPathStack;
-
-  private pageId:number=-1
+  private pageId: number = -1
   //@State myNodeController:MyNodeController|undefined= new MyNodeController(false)
 
   // 🔥 1. 删除单例nodeController，改为动态获取（不再初始化单例）
   private currentNodeKey: string = ''; // 记录当前点击的GridItem唯一标识
-
   // 1. 新增状态：记录当前正在转场的index（初始为-1，代表无转场）
   @State transitioningIndex: number = -1;
   @State thumbnails: ThumbnailInfo[] = [];
@@ -56,20 +55,11 @@ export struct CameraPicturesPage {
   aboutToAppear(): void {
     this.loadThumbnails();
 
-    // 🔥 2. 移除单例创建逻辑，改为在GridItem循环时动态创建
-    /*let node = getMyNode()
-    if (node == undefined) {
-      // 新建自定义节点
-      createMyNode(this.getUIContext())
-    }
-    this.myNodeController =getMyNode()*/
+
   }
 
   // 🔥 3. 修改转场回调：接收唯一标识，精准归位节点
-  /*private doFinishTransition():void{
-    // pageTwo 结束转场时，将节点从pageTwo迁回PageOne
-    this.myNodeController = getMyNode()
-  }*/
+
   private doFinishTransition(uniqueKey: string): void {
     // 回退时，通过key获取对应的节点，重新绑定到GridItem
     const node = getMyNode(uniqueKey);
@@ -78,20 +68,21 @@ export struct CameraPicturesPage {
     }
   }
 
-
   private registerCustomTransition(): void {
     // 注册自定义动画协议
     CustomTransition.getInstance().registerNavParam(this.pageId,
-      (isPush: boolean, isExit: boolean, transitionProxy: NavigationTransitionProxy) => {}, 500);
+      (isPush: boolean, isExit: boolean, transitionProxy: NavigationTransitionProxy) => {
+      }, 500);
   }
-
 
   // 🔥 4. 修改GridItem点击逻辑：传递唯一标识（index）
   // 3. 修改onGridItemClicked：开始转场时记录index，转场结束后重置
   private onGridItemClicked(index: number): void {
     // 1. 获取当前点击的图片数据
     const currentImage = this.imageInfos[index];
-    if (!currentImage) return;
+    if (!currentImage) {
+      return;
+    }
 
 
     // 唯一标识：用index转字符串（和GridItem中的key一致）
@@ -117,10 +108,6 @@ export struct CameraPicturesPage {
     // 4. 跳转大图页并触发转场
     this.pageStack.pushPath({ name: 'BigImagePage', param: param });
 
-    /*// 5. 自定义节点从当前页面下树（转场过程中节点迁移到目标页）
-    if (this.myNodeController) {
-      this.myNodeController.onRemove();
-    }*/
 
     // 4. 跳转后，延迟重置（确保转场动画结束后再显示原图片，避免回退时异常）
     setTimeout(() => {
@@ -133,8 +120,6 @@ export struct CameraPicturesPage {
       currentNode.onRemove();
     }
   }
-
-
 
   // 加载缩略图数据
   loadThumbnails() {
@@ -211,12 +196,6 @@ export struct CameraPicturesPage {
     return pixelMap;
   }
 
-
-
-
-
-
-
   build() {
     NavDestination() {
       Column() {
@@ -225,14 +204,14 @@ export struct CameraPicturesPage {
             LoadingProgress().size({ width: 40, height: 40 });
             Text('正在检索照片...').fontSize(16);
           }.margin({ top: 50 });
-        } else if (this.errorMsg) {
+        }
+        else if (this.errorMsg) {
           Text(this.errorMsg).fontSize(16).padding(20);
-        } else {
+        }
+        else {
           Text(`共找到 ${this.imageInfos.length} 张照片`).fontSize(14).padding({ left: 16, top: 10 });
           Grid() {
             ForEach(this.imageInfos, (item: ImageInfoWithPixelMap, index: number) => {
-
-
 
               GridItem() {
                 // 用 Stack 让图片和 NodeContainer 重叠（视觉上还是图片，NodeContainer 是转场载体）
@@ -243,12 +222,14 @@ export struct CameraPicturesPage {
                     Image(item.pixelMap || $r('app.media.ic_placeholder'))
                       .width('100%')
                       .height('100%')
-                      .objectFit(ImageFit.Cover)
+                      .objectFit(ImageFit.Fill)
                       .id(`shared-image-${index}`) // 唯一ID，用于获取位置
                       // 🔥 转场时隐藏原图片（transitioningIndex === index时隐藏）
                       .visibility(this.transitioningIndex === index ? Visibility.None : Visibility.Visible)
                       .zIndex(1) // 原图片层级低于NodeContainer，转场时不冲突
                   }
+                  .width('100%')
+                  .height('100%')
 
                   // 🔥 动态创建当前GridItem的NodeController并绑定
                   // 🔥 直接用index.toString()作为uniqueKey，无需单独声明变量
@@ -264,6 +245,7 @@ export struct CameraPicturesPage {
                 }
                 // 点击事件绑定到 Stack（触发转场）
                 .onClick(() => this.onGridItemClicked(index))
+
                 // 移除冗余的 TapGesture（避免重复触发）
               }
               .aspectRatio(1)
@@ -275,11 +257,13 @@ export struct CameraPicturesPage {
           .multiSelectable(true)
           .supportAnimation(true)
           .columnsGap(2) // 列间距
-          .rowsGap(0.01) // 行间距
+          .rowsGap(0) // 行间距
           .height('100%')
           .width('100%')
         }
-      }.width('100%').height('100%');
+      }
+      .width('100%')
+      .height('100%');
     }
     .title('机内照片')
     .menus(this.menuItems)
@@ -295,9 +279,6 @@ export struct CameraPicturesPage {
     .onDisAppear(() => {
       CustomTransition.getInstance().unRegisterNavParam(this.pageId);
 
-      /*if (this.myNodeController) {
-        this.myNodeController.onRemove();
-      }*/
       // 🔥 页面卸载时，清空所有NodeController，避免内存泄漏
       clearAllMyNodes();
     });
