@@ -16,6 +16,15 @@
  * @return napi_value 返回缩略图列表的NAPI数组对象
  */
 #include <js_native_api_types.h>
-napi_value GetThumbnailList(napi_env env, napi_callback_info info);
+extern napi_value GetThumbnailList(napi_env env, napi_callback_info info);
+
+
+/**
+ * @brief ArkTS层调用此函数，传入照片路径，下载照片并返回二进制数据
+ * @param env NAPI环境
+ * @param info NAPI回调信息（包含2个参数：folder、name）
+ * @return napi_value 返回ArkTS的Buffer（存储照片二进制数据），失败返回nullptr
+ */
+extern napi_value DownloadPhoto(napi_env env, napi_callback_info info);
 
 #endif //PHOTOSEND_CAMERA_DOWNLOAD_H

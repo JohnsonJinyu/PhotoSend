@@ -98,26 +98,6 @@ static void CompleteAsyncWork(napi_env env, napi_status status, void *data) {
             napi_set_element(env, resultArray, i, thumbObj);
 
 
-            // napi_create_buffer_copy(env, info.thumbSize, info.thumbData, nullptr, &thumbBuffer);
-            /*napi_status copyStatus =
-                napi_create_buffer_copy(env, info.thumbSize, info.thumbData, nullptr, &thumbBuffer);
-
-            // 关键：检查复制是否成功
-            if (copyStatus != napi_ok) {
-                OH_LOG_Print(LOG_APP, LOG_ERROR, LOG_DOMAIN, LOG_TAG,
-                             "文件 %{public}s 的缩略图复制失败，状态码：%{public}d", info.fileName.c_str(), copyStatus);
-                free(info.thumbData); // 释放原内存
-                continue;             // 跳过当前文件，避免无效数据污染结果
-            }
-
-            // 仅在复制成功后设置属性
-            napi_set_named_property(env, thumbObj, "thumbnail", thumbBuffer);
-
-
-            napi_set_element(env, resultArray, i, thumbObj);
-
-            // 释放malloc的内存（避免泄漏）
-            free(info.thumbData);*/
         }
         args[1] = resultArray;
     } else {
@@ -434,3 +414,120 @@ napi_value GetThumbnailList(napi_env env, napi_callback_info info) {
     napi_get_undefined(env, &result);
     return result;
 }
+
+
+
+
+
+
+
+
+
+// ###########################################################################
+// 核心函数：从相机下载照片（内部逻辑，不直接暴露给ArkTS）
+// ###########################################################################
+/**
+ * @brief 内部函数：根据"相机中的文件路径"，下载照片到内存，并返回二进制数据
+ * @param folder 照片在相机中的文件夹路径（如InternalCapture返回的outFolder）
+ * @param filename 照片在相机中的文件名（如InternalCapture返回的outFilename）
+ * @param data 输出参数：指向下载后的二进制数据（需调用者后续free释放）
+ * @param length 输出参数：下载数据的长度（字节数，即照片大小）
+ * @return bool 下载成功返回true，失败返回false
+ */
+static bool InternalDownloadFile(const char *folder, const char *filename, uint8_t **data, size_t *length) {
+    // 未连接相机，直接返回失败
+    if (!g_connected)
+        return false;
+
+    // CameraFile：libgphoto2结构体，存储从相机下载的文件数据（二进制+元信息）
+    CameraFile *file = nullptr;
+
+    // 创建空的CameraFile对象（用于存放下载的数据）
+    gp_file_new(&file);
+
+    // 调用libgphoto2文件下载函数：gp_camera_file_get
+    // 参数1：已连接的相机对象
+    // 参数2：文件夹路径（相机中）
+    // 参数3：文件名（相机中）
+    // 参数4：文件类型（GP_FILE_TYPE_NORMAL = 原始文件，还有缩略图、元数据等类型）
+    // 参数5：存储下载数据的CameraFile对象
+    // 参数6：上下文对象
+    int ret = gp_camera_file_get(g_camera, folder, filename, GP_FILE_TYPE_NORMAL, file, g_context);
+
+    // 下载失败，释放CameraFile并返回false
+    if (ret != GP_OK) {
+        gp_file_unref(file); // 减少引用计数，释放内存
+        return false;
+    }
+
+    // 从CameraFile中提取二进制数据和大小
+    const char *fileData = nullptr; // 临时存储文件数据（const，不可修改）
+    unsigned long fileSize = 0;     // 临时存储文件大小（libgphoto2用unsigned long）
+    // gp_file_get_data_and_size：获取文件的二进制数据指针和大小
+    gp_file_get_data_and_size(file, &fileData, &fileSize);
+
+    // 在堆上分配内存，存储下载的数据（供调用者使用）
+    *data = (uint8_t *)malloc(fileSize);
+    // 将CameraFile中的数据拷贝到分配的内存中
+    memcpy(*data, fileData, fileSize);
+    // 设置输出参数：数据长度（转换为size_t类型，符合C++标准）
+    *length = fileSize;
+
+    // 释放CameraFile对象（不再需要，避免内存泄漏）
+    gp_file_unref(file);
+
+    return true; // 下载成功
+}
+
+
+
+
+// ###########################################################################
+// NAPI接口：下载照片（暴露给ArkTS调用，封装InternalDownloadFile）
+// ###########################################################################
+/**
+ * @brief ArkTS层调用此函数，传入照片路径，下载照片并返回二进制数据
+ * @param env NAPI环境
+ * @param info NAPI回调信息（包含2个参数：folder、name）
+ * @return napi_value 返回ArkTS的Buffer（存储照片二进制数据），失败返回nullptr
+ */
+napi_value DownloadPhoto(napi_env env, napi_callback_info info) {
+    size_t argc = 2;    // 期望接收2个参数（文件夹路径、文件名）
+    napi_value args[2]; // 存储ArkTS传入的参数
+    // 提取ArkTS传入的参数
+    napi_get_cb_info(env, info, &argc, args, nullptr, nullptr);
+
+    // 缓冲区：存储转换后的C字符串路径
+    char folder[128] = {0};
+    char name[128] = {0};
+
+    // 将ArkTS参数转换为C字符串
+    napi_get_value_string_utf8(env, args[0], folder, sizeof(folder) - 1, nullptr);
+    napi_get_value_string_utf8(env, args[1], name, sizeof(name) - 1, nullptr);
+
+    // 指针：存储下载后的二进制数据（需手动free）
+    uint8_t *data = nullptr;
+    size_t length = 0; // 存储数据长度
+
+    // 调用内部下载函数
+    bool success = InternalDownloadFile(folder, name, &data, &length);
+
+    // 下载失败或无数据，返回nullptr给ArkTS
+    if (!success || data == nullptr || length == 0) {
+        return nullptr;
+    }
+
+    // 创建ArkTS的Buffer：将C++的二进制数据转成ArkTS可操作的Buffer
+    // napi_create_buffer_copy：拷贝数据到ArkTS管理的内存（后续无需C++手动释放）
+    napi_value buffer;
+    napi_create_buffer_copy(env, length, data, nullptr, &buffer);
+
+    // 释放C++堆上的内存（数据已拷贝到ArkTS Buffer，此处需释放避免泄漏）
+    free(data);
+
+    // 返回Buffer给ArkTS（ArkTS侧可通过Buffer转成图片显示）
+    return buffer;
+}
+
+
+
