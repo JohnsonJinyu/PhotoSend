@@ -20,10 +20,13 @@ export function BigImagePageBuilder() {
   BigImagePage();
 }
 
+
 @Component
-struct BigImagePage {
+export struct BigImagePage {
   @State pageInfos: NavPathStack = new NavPathStack();
   @State animationProperties: AnimationProperties = new AnimationProperties(this.getUIContext());
+
+  @State title: string = '';
   //@State myNodeController: MyNodeController | undefined = new MyNodeController(false);
   // 🔥 不再初始化单例，改为通过key动态获取
   private myNodeController: MyNodeController | undefined;
@@ -74,6 +77,10 @@ struct BigImagePage {
     return true;
   }
 
+  downLoadSinglePicture(){
+
+  }
+
   build() {
     NavDestination() {
       // 外层Stack：绑定转场动画属性，控制缩放、位移、裁切
@@ -112,7 +119,16 @@ struct BigImagePage {
       // 对高度进行裁切
       .clip(true)
     }
-    .title(this.params.imageInfo.filename)
+    .title(this.title)
+    .menus([
+      {
+        value:'downloadSinglePicture',
+        icon:($r('app.media.ic_download')),
+        action:()=>{
+          this.downLoadSinglePicture()
+        }
+      }
+    ])
     .backgroundColor('#000000') // 大图页黑色背景
     //.hideTitleBar(true) // 隐藏标题栏，适配一镜到底视觉
     .onReady((context: NavDestinationContext) => {
@@ -124,6 +140,7 @@ struct BigImagePage {
       const navParam = context.pathInfo?.param as BigImageParams;
       if (navParam) {
         this.params = navParam;
+        this.title = this.params.imageInfo.filename; // 触发状态更新
         this.prePageDoFinishTransition = navParam.doDefaultTransition;
         this.cardItemInfo = navParam.cardItemInfo;
         this.currentNodeKey = navParam.uniqueKey; // 保存当前节点的唯一标识
