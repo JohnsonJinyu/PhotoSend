@@ -7,4 +7,9 @@
 #ifndef PHOTOSEND_CAMERA_CAPTURE_H
 #define PHOTOSEND_CAMERA_CAPTURE_H
 
+#include <napi/native_api.h>
+
+
+extern  napi_value TakePhoto(napi_env env, napi_callback_info info);
+
 #endif //PHOTOSEND_CAMERA_CAPTURE_H
