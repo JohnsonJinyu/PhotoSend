@@ -39,6 +39,14 @@
     {
       "name": "reason_request_get_network_info",
       "value": "获取网络端口信息"
+    },
+    {
+      "name": "reason_request_permission_READ_IMAGEVIDEO",
+      "value": "读取图库"
+    },
+    {
+      "name": "reason_request_permission_WRITE_IMAGEVIDEO",
+      "value": "保存图片"
     }
   ]
 }

@@ -27,4 +27,8 @@ extern napi_value GetThumbnailList(napi_env env, napi_callback_info info);
  */
 extern napi_value DownloadPhoto(napi_env env, napi_callback_info info);
 
+
+// 新增异步下载接口声明
+extern napi_value DownloadPhotoAsync(napi_env env, napi_callback_info info);
+
 #endif //PHOTOSEND_CAMERA_DOWNLOAD_H
