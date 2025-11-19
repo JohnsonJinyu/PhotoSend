@@ -88,13 +88,13 @@ export struct BigImagePage {
     // 迁移上一页的自定义节点到当前页（转场核心）
     //this.myNodeController = getMyNode();
     // 🔥 通过key获取CameraPicturesPage传递的节点（不再获取单例）
-    this.myNodeController = getMyNode(this.currentNodeKey);
+    //this.myNodeController = getMyNode(this.currentNodeKey);
 
 
     // worker 相关
     // 新增：创建Worker实例（路径需根据实际Worker脚本位置调整）
     // 注意：Worker脚本需放在项目指定目录（如entry/src/main/ets/workers）
-    this.downloadWorker = new worker.ThreadWorker('../../workers/DownloadMessage.ets') // 假设脚本在当前目录的workers子目录下
+    //this.downloadWorker = new worker.ThreadWorker('../../workers/DownloadMessage.ets') // 假设脚本在当前目录的workers子目录下
 
     // 2. 创建Worker并设置消息监听
     try {
@@ -307,6 +307,7 @@ export struct BigImagePage {
         this.cardItemInfo = navParam.cardItemInfo;
         this.currentNodeKey = navParam.uniqueKey; // 保存当前节点的唯一标识
         this.myNodeController = getMyNode(this.currentNodeKey); // 通过key获取节点
+
       }
       // 3. 注册自定义转场动画（和PageTwo逻辑一致）
       CustomTransition.getInstance().registerNavParam(this.pageId,

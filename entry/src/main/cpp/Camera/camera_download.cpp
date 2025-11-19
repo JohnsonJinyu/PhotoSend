@@ -436,12 +436,14 @@ napi_value GetThumbnailList(napi_env env, napi_callback_info info) {
  */
 static bool InternalDownloadFile(const char *folder, const char *filename, uint8_t **data, size_t *length) {
     // 未连接相机，直接返回失败
+    OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "InternalDownloadFile中g_connected:%{public}d,",g_connected);
     if (!g_connected)
         return false;
 
     // CameraFile：libgphoto2结构体，存储从相机下载的文件数据（二进制+元信息）
     CameraFile *file = nullptr;
 
+    OH_LOG_PrintMsg(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "InternalDownloadFile 这个方法已被调用");
     // 创建空的CameraFile对象（用于存放下载的数据）
     gp_file_new(&file);
 
@@ -452,6 +454,8 @@ static bool InternalDownloadFile(const char *folder, const char *filename, uint8
     // 参数4：文件类型（GP_FILE_TYPE_NORMAL = 原始文件，还有缩略图、元数据等类型）
     // 参数5：存储下载数据的CameraFile对象
     // 参数6：上下文对象
+    OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "获取的文件路径为:%{public}s,文件名为%{public}s",folder,filename);
+    OH_LOG_PrintMsg(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "下载的图片格式为Normal");
     int ret = gp_camera_file_get(g_camera, folder, filename, GP_FILE_TYPE_NORMAL, file, g_context);
 
     // 下载失败，释放CameraFile并返回false
@@ -496,15 +500,21 @@ napi_value DownloadPhoto(napi_env env, napi_callback_info info) {
     napi_value args[2]; // 存储ArkTS传入的参数
     // 提取ArkTS传入的参数
     napi_get_cb_info(env, info, &argc, args, nullptr, nullptr);
+    OH_LOG_PrintMsg(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "DownloadPhoto 这个方法已被调用");
 
     // 缓冲区：存储转换后的C字符串路径
     char folder[128] = {0};
     char name[128] = {0};
-
+    
+    
+    
     // 将ArkTS参数转换为C字符串
     napi_get_value_string_utf8(env, args[0], folder, sizeof(folder) - 1, nullptr);
+    
     napi_get_value_string_utf8(env, args[1], name, sizeof(name) - 1, nullptr);
-
+    OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "获取的文件路径为:%{public}s,文件名为%{public}s",folder,name);
+    
+    
     // 指针：存储下载后的二进制数据（需手动free）
     uint8_t *data = nullptr;
     size_t length = 0; // 存储数据长度

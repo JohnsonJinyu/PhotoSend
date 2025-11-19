@@ -32,6 +32,7 @@ workerPort.onmessage = async (event: MessageEvents) => {
   const folder: string = data.folder;
   const name: string = data.name;
   const filesDir: string = data.filesDir;
+  console.log(`worker 中的参数值分别为，folder:${folder}，name：${name}，fileDir：${filesDir}`);
 
   try {
     // 1. 调用原生接口下载照片（耗时操作）
