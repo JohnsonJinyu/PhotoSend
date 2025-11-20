@@ -32,7 +32,7 @@ class modeSelectedArray {
 export struct CameraPage {
   @Consume('pageStack') pageStack: NavPathStack;
   // 定义响应式变量(@state 确保UI能够实时更新
-  @State currentState: ConnectionStateResult = { state: false, message: `未连接，请检查是否连接相机WiFi` }
+  @State currentState: ConnectionStateResult = { state: false, message: `未连接相机！` }
   // 新增：控制加载控件显示的状态
   @State isLoading: boolean = false;
   // 状态控制
@@ -213,9 +213,9 @@ export struct CameraPage {
                     };
                     break;
                   }
-                  // 默认情况，理论不会触发，因为模式已经被类型限定死
+
                   default:
-                  //promptAction.showToast({ message: `请选择有效的连接模式` });
+
                     return; //终止后续逻辑
                 }
 
@@ -226,12 +226,6 @@ export struct CameraPage {
 
                 // 关键调整：移除内层catch，统一用外层try-catch处理错误
                 await context.startAbility(targetWant);
-
-                // 跳转成功提示（华为设备适配的吐司样式，用户体验更统一）
-                /*promptAction.showToast({
-                  message: `已跳转至${this.currentConnectionMode}设置`,
-                  duration: 2000 // 华为设备吐司默认显示1.5秒，这里延长至2秒确保阅读
-                });*/
 
 
               } catch (error) {
@@ -337,24 +331,7 @@ export struct CameraPage {
       .backgroundColor($r('sys.color.comp_background_list_card'))
 
 
-      // 加载控件（条件渲染）
-      if (this.isLoading) {
-        Column() {
-          // 加载进度指示器
-          LoadingProgress()
-            .color('#FF0000') // 使用主题主色
-            .size({ width: 60, height: 60 }) // 控件大小
-          // 加载提示文字
-          Text('正在连接相机...')
-            .fontSize(16)
-            .margin({ top: 10 })
-            .fontColor('#ffffff')
-        }
-        .width('100%')
-        .height('100%')
-        .backgroundColor('rgba(0, 0, 0, 0.3)') // 半透明遮罩，防止用户操作
-        .justifyContent(FlexAlign.Center) // 居中显示
-      }
+
 
     }
   }

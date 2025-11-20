@@ -198,6 +198,7 @@ class CamConnectionManager {
       // 状态会由 Worker 的第一次检测结果来更新，这里可以不用手动设置
       // 但为了UI能更快地得到反馈，可以先手动设置，后续 Worker 会进行确认
       this.state = isConnected;
+      this.stateMessage = `已连接相机！`
       this.notifyListeners();
       return isConnected;
     } catch (error) {
