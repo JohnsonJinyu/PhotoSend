@@ -32,7 +32,7 @@ class modeSelectedArray {
 export struct CameraPage {
   @Consume('pageStack') pageStack: NavPathStack;
   // 定义响应式变量(@state 确保UI能够实时更新
-  @State currentState: ConnectionStateResult = { state: false, message: `未连接相机` }
+  @State currentState: ConnectionStateResult = { state: false, message: `未连接，请检查是否连接相机WiFi` }
   // 新增：控制加载控件显示的状态
   @State isLoading: boolean = false;
   // 状态控制
@@ -152,7 +152,7 @@ export struct CameraPage {
         // 🔥 设备连接状态栏：直接使用 currentState（单例同步过来的状态）
         Row() {
           // 显示设备连接状态
-          Text(`设备状态:${this.currentState.state ? `已连接` : `未连接`}`)
+          Text(`设备状态:${this.currentState.message}`)
             .fontSize(16)
             .padding(10)
 

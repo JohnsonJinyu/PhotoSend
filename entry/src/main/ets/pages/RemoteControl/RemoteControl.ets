@@ -13,6 +13,7 @@ import { ExposureCompensationDialog } from '../../component/CameraControlDialog/
 import { WhiteBalanceDialog } from '../../component/CameraControlDialog/WhiteBalanceDialog';
 import { ExposureMeterModeDialog } from '../../component/CameraControlDialog/ExposureMeterModeDialog';
 import { ExposureModeDialog } from '../../component/CameraControlDialog/ExposureModeDialog';
+import { camConnectionManager, ConnectionStateResult } from '../../utils/CamConnectManager';
 
 
 const scanner = new getCamIpAndName();
@@ -53,12 +54,9 @@ export struct RemoteControl {
 
 
 
-  // 连接状态检查定时器ID
-  private connectionCheckTimer: number = -1;
 
-  // 状态管理
-  @State isConnected: boolean = false;
-  @State connectStatus: string = '未连接相机';
+  // 同步全局连接状态（和CameraPage一样的响应式变量）
+  @State currentState: ConnectionStateResult = { state: false, message: '未连接，请检查是否连接相机WiFi' };
   @State previewPixelMap: PixelMap | null = null; // 预览帧
   @State previewRunning: boolean = false; // 预览运行状态
   @State previewImage: string = '';
@@ -152,7 +150,19 @@ export struct RemoteControl {
 
 
   aboutToAppear(): void {
-    this.checkConnection();
+
+    // 🔥 1. 注册全局状态监听器（同步连接状态）
+    camConnectionManager.addListener(this.handleGlobalStateChange);
+    // 🔥 2. 初始化状态：从全局单例获取（首次加载用）
+    this.currentState = camConnectionManager.getCurrentState();
+    console.log(`RemoteControl 初始化状态：${JSON.stringify(this.currentState)}`);
+
+
+    // 🔥 3. 参数管理同步全局连接状态（不再自己调用updateConnectionStatus）
+    cameraParamManager.updateConnectionStatus(this.currentState.state);
+
+
+
 
     // 核心修改1：参数同步添加节流（1秒最多1次），避免频繁更新触发UI闪烁
     let lastSyncTime = 0;
@@ -170,9 +180,6 @@ export struct RemoteControl {
     this.paramList = cameraParamManager.getParams();
     this.syncParamToUI();
 
-    this.startConnectionCheck();
-
-
 
 
 
@@ -182,32 +189,28 @@ export struct RemoteControl {
     cameraParamManager.removeListener(() => {
       // 保留原有逻辑
     });
-    this.stopConnectionCheck();
   }
 
 
+  // 🔥 新增：全局状态变化回调（同步到当前页面）
+  private handleGlobalStateChange = (state: boolean, message: string) => {
+    console.log(`RemoteControl 全局状态更新：state=${state}，message=${message}`);
+    // 更新本地响应式变量，触发UI刷新
+    this.currentState = { state, message };
+    // 同步参数管理的连接状态（确保参数刷新逻辑正常）
+    cameraParamManager.updateConnectionStatus(state);
 
-
-  /**
-   * @function 开始检测连接状态
-   * */
-  private startConnectionCheck() {
-    this.connectionCheckTimer = setInterval(() => {
-      if (this.isConnected) {
-        this.checkConnection();
-      }
-    }, 3000);
-  }
-
-  /**
-   *  @function 停止检测连接状态
-   * */
-  private stopConnectionCheck() {
-    if (this.connectionCheckTimer !== -1) {
-      clearInterval(this.connectionCheckTimer);
-      this.connectionCheckTimer = -1;
+    // 状态变化时的联动逻辑（原有）
+    if (state) {
+      // 已连接：启动预览
+      this.startPreview();
+    } else {
+      // 已断开：停止预览
+      this.stopPreview();
     }
-  }
+  };
+
+
 
 
 
@@ -274,32 +277,25 @@ export struct RemoteControl {
    * @function 手动连接相机
    * */
   manualConnect() {
-    // 完全保留原有逻辑
-    const success = nativeCamera.ConnectCamera("Nikon Zf", "ptpip:192.168.1.1");
-    cameraParamManager.updateConnectionStatus(success);
-    this.isConnected = success;
-    this.connectStatus = success ? '相机已连接' : '连接失败，请检查WiFi';
-  }
-
-  /**
-   * @function 连接状态检测
-   * */
-  checkConnection() {
-    // 完全保留原有逻辑
-    const connected = nativeCamera.IsCameraConnected();
-    if (connected !== this.isConnected) {
-      cameraParamManager.updateConnectionStatus(connected);
-      this.isConnected = connected;
-      this.connectStatus = connected ? '相机已连接' : '未连接，请检查是否连接相机WiFi';
+    if (!this.currentState.state) { // 未连接时才调用
+      this.statusMessage = '正在连接相机...';
+      camConnectionManager.connectCamera().then((success) => {
+        // 连接结果由全局状态回调处理，这里无需额外更新
+        if (!success) {
+          this.statusMessage = '连接失败，请检查WiFi';
+        }
+      });
     }
   }
+
+
 
 
   /**
    * @function （仅优化定时器稳定性，未改核心逻辑）
    */
   startPreview() {
-    if (this.previewRunning || !this.isConnected) {
+    if (this.previewRunning || !this.currentState.state) {
       return;
     }
     this.previewRunning = true;
@@ -567,24 +563,24 @@ export struct RemoteControl {
               .onClick(() => {
                 this.manualConnect();
               })
-              .enabled(!this.isConnected)
+              .enabled(!this.currentState.state)
 
           }
 
 
           // 连接状态指示
           Row({ space: 10 }) {
-            Text(this.connectStatus)
+            Text(this.currentState.message)
               .fontSize(18)
 
             Circle()
               .borderRadius(12)
               .width(24)
               .height(24)
-              .fill(this.isConnected ? '#00C853' : '#F44336')
+              .fill(this.currentState.state ? '#00C853' : '#F44336')
               .shadow({
                 radius: 8,
-                color: this.isConnected ? 'rgba(0, 200, 83, 0.6)' : 'rgba(244, 67, 54, 0.6)',
+                color: this.currentState.state ? 'rgba(0, 200, 83, 0.6)' : 'rgba(244, 67, 54, 0.6)',
                 offsetX: 0,
                 offsetY: 0
               })

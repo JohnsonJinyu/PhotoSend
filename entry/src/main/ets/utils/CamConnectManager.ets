@@ -45,7 +45,7 @@ class CamConnectionManager {
   private static instance: CamConnectionManager | null = null;
   // 核心状态管理
   private state: boolean = false;
-  private stateMessage: string = '未连接相机';
+  private stateMessage: string = '未连接，请检查是否连接相机WiFi';
   // 新增：存储相机厂商和型号
   private cameraManufacturer: string = 'Nikon';
   private cameraModel: string = 'Zf';
@@ -100,7 +100,7 @@ class CamConnectionManager {
         // 直接根据 Worker 传来的状态更新自身状态
         if (isConnected !== this.state) {
           this.state = isConnected;
-          this.stateMessage = isConnected ? '相机已连接' : '连接已中断';
+          this.stateMessage = isConnected ? '相机已连接' : '未连接，请检查是否连接相机WiFi';
           if (!isConnected) {
             this.stopConnectionCheck();
           }
