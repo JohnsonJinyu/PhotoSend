@@ -38,6 +38,8 @@ export struct CameraPage {
   // 状态控制
   @State currentConnectionMode: ConnectionMode = 'WiFi-AP'
   @State selectedModeIndex: number = 1
+
+  @State enableLoadingValue:boolean = false
   // 4. 状态更新示例（比如连接成功/失败时更新状态） 在下面用
   // 连接成功时
   //this.isDeviceConnected = true;
@@ -148,31 +150,38 @@ export struct CameraPage {
 
         }
 
+        Stack(){
+          // 🔥 设备连接状态栏：直接使用 currentState（单例同步过来的状态）
+          Row() {
+            // 显示设备连接状态
+            Text(`设备状态:${this.currentState.message}`)
+              .fontSize(16)
+              .padding(10)
 
-        // 🔥 设备连接状态栏：直接使用 currentState（单例同步过来的状态）
-        Row() {
-          // 显示设备连接状态
-          Text(`设备状态:${this.currentState.message}`)
-            .fontSize(16)
-            .padding(10)
 
+            // LED灯：根据 currentState.state 变化颜色
+            Circle()
+              .borderRadius(12) // 圆角为宽度的一半，确保正圆
+              .width(24) // 设置宽度为24vp
+              .height(24) // 高度与宽度一致，形成正圆
+              .fill(this.currentState.state ? '#00C853' : '#F44336') //绿色=已连接 ，红色=未连接
+              // 阴影效果增强发光感
+              .shadow({
+                radius: 8, //阴影模糊半径
+                color: this.currentState.state ? 'rgba(0, 200, 83, 0.6)' : 'rgba(244, 67, 54, 0.6)', // 阴影颜色与主体一致，降低透明度
+                offsetX: 0,
+                offsetY: 0
+              })
+              .animation({ duration: 300 }); //颜色切换添加300ms过度
 
-          // LED灯：根据 currentState.state 变化颜色
-          Circle()
-            .borderRadius(12) // 圆角为宽度的一半，确保正圆
-            .width(24) // 设置宽度为24vp
-            .height(24) // 高度与宽度一致，形成正圆
-            .fill(this.currentState.state ? '#00C853' : '#F44336') //绿色=已连接 ，红色=未连接
-            // 阴影效果增强发光感
-            .shadow({
-              radius: 8, //阴影模糊半径
-              color: this.currentState.state ? 'rgba(0, 200, 83, 0.6)' : 'rgba(244, 67, 54, 0.6)', // 阴影颜色与主体一致，降低透明度
-              offsetX: 0,
-              offsetY: 0
-            })
-            .animation({ duration: 300 }); //颜色切换添加300ms过度
+          }
 
+          LoadingProgress()
+            .color('rgba(255,0,0,1')
+            .size({width:30,height:30})
+            .enableLoading(this.enableLoadingValue)
         }
+
 
 
         Row() {
@@ -294,14 +303,16 @@ export struct CameraPage {
           .enabled(!this.currentState.state)
           .onClick(() => {
 
-            // 提前实例化CameraHelper
-            const cameraHelper = CameraHelper.getInstance();
+            this.enableLoadingValue = true
+
 
             // 仅当未连接时才触发连接并显示加载
             if (!this.currentState.state) {
               this.isLoading = true; // 显示加载控件
               camConnectionManager.connectCamera();
             }
+
+            this.enableLoadingValue = false
           })
 
 
