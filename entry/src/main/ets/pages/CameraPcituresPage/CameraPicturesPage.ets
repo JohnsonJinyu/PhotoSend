@@ -5,6 +5,7 @@ import { createMyNode, getMyNode, clearAllMyNodes } from '../../NodeContainer/Cu
 import { CustomTransition } from '../../CustomTransition/CustomNavigationUtils';
 import { ComponentAttrUtils, RectInfoInPx } from '../../utils/ComponentAttrUtils';
 import { WindowUtils } from '../../utils/WindowUtils';
+import { camConnectionManager } from '../../utils/CamConnectManager';
 
 export interface ImageInfoWithPixelMap {
   folder: string;
@@ -53,6 +54,9 @@ export struct CameraPicturesPage {
   ];
 
   aboutToAppear(): void {
+    // 进入页面时暂停检测
+    camConnectionManager.pauseCheck();
+
     this.loadThumbnails();
 
 
@@ -274,6 +278,7 @@ export struct CameraPicturesPage {
       this.pageStack = context.pathStack;
       this.pageId = this.pageStack.getAllPathName().length - 1;
       this.registerCustomTransition();
+      camConnectionManager.resumeCheck()
     })
     // 新增：注销转场、节点下树
     .onDisAppear(() => {
