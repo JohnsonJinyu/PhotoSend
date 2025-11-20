@@ -56,7 +56,7 @@ export struct RemoteControl {
 
 
   // 同步全局连接状态（和CameraPage一样的响应式变量）
-  @State currentState: ConnectionStateResult = { state: false, message: '未连接，请检查是否连接相机WiFi' };
+  @State currentState: ConnectionStateResult = { state: false, message: '未连接相机！' };
   @State previewPixelMap: PixelMap | null = null; // 预览帧
   @State previewRunning: boolean = false; // 预览运行状态
   @State previewImage: string = '';
