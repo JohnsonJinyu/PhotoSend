@@ -1,8 +1,8 @@
-import { promptAction } from "@kit.ArkUI"
+// CameraPage.ets
 import { common, Want } from '@kit.AbilityKit'
 
 import { BusinessError } from '@ohos.base'
-import { camConnectionManager } from '../../utils/CamConnectManager';
+import { camConnectionManager, ConnectionStateResult } from '../../utils/CamConnectManager';
 import { CameraHelper } from 'ets/utils/CameraHelper';
 
 // 定义具体的连接模式类型
@@ -28,15 +28,11 @@ class modeSelectedArray {
 }
 
 
-
-
-
 @Component
 export struct CameraPage {
   @Consume('pageStack') pageStack: NavPathStack;
   // 定义响应式变量(@state 确保UI能够实时更新
-  @State deviceConnectState: boolean = false;
-  @State connectMsg: string = '未连接相机';
+  @State currentState: ConnectionStateResult = { state: false, message: `未连接相机` }
   // 新增：控制加载控件显示的状态
   @State isLoading: boolean = false;
   // 状态控制
@@ -64,10 +60,10 @@ export struct CameraPage {
   aboutToAppear() {
     // 注册监听器
     camConnectionManager.addListener(this.handleStateChange);
-    // 初始化状态
-    const GetStateAndMessage = camConnectionManager.getCurrentState();
-    this.deviceConnectState = GetStateAndMessage.state
-    this.connectMsg = GetStateAndMessage.message;
+
+    // 初始化 直接从店里获取当前状态（首次加载UI使用）
+    this.currentState = camConnectionManager.getCurrentState()
+
 
     // 2. 新增：初始化时同步默认的厂商和型号到管理器
     camConnectionManager.updateCameraInfo(this.currentCamManufacturer, this.currentCamModel);
@@ -78,10 +74,11 @@ export struct CameraPage {
     camConnectionManager.removeListener(this.handleStateChange);
   }
 
-  // 状态变化回调
+  // 🔥 状态同步回调：单例状态变化时触发，更新组件的响应式变量
   private handleStateChange = (state: boolean, message: string) => {
-    this.deviceConnectState = state;
-    this.connectMsg = message;
+    // 直接更新 currentState，因 @State 修饰，UI会自动刷新
+    console.log(`UI监听器触发：新state=${state}，新message=${message}`) // 🔥 新增日志
+    this.currentState = { state, message };
     // 连接状态变化后，关闭加载控件
     if (this.isLoading) {
       this.isLoading = false;
@@ -90,7 +87,7 @@ export struct CameraPage {
 
   build() {
 
-    Stack({alignContent:Alignment.Center}) {
+    Stack({ alignContent: Alignment.Center }) {
       Column({ space: 10 }) {
 
         //顶部图片显示区域
@@ -152,24 +149,24 @@ export struct CameraPage {
         }
 
 
-        // 设备连接状态栏
+        // 🔥 设备连接状态栏：直接使用 currentState（单例同步过来的状态）
         Row() {
           // 显示设备连接状态
-          Text(`设备状态:${this.deviceConnectState ? `已连接` : `未连接`}`)
+          Text(`设备状态:${this.currentState.state ? `已连接` : `未连接`}`)
             .fontSize(16)
             .padding(10)
 
 
-          // LED灯
+          // LED灯：根据 currentState.state 变化颜色
           Circle()
             .borderRadius(12) // 圆角为宽度的一半，确保正圆
             .width(24) // 设置宽度为24vp
             .height(24) // 高度与宽度一致，形成正圆
-            .fill(this.deviceConnectState ? '#00C853' : '#F44336') //绿色=已连接 ，红色=未连接
+            .fill(this.currentState.state ? '#00C853' : '#F44336') //绿色=已连接 ，红色=未连接
             // 阴影效果增强发光感
             .shadow({
               radius: 8, //阴影模糊半径
-              color: this.deviceConnectState ? 'rgba(0, 200, 83, 0.6)' : 'rgba(244, 67, 54, 0.6)', // 阴影颜色与主体一致，降低透明度
+              color: this.currentState.state ? 'rgba(0, 200, 83, 0.6)' : 'rgba(244, 67, 54, 0.6)', // 阴影颜色与主体一致，降低透明度
               offsetX: 0,
               offsetY: 0
             })
@@ -300,14 +297,14 @@ export struct CameraPage {
           .fontSize(16)
           .width(280)
           .height(40)
-          .enabled(!this.deviceConnectState)
+          .enabled(!this.currentState.state)
           .onClick(() => {
 
             // 提前实例化CameraHelper
             const cameraHelper = CameraHelper.getInstance();
 
             // 仅当未连接时才触发连接并显示加载
-            if (!this.deviceConnectState) {
+            if (!this.currentState.state) {
               this.isLoading = true; // 显示加载控件
               camConnectionManager.connectCamera();
             }

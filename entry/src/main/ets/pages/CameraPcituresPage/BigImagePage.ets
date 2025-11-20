@@ -5,7 +5,7 @@ import { MyNodeController, getMyNode,deleteMyNode } from '../../NodeContainer/Cu
 import { CustomTransition } from '../../CustomTransition/CustomNavigationUtils';
 import { ImageInfoWithPixelMap } from './CameraPicturesPage';
 import nativeCamera from  'libentry.so'
-import { promptAction, PromptAction } from '@kit.ArkUI';
+
 import fs from '@ohos.file.fs';
 import { fileIo } from '@kit.CoreFileKit';
 import { photoAccessHelper } from '@kit.MediaLibraryKit';

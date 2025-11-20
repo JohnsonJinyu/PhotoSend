@@ -16,7 +16,8 @@
     },
     "sourceOption": {
       "workers": [
-        './src/main/ets/workers/DownloadMessage.ets'
+        './src/main/ets/workers/DownloadMessage.ets',
+        './src/main/ets/workers/CheckConnection.ets'
       ]
     }
   },
