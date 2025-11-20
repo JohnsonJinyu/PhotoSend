@@ -2,8 +2,8 @@
 import { common, Want } from '@kit.AbilityKit'
 
 import { BusinessError } from '@ohos.base'
-import { camConnectionManager, ConnectionStateResult } from '../../utils/CamConnectManager';
-import { CameraHelper } from 'ets/utils/CameraHelper';
+import { CamConnectionManager } from '../../utils/CamConnectManager';
+import { ConnectionStateResult } from '../../utils/cam_connect_type';
 
 // 定义具体的连接模式类型
 type ConnectionMode = '蓝牙' | 'WiFi-AP' | 'WiFi-STA';
@@ -59,21 +59,36 @@ export struct CameraPage {
   // 定义默认相机型号
   @State currentCamModel: string = 'Zf'
 
+  // 1. 声明单例变量（用于存储通过getInstance()获取的实例）
+  private camManager: CamConnectionManager | null = null;
+
   aboutToAppear() {
+
+    // 2. 通过静态方法获取实例（复用EntryAbility创建的单例）
+    this.camManager = CamConnectionManager.getInstance();
+    if (!this.camManager) {
+      console.error("CameraPage 获取CamConnectionManager实例失败！");
+      return;
+    }
+
     // 注册监听器
-    camConnectionManager.addListener(this.handleStateChange);
+    this.camManager.addListener(this.handleStateChange);
 
     // 初始化 直接从店里获取当前状态（首次加载UI使用）
-    this.currentState = camConnectionManager.getCurrentState()
+    this.currentState = this.camManager.getCurrentState()
 
 
     // 2. 新增：初始化时同步默认的厂商和型号到管理器
-    camConnectionManager.updateCameraInfo(this.currentCamManufacturer, this.currentCamModel);
+    this.camManager.updateCameraInfo(this.currentCamManufacturer, this.currentCamModel);
   }
 
   aboutToDisappear() {
-    // 移除监听器
-    camConnectionManager.removeListener(this.handleStateChange);
+    // 先判断 this.camManager 非空，再移除监听器
+    if (this.camManager) {
+      this.camManager.removeListener(this.handleStateChange);
+    } else {
+      console.warn("aboutToDisappear: camManager 为空，无需移除监听器");
+    }
   }
 
   // 🔥 状态同步回调：单例状态变化时触发，更新组件的响应式变量
@@ -116,7 +131,12 @@ export struct CameraPage {
                     this.selectedModeIndex = value.index
                     this.currentCamManufacturer = this.SupportCamManufacturer[value.index]
                     // 同步到管理器：厂商变化时更新
-                    camConnectionManager.updateCameraInfo(this.currentCamManufacturer, this.currentCamModel);
+                    if (this.camManager) {
+                      this.camManager.updateCameraInfo(this.currentCamManufacturer, this.currentCamModel);
+                    }else {
+                      console.warn(" camManager 为空，无需移除监听器");
+                    }
+
                   }
                 }
 
@@ -142,7 +162,13 @@ export struct CameraPage {
                     //3、根据索引更新当前模式的状态变量（直接影响UI显示）
                     this.currentCamModel = this.SupportNikonModel[value.index]
                     // 同步到管理器：型号变化时更新
-                    camConnectionManager.updateCameraInfo(this.currentCamManufacturer, this.currentCamModel);
+                    // 先非空判断
+                    if (this.camManager) {
+                      this.camManager.updateCameraInfo(this.currentCamManufacturer, this.currentCamModel);
+                    }else {
+                      console.warn(" camManager 为空");
+                    }
+
                   }
                 }
               })
@@ -309,7 +335,14 @@ export struct CameraPage {
             // 仅当未连接时才触发连接并显示加载
             if (!this.currentState.state) {
               this.isLoading = true; // 显示加载控件
-              camConnectionManager.connectCamera();
+
+              // 先非空判断
+              if (this.camManager) {
+                this.camManager.connectCamera();
+              }else {
+                console.warn(" camManager 为空，无需移除监听器");
+              }
+
             }
 
             this.enableLoadingValue = false

@@ -5,7 +5,7 @@ import { createMyNode, getMyNode, clearAllMyNodes } from '../../NodeContainer/Cu
 import { CustomTransition } from '../../CustomTransition/CustomNavigationUtils';
 import { ComponentAttrUtils, RectInfoInPx } from '../../utils/ComponentAttrUtils';
 import { WindowUtils } from '../../utils/WindowUtils';
-import { camConnectionManager } from '../../utils/CamConnectManager';
+import { CamConnectionManager } from '../../utils/CamConnectManager';
 
 export interface ImageInfoWithPixelMap {
   folder: string;
@@ -53,9 +53,19 @@ export struct CameraPicturesPage {
     }
   ];
 
+  // 1. 声明单例变量（用于存储通过getInstance()获取的实例）
+  private camManager: CamConnectionManager | null = null;
+
   aboutToAppear(): void {
+
+    // 2. 通过静态方法获取实例（复用EntryAbility创建的单例）
+    this.camManager = CamConnectionManager.getInstance();
+    if (!this.camManager) {
+      console.error("CameraPage 获取CamConnectionManager实例失败！");
+      return;
+    }
     // 进入页面时暂停检测
-    camConnectionManager.pauseCheck();
+    this.camManager.pauseCheck();
 
     this.loadThumbnails();
 
@@ -278,7 +288,10 @@ export struct CameraPicturesPage {
       this.pageStack = context.pathStack;
       this.pageId = this.pageStack.getAllPathName().length - 1;
       this.registerCustomTransition();
-      camConnectionManager.resumeCheck()
+      if (this.camManager) {
+        this.camManager.resumeCheck()
+      }
+
     })
     // 新增：注销转场、节点下树
     .onDisAppear(() => {

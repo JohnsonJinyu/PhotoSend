@@ -1,6 +1,7 @@
 import nativeCamera from 'libentry.so';
 import { BusinessError } from '@ohos.base';
 import { ErrorEvent, MessageEvent, worker } from '@kit.ArkTS';
+import { CheckMessage, CheckMsgType, ConnectionStateResult} from '../utils/cam_connect_type'
 
 // 仅保留两种连接状态
 export type ConnectionState = 'connected' | 'disconnected';
@@ -8,28 +9,7 @@ export type ConnectionState = 'connected' | 'disconnected';
 // 状态变化监听器类型
 export type ConnectionListener = (state: boolean, message: string) => void;
 
-//  显式声明状态结果接口（解决对象字面量报错）
-export interface ConnectionStateResult {
-  state: boolean;
-  message: string;
-}
 
-// ======================== 主线程与Worker的消息协议 ========================
-// 消息类型枚举（明确双方通信的指令）
-export enum CheckMsgType {
-  START_CHECK = 'start_check', // 主线程→Worker：启动检测
-  STOP_CHECK = 'stop_check', // 主线程→Worker：停止检测
-  PAUSE_CHECK = 'pause_check', // 主线程→Worker：暂停检测
-  RESUME_CHECK = 'resume_check', // 主线程→Worker：恢复检测
-  CHECK_RESULT = 'check_result', // Worker→主线程：检测结果
-  ERROR = 'error' // Worker→主线程：检测错误
-}
-
-// 消息体结构（统一格式，方便解析）
-export interface CheckMessage {
-  type: CheckMsgType;
-  data?: boolean | string; // 附加数据（如检测结果、错误信息）
-}
 
 
 // Worker内部状态（控制检测逻辑）
@@ -40,7 +20,7 @@ export interface WorkerInnerState {
 }
 
 
-class CamConnectionManager {
+export class CamConnectionManager {
   // 单例实例
   private static instance: CamConnectionManager | null = null;
   // 核心状态管理
@@ -66,6 +46,7 @@ class CamConnectionManager {
   // 初始化检测worker
   private initWorker() {
     try {
+      console.warn(`⚠️  开始创建 Worker，当前时间=${new Date().getTime()}`);
       // 创建Worker（路径根据项目结构调整，确保能找到文件）
       this.checkWorker = new worker.ThreadWorker('../workers/CheckConnection')
 
@@ -227,6 +208,7 @@ class CamConnectionManager {
   // 获取全局唯一实例
   static getInstance(): CamConnectionManager {
     if (!CamConnectionManager.instance) {
+      console.warn(`⚠️  单例 instance 为 null，重新创建 CamConnectionManager 实例`);
       CamConnectionManager.instance = new CamConnectionManager();
     }
     return CamConnectionManager.instance;
@@ -261,12 +243,26 @@ class CamConnectionManager {
 
   // 销毁方法（可选，应用退出时调用）
   destroy() {
+    console.warn(`⚠️  destroy 方法被调用，当前时间=${new Date().getTime()}`);
     this.stopConnectionCheck();
     this.listeners = [];
     CamConnectionManager.instance = null;
+    /*// 第一步：彻底终止已创建的 Worker，释放资源
+    if (this.checkWorker) {
+      this.checkWorker.terminate(); // 关键：销毁 Worker 实例
+      this.checkWorker = null;
+      this.isWorkerReady = false;
+      console.log(`✅ 已彻底销毁连接检测 Worker`);
+    }
+    // 第二步：停止 Worker 内部的检测循环
+    this.stopConnectionCheck();
+    // 第三步：清空监听器（避免内存泄漏）
+    this.listeners = [];
+    // 第四步：移除“主动置空单例”的逻辑（除非明确要销毁全局实例，否则不重置）
+    // CamConnectionManager.instance = null; // 注释掉这行！避免意外重置*/
   }
 }
 
 
 // 导出全局实例
-export const camConnectionManager = CamConnectionManager.getInstance();
+//export const camConnectionManager = CamConnectionManager.getInstance();

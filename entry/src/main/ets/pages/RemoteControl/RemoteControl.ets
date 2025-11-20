@@ -13,7 +13,8 @@ import { ExposureCompensationDialog } from '../../component/CameraControlDialog/
 import { WhiteBalanceDialog } from '../../component/CameraControlDialog/WhiteBalanceDialog';
 import { ExposureMeterModeDialog } from '../../component/CameraControlDialog/ExposureMeterModeDialog';
 import { ExposureModeDialog } from '../../component/CameraControlDialog/ExposureModeDialog';
-import { camConnectionManager, ConnectionStateResult } from '../../utils/CamConnectManager';
+import { CamConnectionManager } from '../../utils/CamConnectManager';
+import { ConnectionStateResult } from '../../utils/cam_connect_type';
 
 
 const scanner = new getCamIpAndName();
@@ -78,6 +79,9 @@ export struct RemoteControl {
   private nativeLibDir: string = '';
   private timerId: number = -1; // 预览定时器ID
   private isProcessingPreview: boolean = false;
+  // 1. 声明单例变量（用于存储通过getInstance()获取的实例）
+  private camManager: CamConnectionManager | null = null;
+
 
   // 弹窗控制器
   // ISO 值选择弹窗
@@ -151,10 +155,18 @@ export struct RemoteControl {
 
   aboutToAppear(): void {
 
+    // 2. 通过静态方法获取实例（复用EntryAbility创建的单例）
+    this.camManager = CamConnectionManager.getInstance();
+    if (!this.camManager) {
+      console.error("CameraPage 获取CamConnectionManager实例失败！");
+      return;
+    }
+
+
     // 🔥 1. 注册全局状态监听器（同步连接状态）
-    camConnectionManager.addListener(this.handleGlobalStateChange);
+    this.camManager.addListener(this.handleGlobalStateChange);
     // 🔥 2. 初始化状态：从全局单例获取（首次加载用）
-    this.currentState = camConnectionManager.getCurrentState();
+    this.currentState = this.camManager.getCurrentState();
     console.log(`RemoteControl 初始化状态：${JSON.stringify(this.currentState)}`);
 
 
@@ -279,13 +291,16 @@ export struct RemoteControl {
   manualConnect() {
     if (!this.currentState.state) { // 未连接时才调用
       this.statusMessage = '正在连接相机...';
-      camConnectionManager.connectCamera().then((success) => {
-        // 连接结果由全局状态回调处理，这里无需额外更新
-        if (!success) {
-          this.statusMessage = '连接失败，请检查WiFi';
-        }
-      });
-    }
+      if (this.camManager) {
+        this.camManager.connectCamera().then((success) => {
+          // 连接结果由全局状态回调处理，这里无需额外更新
+          if (!success) {
+            this.statusMessage = '连接失败，请检查WiFi';
+          }
+        });
+      }
+      }
+
   }
 
 

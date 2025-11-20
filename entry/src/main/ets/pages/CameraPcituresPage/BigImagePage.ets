@@ -4,13 +4,10 @@ import { AnimationProperties } from '../../CustomTransition/AnimationProperties'
 import { MyNodeController, getMyNode,deleteMyNode } from '../../NodeContainer/CustomComponent';
 import { CustomTransition } from '../../CustomTransition/CustomNavigationUtils';
 import { ImageInfoWithPixelMap } from './CameraPicturesPage';
-import nativeCamera from  'libentry.so'
-
-import fs from '@ohos.file.fs';
-import { fileIo } from '@kit.CoreFileKit';
 import { photoAccessHelper } from '@kit.MediaLibraryKit';
 import { common } from '@kit.AbilityKit';
 import { ErrorEvent, MessageEvent, url, worker} from '@kit.ArkTS'
+import { CamConnectionManager } from '../../utils/CamConnectManager';
 
 // 扩展大图页参数接口，新增转场必需字段
 // 扩展BigImageParams，新增uniqueKey字段
@@ -70,6 +67,10 @@ export struct BigImagePage {
   // 新增：当前转场节点的唯一标识
   private currentNodeKey: string = '';
 
+
+  // 1. 声明单例变量（用于存储通过getInstance()获取的实例）
+  private camManager: CamConnectionManager | null = null;
+
   // 监听配置变化，触发转场注销（和PageTwo保持一致）
   @StorageProp('windowSizeChanged') @Watch('unRegisterNavParam') windowSizeChangedTime: number = 0;
   @StorageProp('onConfigurationUpdate') @Watch('unRegisterNavParam') onConfigurationUpdateTime: number = 0;
@@ -85,16 +86,14 @@ export struct BigImagePage {
 
 
   aboutToAppear(): void {
-    // 迁移上一页的自定义节点到当前页（转场核心）
-    //this.myNodeController = getMyNode();
-    // 🔥 通过key获取CameraPicturesPage传递的节点（不再获取单例）
-    //this.myNodeController = getMyNode(this.currentNodeKey);
 
+    // 2. 通过静态方法获取实例（复用EntryAbility创建的单例）
+    this.camManager = CamConnectionManager.getInstance();
+    if (!this.camManager) {
+      console.error("CameraPage 获取CamConnectionManager实例失败！");
+      return;
+    }
 
-    // worker 相关
-    // 新增：创建Worker实例（路径需根据实际Worker脚本位置调整）
-    // 注意：Worker脚本需放在项目指定目录（如entry/src/main/ets/workers）
-    //this.downloadWorker = new worker.ThreadWorker('../../workers/DownloadMessage.ets') // 假设脚本在当前目录的workers子目录下
 
     // 2. 创建Worker并设置消息监听
     try {
@@ -135,6 +134,10 @@ export struct BigImagePage {
     }
 
 
+  }
+
+  aboutToDisappear(): void {
+    this.terminateWorker()
   }
 
   // 销毁Worker（页面消失或出错时调用）
@@ -285,6 +288,10 @@ export struct BigImagePage {
         value:'downloadSinglePicture',
         icon:($r('app.media.ic_download')),
         action:()=>{
+          if (this.camManager) {
+            this.camManager.pauseCheck()
+          }
+
           this.downLoadSinglePicture()
         }
       }

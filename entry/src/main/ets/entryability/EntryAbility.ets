@@ -1,12 +1,10 @@
 import { AbilityConstant, ConfigurationConstant, UIAbility, Want } from '@kit.AbilityKit';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { display, window } from '@kit.ArkUI';
-import { BusinessError } from '@kit.BasicServicesKit';
 import nativeEntry from 'libentry.so'
 import common from '@ohos.app.ability.common';
 import { WindowUtils } from '../utils/WindowUtils';
-import { data } from '@kit.TelephonyKit';
-
+import { CamConnectionManager } from '../utils/CamConnectManager';
 
 const DOMAIN = 0x0000;
 const TAG: string = 'EntryAbility';
@@ -30,6 +28,12 @@ export default class EntryAbility extends UIAbility {
 
     // 初始化 gphoto2 插件目录
     nativeEntry.SetGPhotoLibDirs(nativeLibDir);
+
+
+    // 主线程主动初始化单例，仅执行一次
+    // 2. 通过静态方法获取单例（主线程仅执行一次）
+    const camManager = CamConnectionManager.getInstance();
+    console.log('主线程初始化 CamConnectionManager 单例成功');
 
 
     hilog.info(DOMAIN, 'testTag', '%{public}s', 'Ability onCreate');
