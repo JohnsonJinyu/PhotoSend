@@ -94,6 +94,11 @@ export struct BigImagePage {
       return;
     }
 
+    if (this.camManager) {
+      this.camManager.stopConnectionCheck();
+      console.log("BigImagePage：下载开始，彻底停止检测");
+    }
+
 
     // 2. 创建Worker并设置消息监听
     try {
@@ -138,6 +143,11 @@ export struct BigImagePage {
 
   aboutToDisappear(): void {
     this.terminateWorker()
+
+    if (this.camManager) {
+      this.camManager.startConnectionCheck();
+      console.log("BigImagePage：退出页面，启用检测");
+    }
   }
 
   // 销毁Worker（页面消失或出错时调用）
@@ -288,9 +298,7 @@ export struct BigImagePage {
         value:'downloadSinglePicture',
         icon:($r('app.media.ic_download')),
         action:()=>{
-          if (this.camManager) {
-            this.camManager.pauseCheck()
-          }
+
 
           this.downLoadSinglePicture()
         }

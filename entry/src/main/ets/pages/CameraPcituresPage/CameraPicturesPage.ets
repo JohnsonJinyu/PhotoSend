@@ -52,7 +52,6 @@ export struct CameraPicturesPage {
     }
     }
   ];
-
   // 1. 声明单例变量（用于存储通过getInstance()获取的实例）
   private camManager: CamConnectionManager | null = null;
 
@@ -64,8 +63,9 @@ export struct CameraPicturesPage {
       console.error("CameraPage 获取CamConnectionManager实例失败！");
       return;
     }
-    // 进入页面时暂停检测
+    // 进入页面：暂停检测（仅执行一次，无后续覆盖）
     this.camManager.pauseCheck();
+    console.log("CameraPicturesPage：进入页面，暂停检测");
 
     this.loadThumbnails();
 
@@ -218,11 +218,9 @@ export struct CameraPicturesPage {
             LoadingProgress().size({ width: 40, height: 40 });
             Text('正在检索照片...').fontSize(16);
           }.margin({ top: 50 });
-        }
-        else if (this.errorMsg) {
+        } else if (this.errorMsg) {
           Text(this.errorMsg).fontSize(16).padding(20);
-        }
-        else {
+        } else {
           Text(`共找到 ${this.imageInfos.length} 张照片`).fontSize(14).padding({ left: 16, top: 10 });
           Grid() {
             ForEach(this.imageInfos, (item: ImageInfoWithPixelMap, index: number) => {
@@ -288,9 +286,9 @@ export struct CameraPicturesPage {
       this.pageStack = context.pathStack;
       this.pageId = this.pageStack.getAllPathName().length - 1;
       this.registerCustomTransition();
-      if (this.camManager) {
+      /*if (this.camManager) {
         this.camManager.resumeCheck()
-      }
+      }*/
 
     })
     // 新增：注销转场、节点下树
@@ -299,6 +297,12 @@ export struct CameraPicturesPage {
 
       // 🔥 页面卸载时，清空所有NodeController，避免内存泄漏
       clearAllMyNodes();
+
+      // 🔥 离开页面：恢复检测（补充分配，确保后续页面检测正常）
+      if (this.camManager) {
+        this.camManager.resumeCheck();
+        console.log("CameraPicturesPage：离开页面，恢复检测");
+      }
     });
   }
 }
