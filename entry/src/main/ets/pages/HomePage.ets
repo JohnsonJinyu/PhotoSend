@@ -4,6 +4,7 @@ import { CameraPage } from './CameraPage/CameraPage';
 import { PhoneLocalPictures } from './PhoneLocalPictures';
 import { MinePage } from './MinePage/MinePage';
 import { AnimateCallback, CustomTransition } from '../CustomTransition/CustomNavigationUtils';
+import { CreateLocalDirUtil } from '../utils/CreateLocalDir';
 
 const TAG: string = 'HomePage';
 
@@ -29,6 +30,10 @@ struct HomePage {
       return true
     }
     return false
+  }
+
+  aboutToAppear(): void {
+    CreateLocalDirUtil.checkAndCreateDir("PhotoSendApp")
   }
 
   build() {

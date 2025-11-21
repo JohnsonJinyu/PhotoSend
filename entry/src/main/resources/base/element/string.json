@@ -47,6 +47,14 @@
     {
       "name": "reason_request_permission_WRITE_IMAGEVIDEO",
       "value": "保存图片"
+    },
+    {
+      "name": "reason_request_WRITE_MEDIA",
+      "value": "保存图片"
+    },
+    {
+      "name": "reason_request_READ_MEDIA",
+      "value": "展示已经下载的照片"
     }
   ]
 }

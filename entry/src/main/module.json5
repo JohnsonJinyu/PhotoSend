@@ -72,6 +72,31 @@
       {
         "name": "ohos.permission.GET_NETWORK_INFO",
         "reason":"$string:reason_request_get_network_info"
+      },
+      {
+        "name": "ohos.permission.WRITE_MEDIA",
+        "reason": "$string:reason_request_WRITE_MEDIA",
+        "usedScene": {
+          "abilities": [
+            "EntryAbility"
+          ]
+        }
+      },
+      {
+        "name": "ohos.permission.READ_MEDIA",
+        "reason": "$string:reason_request_READ_MEDIA",
+        "usedScene": {
+          "abilities": [
+            "EntryAbility"
+          ]
+        }
+      },
+      {
+        "name": "ohos.permission.READ_WRITE_DOWNLOAD_DIRECTORY",
+        "reason": "$string:reason_request_WRITE_MEDIA",
+        "usedScene": {
+          "abilities": ["EntryAbility"]
+        }
       }
 
 
