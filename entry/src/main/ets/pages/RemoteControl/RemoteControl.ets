@@ -401,7 +401,7 @@ export struct RemoteControl {
   }
 
 
-  takeAndDownloadKnown() {
+  /*takeAndDownloadKnown() {
     // 完全保留原有逻辑
     try {
       const ok = nativeCamera.TakePhoto();
@@ -439,7 +439,7 @@ export struct RemoteControl {
       console.error("异常: " + JSON.stringify(e));
       this.statusMessage = '拍照下载异常';
     }
-  }
+  }*/
 
 
   getCameraInfo() {
@@ -648,7 +648,7 @@ export struct RemoteControl {
           Button('图库')
           Button('拍照')
             .onClick(() => {
-              this.takeAndDownloadKnown()
+              //this.takeAndDownloadKnown()
             })
         }
         .margin({ top: 20 })

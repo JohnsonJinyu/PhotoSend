@@ -186,7 +186,7 @@ export const GetPreview: () => ArrayBuffer;
  * @returns 照片的二进制数据（ArrayBuffer）
  */
 
-export const DownloadPhoto: (folder: string, name: string) => ArrayBuffer;
+export const DownloadPhoto: (folder: string, name: string,tempFilePath) => boolean;
 
 /**
  * 断开与相机的连接

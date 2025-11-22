@@ -11,6 +11,7 @@
 #include <cstdint>
 #include <hilog/log.h>
 #include <string>
+#include <fstream> 
 
 #define LOG_DOMAIN 0x0005         // 日志域（自定义标识，区分不同模块日志）
 #define LOG_TAG "Camera_Download" // 日志标签（日志中显示的模块名）
@@ -425,199 +426,165 @@ napi_value GetThumbnailList(napi_env env, napi_callback_info info) {
 // ###########################################################################
 // 核心函数：从相机下载照片（内部逻辑，不直接暴露给ArkTS）
 // ###########################################################################
+// ###########################################################################
+// 核心函数：从相机下载照片到指定的沙箱文件路径
+// ###########################################################################
 /**
- * @brief 内部函数：根据"相机中的文件路径"，下载照片到内存，并通过输出参数返回
+ * @brief 内部函数：根据"相机中的文件路径"，下载照片并直接写入到指定的沙箱文件中。
  * @param folder 照片在相机中的文件夹路径（如："/DCIM/100NIKON"）
  * @param filename 照片在相机中的文件名（如："DSC_0001.JPG"）
- * @param[out] data 输出参数：二级指针（指向存储照片二进制数据的指针）
- *                  函数内部会分配内存存储照片数据，最终将内存地址通过此参数传出
- *                  调用者（DownloadPhoto）使用完后必须手动free释放，避免内存泄漏
- * @param[out] length 输出参数：一级指针（指向存储照片数据长度的变量）
- *                    函数内部会将照片的字节数通过此参数传出
- * @return bool 下载成功返回true，失败返回false（仅表示下载结果，不返回数据）
+ * @param filePath 照片下载后在设备沙箱中的保存路径（如："/data/storage/el2/base/.../cache/temp_photo.jpg"）
+ * @return bool 下载并成功写入文件返回true，失败返回false。
  */
-static bool InternalDownloadFile(const char *folder, const char *filename, uint8_t **data, size_t *length) {
+bool InternalDownloadFile(const char* folder, const char* filename, const char* filePath) {
     OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "===== 开始执行 InternalDownloadFile =====");
-    OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "参数: folder='%{public}s', filename='%{public}s'", folder, filename);
+    OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "参数: folder='%{public}s', filename='%{public}s', filePath='%{public}s'", folder, filename, filePath);
 
     // 1. 检查相机连接状态
-    OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "步骤 1: 检查相机连接状态. g_connected=%{public}d", g_connected);
     if (!g_connected) {
         OH_LOG_Print(LOG_APP, LOG_ERROR, LOG_DOMAIN, LOG_TAG, "错误: 相机未连接，下载失败.");
         return false;
     }
 
-    // 2. 创建 CameraFile 对象
-    OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "步骤 2: 创建 CameraFile 对象.");
+    // 2. 检查目标文件路径是否有效
+    if (filePath == nullptr || strlen(filePath) == 0) {
+        OH_LOG_Print(LOG_APP, LOG_ERROR, LOG_DOMAIN, LOG_TAG, "错误: 目标文件路径(filePath)为空.");
+        return false;
+    }
+
     CameraFile *file = nullptr;
-    int ret = gp_file_new(&file);
+    int ret = GP_OK;
+
+    // 3. 创建 CameraFile 对象
+    ret = gp_file_new(&file);
     if (ret != GP_OK) {
         OH_LOG_Print(LOG_APP, LOG_ERROR, LOG_DOMAIN, LOG_TAG, "错误: 创建 CameraFile 对象失败. ret=%{public}d", ret);
         return false;
     }
     OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "成功: CameraFile 对象创建. file=%{public}p", file);
 
-    // 5. 调用 libgphoto2 核心下载接口
-    OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "步骤 5: 调用 gp_camera_file_get 开始下载文件.");
+    // 4. 调用 libgphoto2 核心下载接口
+    OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "步骤 4: 调用 gp_camera_file_get 开始下载文件.");
     ret = gp_camera_file_get(g_camera, folder, filename, GP_FILE_TYPE_NORMAL, file, g_context);
     if (ret != GP_OK) {
-        OH_LOG_Print(LOG_APP, LOG_ERROR, LOG_DOMAIN,LOG_TAG, "错误: gp_camera_file_get 下载失败. ret=%{public}d", ret);
-        gp_file_unref(file);
+        OH_LOG_Print(LOG_APP, LOG_ERROR, LOG_DOMAIN, LOG_TAG, "错误: gp_camera_file_get 下载失败. ret=%{public}d", ret);
+        gp_file_unref(file); // 释放已创建的对象
         return false;
     }
     OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "成功: gp_camera_file_get 下载文件成功.");
 
-    // 7. 从 CameraFile 对象中提取数据和大小
-    OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "步骤 7: 从 CameraFile 中提取数据和大小.");
+    // 5. 从 CameraFile 对象中提取数据和大小
+    OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "步骤 5: 从 CameraFile 中提取数据和大小.");
     const char *fileData = nullptr;
     unsigned long fileSize = 0;
     gp_file_get_data_and_size(file, &fileData, &fileSize);
 
     OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "提取结果: fileData=%{public}p, fileSize=%{public}lu bytes", fileData, fileSize);
 
-    // 8. 检查提取的数据是否有效
+    // 6. 检查提取的数据是否有效
     if (fileData == nullptr || fileSize == 0) {
-        OH_LOG_PrintMsg(LOG_APP, LOG_ERROR, LOG_DOMAIN, LOG_TAG, "错误: 提取的数据为空或大小为0.");
-        gp_file_unref(file);
+        OH_LOG_Print(LOG_APP, LOG_ERROR, LOG_DOMAIN, LOG_TAG, "错误: 提取的数据为空或大小为0.");
+        gp_file_unref(file); // 释放资源
         return false;
     }
 
-    // 9. 为输出数据分配独立内存
-    OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "步骤 9: 分配内存. 大小=%{public}lu bytes", fileSize);
-    *data = (uint8_t *)malloc(fileSize);
-    if (*data == nullptr) {
-        OH_LOG_PrintMsg(LOG_APP, LOG_ERROR, LOG_DOMAIN, LOG_TAG, "错误: malloc 内存分配失败.");
-        gp_file_unref(file);
+    // 7. 将数据写入到沙箱文件
+    OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "步骤 7: 将数据写入沙箱文件: %{public}s", filePath);
+    std::ofstream outFile(filePath, std::ios::binary);
+    if (!outFile.is_open()) {
+        OH_LOG_Print(LOG_APP, LOG_ERROR, LOG_DOMAIN, LOG_TAG, "错误: 无法打开沙箱文件进行写入.");
+        gp_file_unref(file); // 释放资源
         return false;
     }
-    OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "成功: 内存分配成功. *data=%{public}p", *data);
 
-    // 10. 拷贝数据
-    OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "步骤 10: 开始 memcpy 数据.");
-    memcpy(*data, fileData, fileSize);
-    OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "成功: 数据拷贝完成.");
+    outFile.write(fileData, fileSize);
+    outFile.close();
+    OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "成功: 数据已全部写入沙箱文件.");
 
-    // 11. 设置输出参数 length
-    *length = fileSize;
-    OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "步骤 11: 设置输出长度. *length=%{public}zu", *length);
-
-    // 12. 释放 CameraFile 对象
-    OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "步骤 12: 释放 CameraFile 对象.");
+    // 8. 释放 CameraFile 对象
+    OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "步骤 8: 释放 CameraFile 对象.");
     gp_file_unref(file);
     OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "成功: CameraFile 对象已释放.");
 
-    // 13. 下载成功
+    // 9. 下载和写入全部成功
     OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "===== InternalDownloadFile 执行成功 =====");
     return true;
 }
 
+
 // ###########################################################################
-// NAPI接口：下载照片（暴露给ArkTS调用，封装InternalDownloadFile）
+// NAPI接口：下载照片到沙箱（暴露给ArkTS调用）
 // ###########################################################################
 /**
- * @brief ArkTS层调用此函数，传入照片路径，下载照片并返回二进制数据
- * @param env NAPI环境对象（必选参数，封装了ArkTS和C++的交互上下文）
- * @param info NAPI回调信息对象（必选参数，存储了ArkTS传入的参数、this指针等）
- * @return napi_value 返回ArkTS的Buffer类型（存储照片二进制数据），失败返回nullptr（ArkTS侧接收为null）
- *         NAPI是ArkTS和C++的"桥梁"，负责两种语言的数据类型转换
+ * @brief ArkTS层调用此函数，传入相机文件路径和沙箱临时路径，触发下载。
+ * @param env NAPI环境对象。
+ * @param info NAPI回调信息对象。
+ * @return napi_value 返回一个布尔值给ArkTS。true表示成功，false表示失败。
  */
 napi_value DownloadPhoto(napi_env env, napi_callback_info info) {
     OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
     OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "!!!!!!!!!! 开始执行 NAPI 接口 DownloadPhoto !!!!!!!!!!");
     OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
 
-    // 1, 2. 提取 ArkTS 传入的参数
-    size_t argc = 2;
-    napi_value args[2];
-    // 【修正点1/2】：只定义一次 status 变量
+    // 1. 准备提取3个参数
+    size_t argc = 3;
+    napi_value args[3];
     napi_status status = napi_get_cb_info(env, info, &argc, args, nullptr, nullptr);
-    if (status != napi_ok || argc < 2) {
-        // 【修正点2/2】：添加 {public}
-        OH_LOG_Print(LOG_APP, LOG_ERROR, LOG_DOMAIN, LOG_TAG, "错误: napi_get_cb_info 提取参数失败或参数数量不足. status=%{public}d, argc=%{public}zu", status, argc);
-        return nullptr;
+    if (status != napi_ok || argc < 3) {
+        OH_LOG_Print(LOG_APP, LOG_ERROR, LOG_DOMAIN, LOG_TAG, "错误: 提取参数失败或参数数量不足（需要3个）. status=%{public}d, argc=%{public}zu", status, argc);
+        // 返回 false
+        napi_value result;
+        napi_get_boolean(env, false, &result);
+        return result;
     }
-    OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "成功: napi_get_cb_info 提取参数成功.");
+    OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "成功: 提取参数成功.");
 
-    // 修复字符串缓冲区溢出问题
+    // 2. 定义缓冲区并转换字符串参数
     char folder[256] = {0};
     char name[256] = {0};
-    size_t folder_len = sizeof(folder);
-    size_t name_len = sizeof(name);
+    char tempFilePath[1024] = {0}; // 沙箱路径可能较长
 
-    status = napi_get_value_string_utf8(env, args[0], folder, folder_len, nullptr);
+    status = napi_get_value_string_utf8(env, args[0], folder, sizeof(folder), nullptr);
     if (status != napi_ok) {
-        // 【修正点2/2】：添加 {public}
-        OH_LOG_Print(LOG_APP, LOG_ERROR, LOG_DOMAIN, LOG_TAG, "错误: napi_get_value_string_utf8 转换 folder 失败. status=%{public}d", status);
-        return nullptr;
+        OH_LOG_Print(LOG_APP, LOG_ERROR, LOG_DOMAIN, LOG_TAG, "错误: 转换 folder 参数失败. status=%{public}d", status);
+        napi_value result;
+        napi_get_boolean(env, false, &result);
+        return result;
     }
-    status = napi_get_value_string_utf8(env, args[1], name, name_len, nullptr);
+
+    status = napi_get_value_string_utf8(env, args[1], name, sizeof(name), nullptr);
     if (status != napi_ok) {
-        // 【修正点2/2】：添加 {public}
-        OH_LOG_Print(LOG_APP, LOG_ERROR, LOG_DOMAIN, LOG_TAG, "错误: napi_get_value_string_utf8 转换 name 失败. status=%{public}d", status);
-        return nullptr;
+        OH_LOG_Print(LOG_APP, LOG_ERROR, LOG_DOMAIN, LOG_TAG, "错误: 转换 name 参数失败. status=%{public}d", status);
+        napi_value result;
+        napi_get_boolean(env, false, &result);
+        return result;
+    }
+
+    status = napi_get_value_string_utf8(env, args[2], tempFilePath, sizeof(tempFilePath), nullptr);
+    if (status != napi_ok) {
+        OH_LOG_Print(LOG_APP, LOG_ERROR, LOG_DOMAIN, LOG_TAG, "错误: 转换 tempFilePath 参数失败. status=%{public}d", status);
+        napi_value result;
+        napi_get_boolean(env, false, &result);
+        return result;
     }
     
-    // 打印接收到的路径和文件名
+    // 打印接收到的完整参数
     OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "从 ArkTS 接收的参数:");
-    OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "  folder: '%{public}s' (长度: %{public}zu)", folder, strlen(folder));
-    OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "  name:   '%{public}s' (长度: %{public}zu)", name, strlen(name));
+    OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "  folder:     '%{public}s'", folder);
+    OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "  name:       '%{public}s'", name);
+    OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "  tempFilePath: '%{public}s'", tempFilePath);
 
-    // 7, 8. 调用内部下载函数
-    uint8_t *photo_data = nullptr;
-    size_t photo_length = 0;
+    // 3. 调用内部下载函数
     OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "准备调用 InternalDownloadFile...");
-    bool success = InternalDownloadFile(folder, name, &photo_data, &photo_length);
-    // 【修正点2/2】：添加 {public}
-    OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "InternalDownloadFile 返回: success=%{public}d", success);
-    // 【修正点2/2】：添加 {public}
-    OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "InternalDownloadFile 输出: photo_data=%{public}p, photo_length=%{public}zu", photo_data, photo_length);
+    bool success = InternalDownloadFile(folder, name, tempFilePath);
+    OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "InternalDownloadFile 执行结果: %{public}s", success ? "成功" : "失败");
 
-    // 9. 检查下载结果
-    if (!success || photo_data == nullptr || photo_length == 0) {
-        OH_LOG_PrintMsg(LOG_APP, LOG_ERROR, LOG_DOMAIN, LOG_TAG, "错误: 下载失败或返回数据无效.");
-        if (photo_data) {
-            OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "清理: free(photo_data)");
-            free(photo_data);
-        }
-        return nullptr;
-    }
+    // 4. 向 ArkTS 返回布尔结果
+    napi_value result;
+    napi_get_boolean(env, success, &result);
 
-    // 10. 转换数据为 NAPI Buffer
-    // 【修正点2/2】：添加 {public}
-    OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "步骤 10: 创建 NAPI Buffer. 大小=%{public}zu", photo_length);
-    napi_value buffer = nullptr;
-    void* buffer_data = nullptr;
-    
-    // 10.1. 创建一个指定大小的空Buffer
-    // 【修正点1/2】：使用已定义的 status 变量
-    status = napi_create_buffer(env, photo_length, &buffer_data, &buffer);
-    if (status != napi_ok) {
-        // 【修正点2/2】：添加 {public}
-        OH_LOG_Print(LOG_APP, LOG_ERROR, LOG_DOMAIN, LOG_TAG, "错误: napi_create_buffer 创建空Buffer失败. status=%{public}d", status);
-        free(photo_data); // 释放我们自己分配的内存
-        return nullptr;
-    }
-    // 【修正点2/2】：添加 {public}
-    OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "成功: napi_create_buffer 创建空Buffer成功. buffer_data=%{public}p", buffer_data);
-    
-    // 10.2. 手动将数据从 photo_data 拷贝到新创建的Buffer的内存中
-    if (buffer_data != nullptr && photo_data != nullptr) {
-        memcpy(buffer_data, photo_data, photo_length);
-        OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "成功: 手动拷贝数据到Buffer完成.");
-    } else {
-        OH_LOG_PrintMsg(LOG_APP, LOG_ERROR, LOG_DOMAIN, LOG_TAG, "错误: buffer_data 或 photo_data 为空，无法拷贝.");
-        free(photo_data);
-        return nullptr;
-    }
-
-    // 11. 释放 C++ 内存
-    OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "步骤 11: 释放 photo_data 内存.");
-    free(photo_data);
-    OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "成功: photo_data 内存已释放.");
-
-    // 13. 返回结果
-    OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "!!!!!!!!!! DownloadPhoto 执行成功，返回 Buffer !!!!!!!!!!");
-    return buffer;
+    OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "!!!!!!!!!! DownloadPhoto 执行完毕，返回结果 !!!!!!!!!!");
+    return result;
 }
 
 // ###########################################################################
