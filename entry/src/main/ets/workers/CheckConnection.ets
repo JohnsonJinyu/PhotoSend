@@ -116,7 +116,12 @@ workerPort.onmessageerror = (event: MessageEvents) => {
     type: CheckMsgType.ERROR,
     data: `消息解析失败：${event.data}`
   };
-  workerPort.postMessage(errorMsg);
+  try {
+    workerPort.postMessage(errorMsg);
+  } catch (error) {
+
+    console.error(`check connection woker error:${error}`)
+  }
 
 };
 
@@ -132,5 +137,10 @@ workerPort.onerror = (event: ErrorEvent) => {
     type: CheckMsgType.ERROR,
     data: `Worker异常: ${event.message}`
   };
-  workerPort.postMessage(errorMsg);
+  try {
+    workerPort.postMessage(errorMsg);
+  } catch (error) {
+
+    console.error(`check connection woker error:${error}`)
+  }
 };

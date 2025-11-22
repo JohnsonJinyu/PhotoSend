@@ -5,7 +5,6 @@ import { ShutterSpeedDialog } from 'ets/component/CameraControlDialog/ShutterSpe
 import { image } from '@kit.ImageKit';
 import { fileIo } from '@kit.CoreFileKit'
 import { common } from '@kit.AbilityKit';
-import getCamIpAndName from '../../utils/tools/GetCameraIpAndName'
 import { cameraParamManager, ParamOption } from '../../utils/tools/CameraParamManager'
 import { ApertureDialog } from '../../component/CameraControlDialog/ApertureDialog';
 import { FocusModeDialog } from '../../component/CameraControlDialog/FocusModeDialog';
@@ -15,33 +14,6 @@ import { ExposureMeterModeDialog } from '../../component/CameraControlDialog/Exp
 import { ExposureModeDialog } from '../../component/CameraControlDialog/ExposureModeDialog';
 import { CamConnectionManager } from '../../utils/tools/CamConnectManager';
 import { ConnectionStateResult } from '../../utils/tools/cam_connect_type';
-
-
-const scanner = new getCamIpAndName();
-let cameraIp: string;
-
-
-const evMap: Record<string, string> = {
-  "-2": "-2",
-  "-1.666": "-1 2/3",
-  "-1.333": "-1 1/3",
-  "-1": "-1",
-  "-0.666": "-2/3",
-  "-0.333": "-1/3",
-  "0": "0",
-  "0.333": "+1/3",
-  "0.666": "+2/3",
-  "1": "+1",
-  "1.333": "+1 1/3",
-  "1.666": "+1 2/3",
-  "2": "+2"
-};
-
-
-interface ShutterOptionSec {
-  original: string;
-  sec: number | null;
-}
 
 
 @Builder
@@ -75,8 +47,6 @@ export struct RemoteControl {
   @State whiteBalanceValue: string = "NA";
   @State focusModeValue: string = "NA";
   @State exposureProgramValue: string = "NA";
-
-  private nativeLibDir: string = '';
   private timerId: number = -1; // 预览定时器ID
   private isProcessingPreview: boolean = false;
   // 1. 声明单例变量（用于存储通过getInstance()获取的实例）
@@ -448,7 +418,8 @@ export struct RemoteControl {
         return;
       }
 
-      const context = getContext(this) as common.UIAbilityContext;
+      //const context = getContext(this) as common.UIAbilityContext;
+      const context = this.getUIContext().getHostContext() as common.UIAbilityContext
       const savePath = `${context.filesDir}/${filename}`;
       const fdAny = fileIo.openSync(savePath, fileIo.OpenMode.CREATE | fileIo.OpenMode.READ_WRITE);
       const uint8Arr = new Uint8Array(arrBuf);
@@ -491,20 +462,6 @@ export struct RemoteControl {
       console.error("获取相机信息失败：", e);
     }
   }
-
-
-  private formatExposureCompensation(value: string): string {
-    // 完全保留原有逻辑
-    const num = parseFloat(value);
-    if (isNaN(num)) {
-      return 'NA';
-    }
-    const closestKey = Object.keys(evMap).find(key => {
-      return Math.abs(parseFloat(key) - num) < 0.001;
-    });
-    return closestKey ? `${evMap[parseFloat(closestKey)]}` : `${num}`;
-  }
-
 
   parseShutterToSeconds(shutterStr: string): number | null {
     // 完全保留原有逻辑

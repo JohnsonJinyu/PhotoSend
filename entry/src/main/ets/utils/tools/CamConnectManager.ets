@@ -31,8 +31,6 @@ export class CamConnectionManager {
   private cameraModel: string = 'Zf';
   // 监听器列表（存储各页面的回调）
   private listeners: ConnectionListener[] = [];
-  // 连接状态检查定时器（参考RemoteControl的定时器逻辑）
-  private connectionCheckTimer: number = -1;
   // worker 相关
   private checkWorker: worker.ThreadWorker | null = null
   private isWorkerReady: boolean = false // worker是否初始化完成
@@ -105,7 +103,12 @@ export class CamConnectionManager {
       console.warn(`Worker未就绪，无法发送消息`)
       return
     }
-    this.checkWorker.postMessage(msg)
+    try {
+      this.checkWorker.postMessage(msg)
+    } catch (error) {
+
+      console.error(`check connection woker error:${error}`)
+    }
   }
 
   // ======================== 检测控制方法（对外/内部调用） ========================

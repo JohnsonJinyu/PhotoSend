@@ -5,7 +5,6 @@ import { PhoneLocalPhotos } from './PhoneLocalPhotos/PhoneLocalPhotos';
 import { MinePage } from './MinePage/MinePage';
 import { AnimateCallback, CustomTransition } from '../CustomTransition/CustomNavigationUtils';
 import { CreateLocalDirUtil } from '../utils/tools/CreateLocalDir';
-import log from '@ohos.hilog';
 import { common } from '@kit.AbilityKit';
 
 const TAG: string = 'HomePage';
