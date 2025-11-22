@@ -1,6 +1,6 @@
 import { ErrorEvent, MessageEvents, ThreadWorkerGlobalScope, worker } from '@kit.ArkTS';
 import nativeCamera from 'libentry.so'
-import { CheckMessage, CheckMsgType} from '../utils/cam_connect_type'
+import { CheckMessage, CheckMsgType} from '../utils/tools/cam_connect_type'
 
 
 const workerPort: ThreadWorkerGlobalScope = worker.workerPort;

@@ -5,16 +5,16 @@ import { ShutterSpeedDialog } from 'ets/component/CameraControlDialog/ShutterSpe
 import { image } from '@kit.ImageKit';
 import { fileIo } from '@kit.CoreFileKit'
 import { common } from '@kit.AbilityKit';
-import getCamIpAndName from '../../utils/GetCameraIpAndName'
-import { cameraParamManager, ParamOption } from '../../utils/CameraParamManager'
+import getCamIpAndName from '../../utils/tools/GetCameraIpAndName'
+import { cameraParamManager, ParamOption } from '../../utils/tools/CameraParamManager'
 import { ApertureDialog } from '../../component/CameraControlDialog/ApertureDialog';
 import { FocusModeDialog } from '../../component/CameraControlDialog/FocusModeDialog';
 import { ExposureCompensationDialog } from '../../component/CameraControlDialog/ExposureCompensationDialog';
 import { WhiteBalanceDialog } from '../../component/CameraControlDialog/WhiteBalanceDialog';
 import { ExposureMeterModeDialog } from '../../component/CameraControlDialog/ExposureMeterModeDialog';
 import { ExposureModeDialog } from '../../component/CameraControlDialog/ExposureModeDialog';
-import { CamConnectionManager } from '../../utils/CamConnectManager';
-import { ConnectionStateResult } from '../../utils/cam_connect_type';
+import { CamConnectionManager } from '../../utils/tools/CamConnectManager';
+import { ConnectionStateResult } from '../../utils/tools/cam_connect_type';
 
 
 const scanner = new getCamIpAndName();

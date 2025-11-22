@@ -1,10 +1,10 @@
 //HomePage.ets
 
 import { CameraPage } from './CameraPage/CameraPage';
-import { PhoneLocalPictures } from './PhoneLocalPictures';
+import { PhoneLocalPhotos } from './PhoneLocalPhotos/PhoneLocalPhotos';
 import { MinePage } from './MinePage/MinePage';
 import { AnimateCallback, CustomTransition } from '../CustomTransition/CustomNavigationUtils';
-import { CreateLocalDirUtil } from '../utils/CreateLocalDir';
+import { CreateLocalDirUtil } from '../utils/tools/CreateLocalDir';
 import log from '@ohos.hilog';
 import { common } from '@kit.AbilityKit';
 
@@ -61,7 +61,7 @@ struct HomePage {
 
           TabContent() {
             NavDestination() {
-              PhoneLocalPictures()
+              PhoneLocalPhotos()
             }
             .title('相册')
             .hideBackButton(true)

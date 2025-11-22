@@ -3,8 +3,8 @@ import { hilog } from '@kit.PerformanceAnalysisKit';
 import { display, window } from '@kit.ArkUI';
 import nativeEntry from 'libentry.so'
 import common from '@ohos.app.ability.common';
-import { WindowUtils } from '../utils/WindowUtils';
-import { CamConnectionManager } from '../utils/CamConnectManager';
+import { WindowUtils } from '../utils/animation/WindowUtils';
+import { CamConnectionManager } from '../utils/tools/CamConnectManager';
 
 const DOMAIN = 0x0000;
 const TAG: string = 'EntryAbility';

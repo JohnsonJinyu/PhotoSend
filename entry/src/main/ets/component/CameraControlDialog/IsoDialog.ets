@@ -1,5 +1,5 @@
 // IsoDialog.ets
-import { CameraHelper } from 'ets/utils/CameraHelper';
+import { CameraHelper } from 'ets/utils/tools/CameraHelper';
 
 import Log from '@ohos.hilog';
 

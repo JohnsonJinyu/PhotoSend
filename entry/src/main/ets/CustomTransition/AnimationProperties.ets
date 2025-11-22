@@ -1,8 +1,8 @@
 // AnimationProperties.ets
 // 一镜到底转场动画封装
 import { curves, UIContext } from '@kit.ArkUI';
-import { RectInfoInPx } from '../utils/ComponentAttrUtils';
-import { WindowUtils } from '../utils/WindowUtils';
+import { RectInfoInPx } from '../utils/animation/ComponentAttrUtils';
+import { WindowUtils } from '../utils/animation/WindowUtils';
 import { MyNodeController } from '../NodeContainer/CustomComponent';
 
 const TAG: string = 'AnimationProperties';

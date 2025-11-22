@@ -1,12 +1,12 @@
 // BigImagePage.ets
-import { RectInfoInPx } from '../../utils/ComponentAttrUtils';
+import { RectInfoInPx } from '../../utils/animation/ComponentAttrUtils';
 import { AnimationProperties } from '../../CustomTransition/AnimationProperties';
 import { MyNodeController, getMyNode, deleteMyNode } from '../../NodeContainer/CustomComponent';
 import { CustomTransition } from '../../CustomTransition/CustomNavigationUtils';
-import { ImageInfoWithPixelMap } from './CameraPicturesPage';
+import { ImageInfoWithPixelMap } from './CamPhotoPrePage';
 import { common } from '@kit.AbilityKit';
 import { ErrorEvent, MessageEvent, worker } from '@kit.ArkTS';
-import { CamConnectionManager } from '../../utils/CamConnectManager';
+import { CamConnectionManager } from '../../utils/tools/CamConnectManager';
 import picker from '@ohos.file.picker';
 import fs from '@ohos.file.fs';
 import { BusinessError } from '@ohos.base';

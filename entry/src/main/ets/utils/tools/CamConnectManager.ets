@@ -1,7 +1,7 @@
 import nativeCamera from 'libentry.so';
 import { BusinessError } from '@ohos.base';
 import { ErrorEvent, MessageEvent, worker } from '@kit.ArkTS';
-import { CheckMessage, CheckMsgType, ConnectionStateResult} from '../utils/cam_connect_type'
+import { CheckMessage, CheckMsgType, ConnectionStateResult} from './cam_connect_type'
 
 // 仅保留两种连接状态
 export type ConnectionState = 'connected' | 'disconnected';

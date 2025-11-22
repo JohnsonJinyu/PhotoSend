@@ -10,7 +10,7 @@
     },
     {
       "name": "CameraPicturesPage",
-      "pageSourceFile": "src/main/ets/pages/CameraPcituresPage/CameraPicturesPage.ets",
+      "pageSourceFile": "src/main/ets/pages/CamPhotoPreAndDownload/CamPhotoPrePage.ets",
       "buildFunction": "CameraPicturesPageBuilder",
       "data": {
         "description": "this is download picture page"
@@ -18,7 +18,7 @@
     },
     {
       "name": "BigImagePage",
-      "pageSourceFile": "src/main/ets/pages/CameraPcituresPage/BigImagePage.ets",
+      "pageSourceFile": "src/main/ets/pages/CamPhotoPreAndDownload/BigImagePage.ets",
       "buildFunction": "BigImagePageBuilder",
       "data": { "description": "this is big image preview page" }
     }

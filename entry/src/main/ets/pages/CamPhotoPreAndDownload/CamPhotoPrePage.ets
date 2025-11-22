@@ -3,9 +3,9 @@ import nativeCamera, { ThumbnailInfo } from 'libentry.so'
 import image from '@ohos.multimedia.image';
 import { createMyNode, getMyNode, clearAllMyNodes } from '../../NodeContainer/CustomComponent';
 import { CustomTransition } from '../../CustomTransition/CustomNavigationUtils';
-import { ComponentAttrUtils, RectInfoInPx } from '../../utils/ComponentAttrUtils';
-import { WindowUtils } from '../../utils/WindowUtils';
-import { CamConnectionManager } from '../../utils/CamConnectManager';
+import { ComponentAttrUtils, RectInfoInPx } from '../../utils/animation/ComponentAttrUtils';
+import { WindowUtils } from '../../utils/animation/WindowUtils';
+import { CamConnectionManager } from '../../utils/tools/CamConnectManager';
 
 export interface ImageInfoWithPixelMap {
   folder: string;
@@ -24,12 +24,12 @@ export interface BigImageParams {
 
 @Builder
 export function CameraPicturesPageBuilder() {
-  CameraPicturesPage();
+  CamPhotoPrePage();
 }
 
 
 @Component
-export struct CameraPicturesPage {
+export struct CamPhotoPrePage {
   @Consume('pageStack') pageStack: NavPathStack;
   private pageId: number = -1
   //@State myNodeController:MyNodeController|undefined= new MyNodeController(false)

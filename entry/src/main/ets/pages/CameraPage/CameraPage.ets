@@ -2,8 +2,8 @@
 import { common, Want } from '@kit.AbilityKit'
 
 import { BusinessError } from '@ohos.base'
-import { CamConnectionManager } from '../../utils/CamConnectManager';
-import { ConnectionStateResult } from '../../utils/cam_connect_type';
+import { CamConnectionManager } from '../../utils/tools/CamConnectManager';
+import { ConnectionStateResult } from '../../utils/tools/cam_connect_type';
 
 // 定义具体的连接模式类型
 type ConnectionMode = '蓝牙' | 'WiFi-AP' | 'WiFi-STA';
