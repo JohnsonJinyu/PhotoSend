@@ -5,8 +5,11 @@ import { PhoneLocalPictures } from './PhoneLocalPictures';
 import { MinePage } from './MinePage/MinePage';
 import { AnimateCallback, CustomTransition } from '../CustomTransition/CustomNavigationUtils';
 import { CreateLocalDirUtil } from '../utils/CreateLocalDir';
+import log from '@ohos.hilog';
+import { common } from '@kit.AbilityKit';
 
 const TAG: string = 'HomePage';
+const DOMAIN = 0x00201;
 
 
 @Preview
@@ -16,6 +19,9 @@ struct HomePage {
   private tabsController: TabsController = new TabsController();
   @State currentIndex: number = 0;
   @Provide('pageStack') pageStack: NavPathStack = new NavPathStack();
+
+  // 用于下面的创建目录
+  private context = this.getUIContext().getHostContext() as common.UIAbilityContext;
 
   // 允许进行自定义转场的页面名称
   private allowedCustomTransitionFromPageName: string[] = ['CameraPicturesPage'];
@@ -33,7 +39,9 @@ struct HomePage {
   }
 
   aboutToAppear(): void {
-    CreateLocalDirUtil.checkAndCreateDir("PhotoSendApp")
+
+    // 创建download下的目录
+    CreateLocalDirUtil.createDownloadDir(this.context);
   }
 
   build() {
