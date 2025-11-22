@@ -1,4 +1,4 @@
-import { ErrorEvent, MessageEvents, ThreadWorkerGlobalScope, worker } from '@kit.ArkTS';
+import { ErrorEvent, MessageEvent, MessageEvents, ThreadWorkerGlobalScope, worker } from '@kit.ArkTS';
 import nativeCamera from 'libentry.so'
 import { fileIo } from '@kit.CoreFileKit';
 
@@ -6,19 +6,28 @@ import { fileIo } from '@kit.CoreFileKit';
 // 获取Worker全局作用域
 const workerPort: ThreadWorkerGlobalScope = worker.workerPort;
 
-// 定义消息数据结构接口（主线程发送给Worker的数据）
-interface DownloadMessage {
+// --- 定义消息结构 ---
+
+// 1. 主线程 -> Worker：下载任务消息
+interface DownloadTaskMessage {
   folder: string;
   name: string;
-  filesDir: string;
 }
 
-// 定义发送消息结构接口（Worker发送给主线程的数据）
-interface PostMessageData {
-  type: 'success' | 'error';
-  message?: string;
-  savePath?: string;
+// 2. Worker -> 主线程：下载成功消息
+interface DownloadSuccessMessage {
+  type: 'downloadSuccess';
+  name: string;
+  imageBuffer: ArrayBuffer;
 }
+
+// 3. Worker -> 主线程：下载失败消息
+interface DownloadFailureMessage {
+  type: 'error';
+  message: string;
+  name?: string; // 文件名可能不存在，比如在onerror中
+}
+
 
 /**
  * Defines the event handler to be called when the worker thread receives a message sent by the host thread.
@@ -26,53 +35,43 @@ interface PostMessageData {
  *@description 处理主线程发送的消息
  * @param event message data
  */
-workerPort.onmessage = async (event: MessageEvents) => {
-  // 解析消息数据（避免解构赋值，符合ArkTS规范）
-  const data: DownloadMessage = event.data as DownloadMessage;
-  const folder: string = data.folder;
-  const name: string = data.name;
-  const filesDir: string = data.filesDir;
-  console.log(`worker 中的参数值分别为，folder:${folder}，name：${name}，fileDir：${filesDir}`);
+workerPort.onmessage =  (event: MessageEvent<DownloadTaskMessage>) => {
+  // 现在 event.data 有了明确的类型 DownloadTaskMessage
+  const taskData = event.data;
+  const folder = taskData.folder;
+  const name = taskData.name;
+
+  console.log(`Worker: 开始下载图片: ${name} from ${folder}`);
 
   try {
     // 1. 调用原生接口下载照片（耗时操作）
     const imageBuffer = nativeCamera.DownloadPhoto(folder, name);
+
     if (!imageBuffer || imageBuffer.byteLength === 0) {
-      const msg: PostMessageData = {
-        type: 'error',
-        message: '下载失败，图片数据为空！'
-      };
-      console.log(`下载失败，图片数据为空，图片名称：${name},图片地址:${folder}`);
-      workerPort.postMessage(msg);
-      return;
+      throw new Error('下载失败，返回的图片数据为空');
     }
 
-    // 2、保存文件
-    const saveDir: string = `${filesDir}/Pictures`;
-    try {
-      await fileIo.access(saveDir);
-    } catch {
-      fileIo.mkdirSync(saveDir);
-    }
+    console.log(`Worker: 下载成功，数据大小: ${imageBuffer.byteLength} bytes`);
 
-    const savePath: string = `${saveDir}/${name}`;
-    const file = await fileIo.open(savePath, fileIo.OpenMode.READ_WRITE | fileIo.OpenMode.CREATE);
-    await fileIo.write(file.fd, new Uint8Array(imageBuffer));
-    await fileIo.close(file.fd);
-
-    // 3. 通知主线程成功
-    const successMsg: PostMessageData = {
-      type: 'success',
-      savePath: savePath
+    // 2. 向主线程发送“下载成功”消息
+    const successMsg: DownloadSuccessMessage = {
+      type: 'downloadSuccess',
+      name: name,
+      imageBuffer: imageBuffer
     };
     workerPort.postMessage(successMsg);
-  }catch (err){
-    const error = err as BusinessError<number>;
-    const errorMsg: PostMessageData = {
+
+  } catch (error) {
+    // 3. 处理下载过程中的已知错误
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    console.error(`Worker: 下载失败: ${errorMsg}`);
+
+    const failureMsg: DownloadFailureMessage = {
       type: 'error',
-      message: `下载失败：${error.message || error.code}`
+      message: errorMsg,
+      name: name // 这里可以明确知道是哪个文件下载失败
     };
-    workerPort.postMessage(errorMsg);
+    workerPort.postMessage(failureMsg);
   }
 };
 
@@ -83,12 +82,15 @@ workerPort.onmessage = async (event: MessageEvents) => {
  * @param event message data
  */
 workerPort.onmessageerror = (event: MessageEvents) => {
-  const errorMsg: PostMessageData = {
+  console.error(`Worker: 消息解析失败: ${event.data}`);
+  const failureMsg: DownloadFailureMessage = {
     type: 'error',
-    message: `消息解析失败：${event.data}`
+    message: '收到无法解析的消息'
+    // name 未知
   };
-  workerPort.postMessage(errorMsg);
+  workerPort.postMessage(failureMsg);
 };
+
 
 /**
  * Defines the event handler to be called when an exception occurs during worker execution.
@@ -97,10 +99,13 @@ workerPort.onmessageerror = (event: MessageEvents) => {
  * @param event error message
  */
 workerPort.onerror = (event: ErrorEvent) => {
-  const errorMsg: PostMessageData = {
+  console.error(`Worker: 发生严重错误 - 消息: ${event.message}, 行号: ${event.lineno}`);
+
+  // 构造一个错误消息发送给主线程
+  const errorMsg: DownloadFailureMessage = {
     type: 'error',
-    message: `Worker错误：${event.message}（行号：${event.lineno}）`
+    message: `Worker内部错误: ${event.message} (行号: ${event.lineno})`
+    // 在这种情况下，无法确定是哪个文件导致的错误，所以name字段省略
   };
   workerPort.postMessage(errorMsg);
-
 };
