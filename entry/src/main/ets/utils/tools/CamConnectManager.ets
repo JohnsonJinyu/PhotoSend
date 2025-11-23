@@ -46,7 +46,7 @@ export class CamConnectionManager {
     try {
       console.warn(`⚠️  开始创建 Worker，当前时间=${new Date().getTime()}`);
       // 创建Worker（路径根据项目结构调整，确保能找到文件）
-      this.checkWorker = new worker.ThreadWorker('../workers/CheckConnection')
+      this.checkWorker = new worker.ThreadWorker('../../workers/CheckConnection')
 
       // 监听Worker 发送的消息（检测结果/错误）
       this.checkWorker.onmessage = (e: MessageEvent<CheckMessage>) => {
@@ -65,6 +65,7 @@ export class CamConnectionManager {
     } catch (error) {
       const err = error as BusinessError;
       console.error(`创建检测Worker失败：${err.message}`);
+      console.error(`创建检测Worker失败：code=${err.code}, message=${err.message}`);
       this.stateMessage = `检测服务初始化失败`;
       this.notifyListeners();
     }
