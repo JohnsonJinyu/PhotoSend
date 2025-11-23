@@ -12,6 +12,7 @@
 #include <hilog/log.h>
 #include <string>
 #include <fstream> 
+#include <stdarg.h>
 
 #define LOG_DOMAIN 0x0005         // 日志域（自定义标识，区分不同模块日志）
 #define LOG_TAG "Camera_Download" // 日志标签（日志中显示的模块名）
@@ -33,6 +34,13 @@ struct AsyncThumbnailData {
     std::string errorMsg;              // 错误信息
 };
 
+
+// 用于在回调函数之间传递的进度信息结构体
+struct DownloadProgressData {
+    std::string fileName;  // 正在下载的文件名
+    float currentProgress; // 当前下载进度 (0.0 ~ 1.0)
+    float totalSize;       // 新增：文件总大小（从progress_start_cb的target获取）
+};
 
 
 
@@ -424,8 +432,69 @@ napi_value GetThumbnailList(napi_env env, napi_callback_info info) {
 
 
 // ###########################################################################
-// 核心函数：从相机下载照片（内部逻辑，不直接暴露给ArkTS）
+// 核心函数：下载进度回调函数
 // ###########################################################################
+
+// 1. 下载开始时调用
+//    - target: 目标值（例如，文件总大小）
+//    - text:   描述性文本（例如，"Downloading image.jpg"）
+//    - 返回:    通常返回 GP_OK (0)
+unsigned int progress_start_cb(GPContext *context, float target, const char *text, void *data) {
+    DownloadProgressData *progress_data = static_cast<DownloadProgressData *>(data);
+   if (progress_data) {
+        progress_data->currentProgress = 0.0f;
+        progress_data->totalSize = target; // 保存文件总大小
+        // 打印开始日志（包含文件名和总大小）
+        OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, 
+                     "文件 %{public}s 下载开始: %{public}s（总大小: %{public}f 字节）",
+                     progress_data->fileName.c_str(), text, target);
+    }
+    return GP_OK;
+}
+
+
+// 2. 下载进度更新时调用 (核心回调)
+//    - id:      进度任务ID（由 start 函数返回）
+//    - current: 当前进度值（例如，已下载的字节数）
+//    - 返回:    void
+void progress_update_cb(GPContext *context, unsigned int id, float current, void *data) {
+    DownloadProgressData *progress_data = static_cast<DownloadProgressData *>(data);
+    if (progress_data && progress_data->totalSize > 0) {
+        // 计算百分比（current是已下载字节数，totalSize是总字节数）
+        float percentage = current / progress_data->totalSize;
+        int progress = static_cast<int>(percentage * 100);
+        // 打印百分比进度日志（与预期格式一致）
+        OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG,
+                     "文件 %{public}s 下载进度：%{public}d%%（已下载: %{public}f 字节 / 总大小: %{public}f 字节）",
+                     progress_data->fileName.c_str(), progress, current, progress_data->totalSize);
+        progress_data->currentProgress = percentage;
+    } else if (progress_data) {
+        // 若总大小未知，打印原始进度值
+        OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG,
+                     "文件 %{public}s 下载中...（当前已下载: %{public}f 字节）",
+                     progress_data->fileName.c_str(), current);
+    }
+}
+
+// 3. 下载结束时调用
+//    - id:      进度任务ID
+//    - 返回:    void
+void progress_stop_cb(GPContext *context, unsigned int id, void *data) {
+    DownloadProgressData *progress_data = static_cast<DownloadProgressData *>(data);
+    if (progress_data) {
+        int finalProgress = static_cast<int>(progress_data->currentProgress * 100);
+        OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG,
+                     "文件 %{public}s 下载结束，最终进度：%{public}d%%",
+                     progress_data->fileName.c_str(), finalProgress);
+    }
+}
+
+
+
+
+
+
+
 // ###########################################################################
 // 核心函数：从相机下载照片到指定的沙箱文件路径
 // ###########################################################################
@@ -462,6 +531,33 @@ bool InternalDownloadFile(const char* folder, const char* filename, const char* 
         return false;
     }
     OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "成功: CameraFile 对象创建. file=%{public}p", file);
+    
+    
+    // =====================================================================
+    // 核心改动：设置进度回调
+    // =====================================================================
+    // 1. 创建并初始化进度数据结构体
+    DownloadProgressData progress_data;
+    progress_data.fileName = filename; // 将当前要下载的文件名传入
+    progress_data.currentProgress = 0.0f;
+
+    // 2. 向 g_context 注册你的回调函数和数据
+    //    这告诉 libgphoto2：当下载开始、进度更新、结束时，
+    //    请调用我的 progress_start_cb, progress_update_cb, progress_stop_cb 函数，
+    //    并把 &progress_data 这个结构体指针作为参数传过去。
+    gp_context_set_progress_funcs(
+        g_context,
+        progress_start_cb,   // 开始回调
+        progress_update_cb,  // 进度更新回调
+        progress_stop_cb,    // 结束回调
+        &progress_data       // 要传递给回调函数的数据
+    );
+
+    // =====================================================================
+    
+    
+    
+    
 
     // 4. 调用 libgphoto2 核心下载接口
     OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "步骤 4: 调用 gp_camera_file_get 开始下载文件.");
@@ -472,6 +568,16 @@ bool InternalDownloadFile(const char* folder, const char* filename, const char* 
         return false;
     }
     OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "成功: gp_camera_file_get 下载文件成功.");
+
+
+    // =====================================================================
+    // 重要：下载完成后，移除回调函数
+    // 这是一个好习惯，可以防止回调函数在后续操作中被意外调用，
+    // 也可以避免悬挂指针的问题。
+    // =====================================================================
+    gp_context_set_progress_funcs(g_context, nullptr, nullptr, nullptr, nullptr);
+    
+    // =====================================================================
 
     // 5. 从 CameraFile 对象中提取数据和大小
     OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "步骤 5: 从 CameraFile 中提取数据和大小.");
