@@ -1,6 +1,7 @@
 // PhoneLocalPhotos.ets
 import fs from "@ohos.file.fs"
 import { promptAction } from "@kit.ArkUI";
+import { uri } from "@kit.ArkTS";
 
 // 图片信息模型
 interface ImageInfo {
@@ -57,11 +58,13 @@ export struct PhoneLocalPhotos {
           const dateStr = this.formatDate(new Date(modifyTime));
 
           imageFiles.push({
-            uri: filePath,
+            uri:  `file://${filePath}`, // 关键：拼接成标准的 URI 格式
             name: fileName,
             modifyTime: modifyTime,
             dateStr: dateStr
           });
+           // 添加此行日志
+       //console.log(`拼接的图片uri为：${}`)
         }
       }
 
