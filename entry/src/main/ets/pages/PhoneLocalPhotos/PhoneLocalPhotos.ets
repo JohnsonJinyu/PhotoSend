@@ -124,14 +124,14 @@ export struct PhoneLocalPhotos {
   build() {
     // 保持不变
     Column() {
-      Row() {
+      /*Row() {
         Text('图片时间轴')
           .fontSize(20)
           .fontWeight(FontWeight.Bold)
           .margin({ top: 10, bottom: 10 })
       }
       .width('100%')
-      .justifyContent(FlexAlign.Center)
+      .justifyContent(FlexAlign.Center)*/
 
       if (this.isLoading) {
         Progress({ value: 0, type: ProgressType.Capsule })
@@ -153,42 +153,41 @@ export struct PhoneLocalPhotos {
         .justifyContent(FlexAlign.Center)
       }
       else {
-        List({ space: 10 }) {
-          ForEach(this.images, (item: ImageInfo, index: number) => {
-            ListItem() {
-              Row() {
-                this.TimeLineDot(index === 0, index === this.images.length - 1)
-                Column() {
-                  Text(item.dateStr)
-                    .fontSize(14)
-                    .fontColor('#666666')
-                    .margin({ bottom: 8 })
-                  Image(item.uri)
-                    .width('100%')
-                    .height(200)
-                    .objectFit(ImageFit.Cover)
-                    .borderRadius(8)
-                    .margin({ bottom: 8 })
-                  Text(item.name)
-                    .fontSize(14)
-                    .fontColor('#333333')
-                    .maxLines(1)
-                    .textOverflow({ overflow: TextOverflow.Ellipsis })
-                }
-                .width('90%')
-                .padding({ left: 10 })
+        Grid() {
+          ForEach(this.images, (item: ImageInfo) => {
+            GridItem() {
+              Column() {
+                // 关键修改：添加 .autoRotate(true)
+                Image(item.uri)
+                  .width('100%')
+                  .aspectRatio(1)
+                  .objectFit(ImageFit.Cover)
+                  .borderRadius(4)
+                  .orientation(ImageRotateOrientation.AUTO)
+                  //.autoRotate(true); // 解决EXIF方向导致的旋转问题
+
+                Text(item.name)
+                  .fontSize(12)
+                  //.fontColor('#333333')
+                  .maxLines(1)
+                  .textOverflow({ overflow: TextOverflow.Ellipsis })
+                  .margin({ top: 4, bottom: 8 })
+                  .width('100%')
+                  .textAlign(TextAlign.Center);
               }
-              .width('100%')
-              .padding({ left: 20, right: 20, top: 5, bottom: 5 })
+              .padding(5);
             }
-          }, (item: ImageInfo) => item.uri)
+          }, (item: ImageInfo) => item.uri);
         }
-        .width('100%')
-        .padding({ top: 10 })
+        .columnsTemplate('1fr 1fr') // 2列布局
+        .columnsGap(10)
+        .rowsGap(10)
+        .padding(10)
+        .width('100%');
       }
     }
     .width('100%')
     .height('100%')
-    .backgroundColor('#F5F5F5')
+    //.backgroundColor('#F5F5F5')
   }
 }
