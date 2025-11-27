@@ -163,6 +163,8 @@ export struct PhoneLocalPhotos {
                   .aspectRatio(1)
                   .objectFit(ImageFit.Cover)
                   .borderRadius(4)
+                  .syncLoad(true)
+                  .dynamicRangeMode(DynamicRangeMode.HIGH)
                   .orientation(ImageRotateOrientation.AUTO)
                   //.autoRotate(true); // 解决EXIF方向导致的旋转问题
 
