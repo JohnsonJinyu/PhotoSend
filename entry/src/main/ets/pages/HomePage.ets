@@ -6,6 +6,7 @@ import { MinePage } from './MinePage/MinePage';
 import { AnimateCallback, CustomTransition } from '../CustomTransition/CustomNavigationUtils';
 import { CreateLocalDirUtil } from '../utils/tools/CreateLocalDir';
 import { common } from '@kit.AbilityKit';
+import dataPreferences from '@ohos.data.preferences';
 
 const TAG: string = 'HomePage';
 const DOMAIN = 0x00201;
@@ -17,6 +18,7 @@ const DOMAIN = 0x00201;
 struct HomePage {
   private tabsController: TabsController = new TabsController();
   @State currentIndex: number = 0;
+  @State appStoragePath: string = ''; // 存储目录路径
   @Provide('pageStack') pageStack: NavPathStack = new NavPathStack();
 
   // 用于下面的创建目录
@@ -37,10 +39,21 @@ struct HomePage {
     return false
   }
 
-  aboutToAppear(): void {
+  async aboutToAppear(): Promise<void> {
 
     // 创建download下的目录
-    CreateLocalDirUtil.createDownloadDir(this.context);
+    //CreateLocalDirUtil.createOrGetDir(this.context);
+    try {
+      // 调用工具类获取目录路径（首次创建，后续直接读取）
+      this.appStoragePath = await CreateLocalDirUtil.createOrGetDir(this.context);
+      console.log(`获取到应用专属目录：${this.appStoragePath}`);
+
+      // 后续逻辑：加载目录下的图片（示例）
+      //await this.loadImagesFromDir();
+    } catch (error) {
+      console.error(`获取目录失败：${JSON.stringify(error)}`);
+      //this.isLoading = false;
+    }
   }
 
   build() {
