@@ -73,7 +73,7 @@ struct HomePage {
 
           TabContent() {
             NavDestination() {
-              PhoneLocalPhotos()
+              PhoneLocalPhotos({ appStoragePath: $appStoragePath })
             }
             .title('相册')
             .hideBackButton(true)

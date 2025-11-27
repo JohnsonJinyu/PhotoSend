@@ -1,7 +1,6 @@
-import { socket } from "@kit.NetworkKit";
-import { common } from "@kit.AbilityKit";
-import  fs  from "@ohos.file.fs"
-import { promptAction, UIContext } from "@kit.ArkUI";
+// PhoneLocalPhotos.ets
+import fs from "@ohos.file.fs"
+import { promptAction } from "@kit.ArkUI";
 
 // 图片信息模型
 interface ImageInfo {
@@ -15,82 +14,75 @@ interface ImageInfo {
 @Component
 export struct PhoneLocalPhotos {
   @State images: ImageInfo[] = []
-  @State isLoading: boolean = true
-  @State appStoragePath: string = ``
+  @State isLoading: boolean = true;
 
-  uiContext = this.getUIContext()
+  // 正确写法：@Watch 装饰在 @Link 变量上，指定触发的方法名
+  @Link @Watch('onPathChange') appStoragePath: string;
 
-  private context = this.uiContext?.getHostContext() as common.UIAbilityContext;
-
-  // 页面初始化时获取图片
-  async aboutToAppear() {
-    try {
-      // 获取应用沙箱存储路径 (API20正确方法)
-      this.appStoragePath = this.context.cacheDir;
-
-      // 加载图片
-      await this.loadImages();
-    }catch (error){
-
-      console.error('获取存储路径失败: ' + JSON.stringify(error));
-      this.isLoading = false;
-
+  // 普通方法：作为 @Watch 的回调（不需要任何装饰器）
+  private onPathChange(newPath: string, oldPath: string) {
+    console.log(`路径变化：旧=${oldPath}，新=${newPath}`);
+    if (newPath && newPath !== oldPath) {
+      this.loadImages(); // 路径变了就重新加载图片
     }
   }
 
-  // 加载并处理图片
+  // 组件初始化时，如果路径已存在，直接加载图片
+  async aboutToAppear() {
+    if (this.appStoragePath) {
+      await this.loadImages();
+    }
+  }
+
+  // 加载图片的逻辑（保持不变）
   async loadImages() {
+    if (!this.appStoragePath) {
+      this.isLoading = false;
+      return;
+    }
+
     try {
       this.isLoading = true;
       const imageFiles: ImageInfo[] = [];
 
-      // 读取目录下的所有文件
+      // 读取应用专属目录下的文件
       const fileList = await fs.listFile(this.appStoragePath);
 
-      // 筛选图片文件并获取信息
+      // 筛选图片文件
       for (const fileName of fileList) {
-        // 检查文件是否为图片
         if (this.isImageFile(fileName)) {
-          const filePath = this.appStoragePath + '/' + fileName;
-
-          // 获取文件信息
+          const filePath = `${this.appStoragePath}/${fileName}`;
           const stat = await fs.stat(filePath);
-
-          // 直接使用stat.mtime（已为时间戳），无需转换
           const modifyTime = stat.mtime;
-
-          // 格式化日期时再转换为Date对象
           const dateStr = this.formatDate(new Date(modifyTime));
 
           imageFiles.push({
-            uri: 'file://' + filePath,
+            uri: filePath,
             name: fileName,
-            modifyTime: modifyTime, // 文件修改时间戳
-
+            modifyTime: modifyTime,
             dateStr: dateStr
           });
         }
       }
 
-      // 按修改时间排序(最新的在前面)
+      // 按修改时间排序
       imageFiles.sort((a, b) => b.modifyTime - a.modifyTime);
       this.images = imageFiles;
     } catch (err) {
       console.error('加载图片失败: ' + JSON.stringify(err));
-      //promptAction.showToast({ message: '加载图片失败' });
+      promptAction.showToast({ message: '加载图片失败' });
     } finally {
       this.isLoading = false;
     }
   }
 
-  // 判断是否为图片文件
+  // 其他辅助方法（保持不变）
   isImageFile(fileName: string): boolean {
     const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp'];
     const ext = fileName.substring(fileName.lastIndexOf('.')).toLowerCase();
     return imageExtensions.includes(ext);
   }
 
-  // 格式化日期显示
   formatDate(date: Date): string {
     const year = date.getFullYear();
     const month = this.padZero(date.getMonth() + 1);
@@ -100,12 +92,10 @@ export struct PhoneLocalPhotos {
     return `${year}-${month}-${day} ${hour}:${minute}`;
   }
 
-  // 数字补零
   padZero(num: number): string {
     return num < 10 ? '0' + num : num.toString();
   }
 
-  // 时间轴节点组件
   @Builder TimeLineDot(isFirst: boolean, isLast: boolean) {
     Column() {
       if (!isFirst) {
@@ -129,8 +119,8 @@ export struct PhoneLocalPhotos {
   }
 
   build() {
+    // 保持不变
     Column() {
-      // 页面标题
       Row() {
         Text('图片时间轴')
           .fontSize(20)
@@ -140,20 +130,18 @@ export struct PhoneLocalPhotos {
       .width('100%')
       .justifyContent(FlexAlign.Center)
 
-      // 加载状态
       if (this.isLoading) {
         Progress({ value: 0, type: ProgressType.Capsule })
           .width(40)
           .height(40)
           .margin({ top: 50 })
       }
-      // 无图片状态
       else if (this.images.length === 0) {
         Column() {
-          Text('📷') // 用相机emoji替代图片
+          Text('📷')
             .fontSize(50)
             .margin({ bottom: 20 })
-          Text('本地无图')
+          Text('暂无图片')
             .fontSize(16)
             .fontColor('#999999')
         }
@@ -161,32 +149,23 @@ export struct PhoneLocalPhotos {
         .height('80%')
         .justifyContent(FlexAlign.Center)
       }
-      // 图片时间轴列表
       else {
         List({ space: 10 }) {
           ForEach(this.images, (item: ImageInfo, index: number) => {
             ListItem() {
               Row() {
-                // 时间轴节点
                 this.TimeLineDot(index === 0, index === this.images.length - 1)
-
-                // 图片和信息
                 Column() {
-                  // 日期时间
                   Text(item.dateStr)
                     .fontSize(14)
                     .fontColor('#666666')
                     .margin({ bottom: 8 })
-
-                  // 图片
                   Image(item.uri)
                     .width('100%')
                     .height(200)
                     .objectFit(ImageFit.Cover)
                     .borderRadius(8)
                     .margin({ bottom: 8 })
-
-                  // 文件名
                   Text(item.name)
                     .fontSize(14)
                     .fontColor('#333333')
@@ -208,7 +187,5 @@ export struct PhoneLocalPhotos {
     .width('100%')
     .height('100%')
     .backgroundColor('#F5F5F5')
-
   }
 }
-
