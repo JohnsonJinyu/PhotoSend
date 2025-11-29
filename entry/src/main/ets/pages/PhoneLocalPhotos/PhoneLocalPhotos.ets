@@ -1,182 +1,115 @@
 // PhoneLocalPhotos.ets
-import fs from "@ohos.file.fs"
 import { promptAction } from "@kit.ArkUI";
-import { uri } from "@kit.ArkTS";
-
-// 图片信息模型
-interface ImageInfo {
-  uri: string;
-  name: string;
-  modifyTime: number;
-  dateStr: string;
-}
+// 导入数据管理类、模型、LazyForEach（官方必需）
+import {  ImageInfo, LocalPhotoDataSource } from './LocalPhotoDataSource';
 
 @Preview
 @Component
 export struct PhoneLocalPhotos {
-  @State images: ImageInfo[] = []
+  // 1. 注入数据管理实例（UI层不存储数据，仅持有数据类引用）
+  @State private dataSource: LocalPhotoDataSource = new LocalPhotoDataSource();
   @State isLoading: boolean = true;
-  @State isRefreshing: boolean = false
-  // 正确写法：@Watch 装饰在 @Link 变量上，指定触发的方法名
+  @State isRefreshing: boolean = false;
+  // 路径变化时，同步更新到数据层
   @Link @Watch('onPathChange') appStoragePath: string;
 
-  // 普通方法：作为 @Watch 的回调（不需要任何装饰器）
+  // 2. 路径变化回调（仅通知数据层更新路径，不处理数据）
   private onPathChange(newPath: string, oldPath: string) {
     console.log(`路径变化：旧=${oldPath}，新=${newPath}`);
     if (newPath && newPath !== oldPath) {
-      this.loadImages(); // 路径变了就重新加载图片
+      this.dataSource.updatePath(newPath); // 同步路径到数据层
+      this.loadImages(); // 触发数据加载
     }
   }
 
-  // 组件初始化时，如果路径已存在，直接加载图片
+  // 3. 组件初始化（仅调用数据层加载方法）
   async aboutToAppear() {
     if (this.appStoragePath) {
+      this.dataSource.updatePath(this.appStoragePath); // 初始化路径
       await this.loadImages();
     }
   }
 
-  // 加载图片的逻辑（保持不变）
-  async loadImages() {
-    if (!this.appStoragePath) {
-      this.isLoading = false;
-      return;
-    }
+  // 4. 加载图片（仅调用数据层方法，不写任何数据逻辑）
+  private async loadImages() {
+    // 区分初始化和刷新状态（UI层仅管理UI状态）
+    const isInitialLoad = this.dataSource.totalCount() === 0;
+    isInitialLoad ? (this.isLoading = true) : (this.isRefreshing = true);
 
     try {
-      this.isLoading = true;
-      const imageFiles: ImageInfo[] = [];
-
-      // 读取应用专属目录下的文件
-      const fileList = await fs.listFile(this.appStoragePath);
-
-      // 筛选图片文件
-      for (const fileName of fileList) {
-        if (this.isImageFile(fileName)) {
-          const filePath = `${this.appStoragePath}/${fileName}`;
-          const stat = await fs.stat(filePath);
-          const modifyTime = stat.mtime;
-          const dateStr = this.formatDate(new Date(modifyTime));
-
-          imageFiles.push({
-            uri: `file://${filePath}`, // 关键：拼接成标准的 URI 格式
-            name: fileName,
-            modifyTime: modifyTime,
-            dateStr: dateStr
-          });
-        }
-      }
-
-      // 按修改时间排序
-      imageFiles.sort((a, b) => b.modifyTime - a.modifyTime);
-      this.images = imageFiles;
+      await this.dataSource.loadData(); // 调用数据层加载数据
     } catch (err) {
-      console.error('加载图片失败: ' + JSON.stringify(err));
+      // UI层仅处理用户提示，不处理数据错误细节
       promptAction.showToast({ message: '加载图片失败' });
     } finally {
+      // 重置UI状态
       this.isLoading = false;
+      this.isRefreshing = false;
     }
   }
 
-  // 其他辅助方法（保持不变）
-  isImageFile(fileName: string): boolean {
-    const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp'];
-    const ext = fileName.substring(fileName.lastIndexOf('.')).toLowerCase();
-    return imageExtensions.includes(ext);
-  }
-
-  formatDate(date: Date): string {
-    const year = date.getFullYear();
-    const month = this.padZero(date.getMonth() + 1);
-    const day = this.padZero(date.getDate());
-    const hour = this.padZero(date.getHours());
-    const minute = this.padZero(date.getMinutes());
-    return `${year}-${month}-${day} ${hour}:${minute}`;
-  }
-
-  padZero(num: number): string {
-    return num < 10 ? '0' + num : num.toString();
-  }
-
-  @Builder
-  TimeLineDot(isFirst: boolean, isLast: boolean) {
-    Column() {
-      if (!isFirst) {
-        Divider()
-          .vertical(true)
-          .height('100%')
-          .color('#DDDDDD')
-      }
-      Circle()
-        .width(12)
-        .height(12)
-        .fill('#007DFF')
-      if (!isLast) {
-        Divider()
-          .vertical(true)
-          .height('100%')
-          .color('#DDDDDD')
-      }
-    }
-    .width(12)
-  }
-
+  // 5. UI渲染（仅渲染数据，无数据操作）
   build() {
-    // 保持不变
     Column() {
-
-
+      // 初始化加载提示
       if (this.isLoading) {
         Progress({ value: 0, type: ProgressType.Capsule })
           .width(40)
           .height(40)
-          .margin({ top: 50 })
-      } else if (this.images.length === 0) {
+          .margin({ top: 50 });
+      }
+      // 无数据提示（通过数据层获取总数）
+      else if (this.dataSource.totalCount() === 0) {
         Column() {
           Text('📷')
             .fontSize(50)
-            .margin({ bottom: 20 })
+            .margin({ bottom: 20 });
           Text('暂无图片')
             .fontSize(16)
-            .fontColor('#999999')
+            .fontColor('#999999');
         }
         .width('100%')
         .height('80%')
-        .justifyContent(FlexAlign.Center)
-      } else {
-
+        .justifyContent(FlexAlign.Center);
+      }
+      // 图片列表（官方 LazyForEach 标准用法）
+      else {
         Refresh({
-          refreshing: this.isLoading,
+          refreshing: this.isRefreshing, // 绑定正确的刷新状态
           promptText: "正在刷新"
         }) {
           Grid() {
-            ForEach(this.images, (item: ImageInfo) => {
-              GridItem() {
-                Column() {
-                  // 关键修改：添加 .autoRotate(true)
-                  Image(item.uri)
-                    .width('100%')
-                    .aspectRatio(1)
-                    .objectFit(ImageFit.Cover)
-                    .borderRadius(4)
-                    .syncLoad(true)
-                    .dynamicRangeMode(DynamicRangeMode.HIGH)
-                    .orientation(ImageRotateOrientation.AUTO)
-                  //.autoRotate(true); // 解决EXIF方向导致的旋转问题
+            // --------------- 官方 LazyForEach 三参数用法 ---------------
+            LazyForEach(
+              this.dataSource, // 第1参数：IDataSource 实例（类型完全匹配）
+              (item: ImageInfo) => { // 第2参数：项生成器（仅渲染UI）
+                GridItem() {
+                  Column() {
+                    Image(item.uri)
+                      .width('100%')
+                      .aspectRatio(1)
+                      .objectFit(ImageFit.Cover)
+                      .borderRadius(4)
+                      .syncLoad(false) // 异步加载
 
-                  Text(item.name)
-                    .fontSize(12)
-                    //.fontColor('#333333')
-                    .maxLines(1)
-                    .textOverflow({ overflow: TextOverflow.Ellipsis })
-                    .margin({ top: 4, bottom: 8 })
-                    .width('100%')
-                    .textAlign(TextAlign.Center);
+                      .dynamicRangeMode(DynamicRangeMode.HIGH)
+                      .orientation(ImageRotateOrientation.AUTO);
+
+                    Text(item.name)
+                      .fontSize(12)
+                      .maxLines(1)
+                      .textOverflow({ overflow: TextOverflow.Ellipsis })
+                      .margin({ top: 4, bottom: 8 })
+                      .width('100%')
+                      .textAlign(TextAlign.Center);
+                  }
+                  .padding(5);
                 }
-                .padding(5);
-              }
-            }, (item: ImageInfo) => item.uri);
+              },
+              (item: ImageInfo) => item.uri // 第3参数：唯一键（与数据层保持一致）
+            );
           }
-          .columnsTemplate('1fr 1fr') // 2列布局
+          .columnsTemplate('1fr 1fr')
           .columnsGap(10)
           .rowsGap(10)
           .padding(10)
@@ -184,18 +117,12 @@ export struct PhoneLocalPhotos {
         }
         .refreshOffset(96)
         .pullToRefresh(true)
-        .onRefreshing(()=>{
-          setTimeout(() => {
-            this.isRefreshing = false
-          }, 2000)
-          this.loadImages()
-        })
-
+        .onRefreshing(() => {
+          this.loadImages(); // 下拉刷新仅调用加载方法
+        });
       }
     }
     .width('100%')
-    .height('100%')
-
-    //.backgroundColor('#F5F5F5')
+    .height('100%');
   }
 }
