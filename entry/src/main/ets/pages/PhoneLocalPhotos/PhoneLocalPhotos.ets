@@ -16,7 +16,7 @@ interface ImageInfo {
 export struct PhoneLocalPhotos {
   @State images: ImageInfo[] = []
   @State isLoading: boolean = true;
-
+  @State isRefreshing: boolean = false
   // 正确写法：@Watch 装饰在 @Link 变量上，指定触发的方法名
   @Link @Watch('onPathChange') appStoragePath: string;
 
@@ -58,13 +58,11 @@ export struct PhoneLocalPhotos {
           const dateStr = this.formatDate(new Date(modifyTime));
 
           imageFiles.push({
-            uri:  `file://${filePath}`, // 关键：拼接成标准的 URI 格式
+            uri: `file://${filePath}`, // 关键：拼接成标准的 URI 格式
             name: fileName,
             modifyTime: modifyTime,
             dateStr: dateStr
           });
-           // 添加此行日志
-       //console.log(`拼接的图片uri为：${}`)
         }
       }
 
@@ -99,7 +97,8 @@ export struct PhoneLocalPhotos {
     return num < 10 ? '0' + num : num.toString();
   }
 
-  @Builder TimeLineDot(isFirst: boolean, isLast: boolean) {
+  @Builder
+  TimeLineDot(isFirst: boolean, isLast: boolean) {
     Column() {
       if (!isFirst) {
         Divider()
@@ -124,22 +123,14 @@ export struct PhoneLocalPhotos {
   build() {
     // 保持不变
     Column() {
-      /*Row() {
-        Text('图片时间轴')
-          .fontSize(20)
-          .fontWeight(FontWeight.Bold)
-          .margin({ top: 10, bottom: 10 })
-      }
-      .width('100%')
-      .justifyContent(FlexAlign.Center)*/
+
 
       if (this.isLoading) {
         Progress({ value: 0, type: ProgressType.Capsule })
           .width(40)
           .height(40)
           .margin({ top: 50 })
-      }
-      else if (this.images.length === 0) {
+      } else if (this.images.length === 0) {
         Column() {
           Text('📷')
             .fontSize(50)
@@ -151,45 +142,60 @@ export struct PhoneLocalPhotos {
         .width('100%')
         .height('80%')
         .justifyContent(FlexAlign.Center)
-      }
-      else {
-        Grid() {
-          ForEach(this.images, (item: ImageInfo) => {
-            GridItem() {
-              Column() {
-                // 关键修改：添加 .autoRotate(true)
-                Image(item.uri)
-                  .width('100%')
-                  .aspectRatio(1)
-                  .objectFit(ImageFit.Cover)
-                  .borderRadius(4)
-                  .syncLoad(true)
-                  .dynamicRangeMode(DynamicRangeMode.HIGH)
-                  .orientation(ImageRotateOrientation.AUTO)
+      } else {
+
+        Refresh({
+          refreshing: this.isLoading,
+          promptText: "正在刷新"
+        }) {
+          Grid() {
+            ForEach(this.images, (item: ImageInfo) => {
+              GridItem() {
+                Column() {
+                  // 关键修改：添加 .autoRotate(true)
+                  Image(item.uri)
+                    .width('100%')
+                    .aspectRatio(1)
+                    .objectFit(ImageFit.Cover)
+                    .borderRadius(4)
+                    .syncLoad(true)
+                    .dynamicRangeMode(DynamicRangeMode.HIGH)
+                    .orientation(ImageRotateOrientation.AUTO)
                   //.autoRotate(true); // 解决EXIF方向导致的旋转问题
 
-                Text(item.name)
-                  .fontSize(12)
-                  //.fontColor('#333333')
-                  .maxLines(1)
-                  .textOverflow({ overflow: TextOverflow.Ellipsis })
-                  .margin({ top: 4, bottom: 8 })
-                  .width('100%')
-                  .textAlign(TextAlign.Center);
+                  Text(item.name)
+                    .fontSize(12)
+                    //.fontColor('#333333')
+                    .maxLines(1)
+                    .textOverflow({ overflow: TextOverflow.Ellipsis })
+                    .margin({ top: 4, bottom: 8 })
+                    .width('100%')
+                    .textAlign(TextAlign.Center);
+                }
+                .padding(5);
               }
-              .padding(5);
-            }
-          }, (item: ImageInfo) => item.uri);
+            }, (item: ImageInfo) => item.uri);
+          }
+          .columnsTemplate('1fr 1fr') // 2列布局
+          .columnsGap(10)
+          .rowsGap(10)
+          .padding(10)
+          .width('100%');
         }
-        .columnsTemplate('1fr 1fr') // 2列布局
-        .columnsGap(10)
-        .rowsGap(10)
-        .padding(10)
-        .width('100%');
+        .refreshOffset(96)
+        .pullToRefresh(true)
+        .onRefreshing(()=>{
+          setTimeout(() => {
+            this.isRefreshing = false
+          }, 2000)
+          this.loadImages()
+        })
+
       }
     }
     .width('100%')
     .height('100%')
+
     //.backgroundColor('#F5F5F5')
   }
 }
