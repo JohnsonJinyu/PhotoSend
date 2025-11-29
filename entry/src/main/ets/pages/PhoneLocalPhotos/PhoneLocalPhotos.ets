@@ -1,64 +1,87 @@
 // PhoneLocalPhotos.ets
 import { promptAction } from "@kit.ArkUI";
-// 导入数据管理类、模型、LazyForEach（官方必需）
-import {  ImageInfo, LocalPhotoDataSource } from './LocalPhotoDataSource';
+import { ImageInfo, LocalPhotoDataSource } from './LocalPhotoDataSource';
 
 @Preview
 @Component
 export struct PhoneLocalPhotos {
-  // 1. 注入数据管理实例（UI层不存储数据，仅持有数据类引用）
   @State private dataSource: LocalPhotoDataSource = new LocalPhotoDataSource();
   @State isLoading: boolean = true;
   @State isRefreshing: boolean = false;
-  // 路径变化时，同步更新到数据层
   @Link @Watch('onPathChange') appStoragePath: string;
 
-  // 2. 路径变化回调（仅通知数据层更新路径，不处理数据）
+  // 路径变化回调（不变）
   private onPathChange(newPath: string, oldPath: string) {
     console.log(`路径变化：旧=${oldPath}，新=${newPath}`);
     if (newPath && newPath !== oldPath) {
-      this.dataSource.updatePath(newPath); // 同步路径到数据层
-      this.loadImages(); // 触发数据加载
+      this.dataSource.updatePath(newPath);
+      this.loadImages();
     }
   }
 
-  // 3. 组件初始化（仅调用数据层加载方法）
+  // 组件初始化（不变）
   async aboutToAppear() {
     if (this.appStoragePath) {
-      this.dataSource.updatePath(this.appStoragePath); // 初始化路径
+      this.dataSource.updatePath(this.appStoragePath);
       await this.loadImages();
     }
   }
 
-  // 4. 加载图片（仅调用数据层方法，不写任何数据逻辑）
+  // 加载图片（不变）
   private async loadImages() {
-    // 区分初始化和刷新状态（UI层仅管理UI状态）
     const isInitialLoad = this.dataSource.totalCount() === 0;
     isInitialLoad ? (this.isLoading = true) : (this.isRefreshing = true);
 
     try {
-      await this.dataSource.loadData(); // 调用数据层加载数据
+      await this.dataSource.loadData();
     } catch (err) {
-      // UI层仅处理用户提示，不处理数据错误细节
       promptAction.showToast({ message: '加载图片失败' });
     } finally {
-      // 重置UI状态
       this.isLoading = false;
       this.isRefreshing = false;
     }
   }
 
-  // 5. UI渲染（仅渲染数据，无数据操作）
+  // --------------- 关键：用 @Builder 封装单个 GridItem 布局（直观易懂）---------------
+  @Builder
+  private ImageGridItem(item: ImageInfo) {
+    // 这里就是单个 GridItem 的布局，和常规 UI 写法完全一致
+    GridItem() {
+      Column() {
+        Image(item.uri)
+          .width('100%')
+          .aspectRatio(1)
+          .objectFit(ImageFit.Cover)
+          .borderRadius(4)
+          .syncLoad(false) // 必须开启异步加载，避免卡顿
+          .autoResize(true)
+          //.priority(ImagePriority.HIGH) // 提升缓存优先级，减少重新加载
+          .dynamicRangeMode(DynamicRangeMode.HIGH)
+          .orientation(ImageRotateOrientation.AUTO);
+
+        Text(item.name)
+          .fontSize(12)
+          .maxLines(1)
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
+          .margin({ top: 4, bottom: 8 })
+          .width('100%')
+          .textAlign(TextAlign.Center);
+      }
+      .padding(5);
+    }
+  }
+
+  // --------------- UI 渲染（扁平化结构，一眼看懂）---------------
   build() {
     Column() {
-      // 初始化加载提示
+      // 加载中提示
       if (this.isLoading) {
         Progress({ value: 0, type: ProgressType.Capsule })
           .width(40)
           .height(40)
           .margin({ top: 50 });
       }
-      // 无数据提示（通过数据层获取总数）
+      // 无数据提示
       else if (this.dataSource.totalCount() === 0) {
         Column() {
           Text('📷')
@@ -72,43 +95,29 @@ export struct PhoneLocalPhotos {
         .height('80%')
         .justifyContent(FlexAlign.Center);
       }
-      // 图片列表（官方 LazyForEach 标准用法）
+      // 图片列表（核心：扁平化 LazyForEach 写法）
       else {
         Refresh({
-          refreshing: this.isRefreshing, // 绑定正确的刷新状态
+          refreshing: this.isRefreshing,
           promptText: "正在刷新"
         }) {
+          // 1. 外层是 Grid 容器（常规布局）
           Grid() {
-            // --------------- 官方 LazyForEach 三参数用法 ---------------
+            // 2. Grid 直接包含 LazyForEach，生成 GridItem
             LazyForEach(
-              this.dataSource, // 第1参数：IDataSource 实例（类型完全匹配）
-              (item: ImageInfo) => { // 第2参数：项生成器（仅渲染UI）
-                GridItem() {
-                  Column() {
-                    Image(item.uri)
-                      .width('100%')
-                      .aspectRatio(1)
-                      .objectFit(ImageFit.Cover)
-                      .borderRadius(4)
-                      .syncLoad(false) // 异步加载
-
-                      .dynamicRangeMode(DynamicRangeMode.HIGH)
-                      .orientation(ImageRotateOrientation.AUTO);
-
-                    Text(item.name)
-                      .fontSize(12)
-                      .maxLines(1)
-                      .textOverflow({ overflow: TextOverflow.Ellipsis })
-                      .margin({ top: 4, bottom: 8 })
-                      .width('100%')
-                      .textAlign(TextAlign.Center);
-                  }
-                  .padding(5);
-                }
+              this.dataSource, // 第1参数：数据源（和 ForEach 的数组作用一样）
+              (item: ImageInfo) => {
+                // 第2参数：生成每个 GridItem（直接调用封装好的 Builder，直观！）
+                this.ImageGridItem(item);
               },
-              (item: ImageInfo) => item.uri // 第3参数：唯一键（与数据层保持一致）
-            );
+              (item: ImageInfo) => item.uri // 第3参数：唯一键（和 ForEach 的 key 作用一样）
+            )
+            // 优化：缓存20个组件，滑回不重新加载
+
+            // 优化：预加载5个，避免滑动空白
+            //.prefetchCount(5);
           }
+          // Grid 的布局属性（常规写法）
           .columnsTemplate('1fr 1fr')
           .columnsGap(10)
           .rowsGap(10)
@@ -118,7 +127,7 @@ export struct PhoneLocalPhotos {
         .refreshOffset(96)
         .pullToRefresh(true)
         .onRefreshing(() => {
-          this.loadImages(); // 下拉刷新仅调用加载方法
+          this.loadImages();
         });
       }
     }
