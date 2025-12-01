@@ -21,6 +21,15 @@
       "pageSourceFile": "src/main/ets/pages/CamPhotoPreAndDownload/BigImagePage.ets",
       "buildFunction": "BigImagePageBuilder",
       "data": { "description": "this is big image preview page" }
+    },
+    {
+      "name": "LocalPhotoDetail",
+      "pageSourceFile": "src/main/ets/pages/PhoneLocalPhotos/LocalPhotoDetail.ets",
+      "buildFunction": "LocalPhotoDetailBuilder",
+      "data": {
+        "description": "this is Local Photo Detail page"
+      }
+
     }
   ]
 }

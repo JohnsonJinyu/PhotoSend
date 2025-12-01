@@ -5,6 +5,9 @@ import { ImageInfo, LocalPhotoDataSource } from './LocalPhotoDataSource';
 @Preview
 @Component
 export struct PhoneLocalPhotos {
+  @Consume('pageStack') pageStack: NavPathStack;
+
+
   @State private dataSource: LocalPhotoDataSource = new LocalPhotoDataSource();
   @State isLoading: boolean = true;
   @State isRefreshing: boolean = false;
@@ -57,7 +60,13 @@ export struct PhoneLocalPhotos {
           .autoResize(true)
           //.priority(ImagePriority.HIGH) // 提升缓存优先级，减少重新加载
           .dynamicRangeMode(DynamicRangeMode.HIGH)
-          .orientation(ImageRotateOrientation.AUTO);
+          .orientation(ImageRotateOrientation.AUTO)
+          .geometryTransition(item.uri,{follow:false})
+          .onClick(()=>{
+            this.pageStack.pushPathByName("LocalPhotoDetail",item,true)
+
+          })
+
 
         Text(item.name)
           .fontSize(12)
@@ -112,10 +121,7 @@ export struct PhoneLocalPhotos {
               },
               (item: ImageInfo) => item.uri // 第3参数：唯一键（和 ForEach 的 key 作用一样）
             )
-            // 优化：缓存20个组件，滑回不重新加载
 
-            // 优化：预加载5个，避免滑动空白
-            //.prefetchCount(5);
           }
           // Grid 的布局属性（常规写法）
           .columnsTemplate('1fr 1fr')

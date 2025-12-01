@@ -3,8 +3,6 @@ import nativeCamera from 'libentry.so'
 import { IsoDialog } from 'ets/component/CameraControlDialog/IsoDialog'
 import { ShutterSpeedDialog } from 'ets/component/CameraControlDialog/ShutterSpeedDialog'
 import { image } from '@kit.ImageKit';
-import { fileIo } from '@kit.CoreFileKit'
-import { common } from '@kit.AbilityKit';
 import { cameraParamManager, ParamOption } from '../../utils/tools/CameraParamManager'
 import { ApertureDialog } from '../../component/CameraControlDialog/ApertureDialog';
 import { FocusModeDialog } from '../../component/CameraControlDialog/FocusModeDialog';
@@ -401,45 +399,6 @@ export struct RemoteControl {
   }
 
 
-  /*takeAndDownloadKnown() {
-    // 完全保留原有逻辑
-    try {
-      const ok = nativeCamera.TakePhoto();
-      if (!ok) {
-        this.statusMessage = '拍照失败';
-        return;
-      }
-
-      const folder = "DCIM/100CANON";
-      const filename = "IMG_0001.JPG";
-      const arrBuf: ArrayBuffer = nativeCamera.DownloadPhoto(folder, filename);
-      if (!arrBuf) {
-        this.statusMessage = '下载失败';
-        return;
-      }
-
-      //const context = getContext(this) as common.UIAbilityContext;
-      const context = this.getUIContext().getHostContext() as common.UIAbilityContext
-      const savePath = `${context.filesDir}/${filename}`;
-      const fdAny = fileIo.openSync(savePath, fileIo.OpenMode.CREATE | fileIo.OpenMode.READ_WRITE);
-      const uint8Arr = new Uint8Array(arrBuf);
-
-      if (typeof fdAny === 'number') {
-        fileIo.writeSync(fdAny, uint8Arr);
-        fileIo.closeSync(fdAny);
-      } else {
-        fileIo.writeSync(fdAny.fd, uint8Arr);
-        fileIo.closeSync(fdAny);
-      }
-
-      this.previewImage = savePath;
-      this.photoList.push({ folder: savePath, name: filename });
-      this.statusMessage = '拍照并保存成功';
-    } catch (e) {
-      console.error("异常: " + JSON.stringify(e));
-      this.statusMessage = '拍照下载异常';
-    }
-  }*/
 
 
   getCameraInfo() {
