@@ -56,6 +56,11 @@ export class LocalPhotoDataSource implements IDataSource{
     }
   }
 
+  // 👇 新增这行！用于外部获取完整图片数组（返回副本，避免源数据被修改）
+  get dataList(): ImageInfo[] {
+    return [...this.data]; // 解构赋值返回副本，安全无副作用
+  }
+
   // --------------- 自定义数据操作方法（供UI层调用）---------------
   // 1. 更新文件路径（UI层路径变化时调用）
   updatePath(newPath: string): void {

@@ -3,6 +3,13 @@
 import { promptAction } from "@kit.ArkUI";
 import { ImageInfo, LocalPhotoDataSource } from './LocalPhotoDataSource';
 
+
+// 👇 新增：定义跳转详情页的参数接口（和 LocalPhotoDetail 中的 ReceiveParams 结构一致）
+interface PhotoDetailParams {
+  imageList: ImageInfo[];
+  selectedIndex: number;
+}
+
 @Preview
 @Component
 export struct PhoneLocalPhotos {
@@ -66,7 +73,11 @@ export struct PhoneLocalPhotos {
           .orientation(ImageRotateOrientation.AUTO)
           .geometryTransition(item.uri,{follow:false})
           .onClick(()=>{
-            this.pageStack.pushPathByName("LocalPhotoDetail",item,true)
+            this.pageStack.pushPathByName("LocalPhotoDetail",
+              {
+                imageList:this.dataSource.dataList,
+                selectedIndex: index // 选中索引
+              } as PhotoDetailParams,true)
 
           })
 
