@@ -1,4 +1,5 @@
 // PhoneLocalPhotos.ets
+// 以Gird显示的图片里表页面
 import { promptAction } from "@kit.ArkUI";
 import { ImageInfo, LocalPhotoDataSource } from './LocalPhotoDataSource';
 
@@ -11,6 +12,8 @@ export struct PhoneLocalPhotos {
   @State private dataSource: LocalPhotoDataSource = new LocalPhotoDataSource();
   @State isLoading: boolean = true;
   @State isRefreshing: boolean = false;
+  @State selectedIndex:number = 0  // 新增：记录当前选中的图片索引（用于传递给详情页）
+
   @Link @Watch('onPathChange') appStoragePath: string;
 
   // 路径变化回调（不变）
@@ -47,7 +50,7 @@ export struct PhoneLocalPhotos {
 
   // --------------- 关键：用 @Builder 封装单个 GridItem 布局（直观易懂）---------------
   @Builder
-  private ImageGridItem(item: ImageInfo) {
+  private ImageGridItem(item: ImageInfo,index:number) {
     // 这里就是单个 GridItem 的布局，和常规 UI 写法完全一致
     GridItem() {
       Column() {
@@ -115,9 +118,9 @@ export struct PhoneLocalPhotos {
             // 2. Grid 直接包含 LazyForEach，生成 GridItem
             LazyForEach(
               this.dataSource, // 第1参数：数据源（和 ForEach 的数组作用一样）
-              (item: ImageInfo) => {
+              (item: ImageInfo,index:number) => {
                 // 第2参数：生成每个 GridItem（直接调用封装好的 Builder，直观！）
-                this.ImageGridItem(item);
+                this.ImageGridItem(item,index);
               },
               (item: ImageInfo) => item.uri // 第3参数：唯一键（和 ForEach 的 key 作用一样）
             )
