@@ -19,7 +19,7 @@ export struct PhoneLocalPhotos {
   @State private dataSource: LocalPhotoDataSource = new LocalPhotoDataSource();
   @State isLoading: boolean = true;
   @State isRefreshing: boolean = false;
-  @State selectedIndex:number = 0  // 新增：记录当前选中的图片索引（用于传递给详情页）
+  @StorageLink('selectedIndex') selectedIndex:number = 0  // 记录当前选中的图片索引（用于传递给详情页）
 
   @Link @Watch('onPathChange') appStoragePath: string;
 
@@ -73,6 +73,10 @@ export struct PhoneLocalPhotos {
           .orientation(ImageRotateOrientation.AUTO)
           .geometryTransition(item.uri,{follow:false})
           .onClick(()=>{
+            if (!index) {
+              index=0
+            }
+            this.selectedIndex = index
             this.pageStack.pushPathByName("LocalPhotoDetail",
               {
                 imageList:this.dataSource.dataList,

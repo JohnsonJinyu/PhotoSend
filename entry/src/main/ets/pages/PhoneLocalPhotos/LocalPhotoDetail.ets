@@ -1,3 +1,5 @@
+// LocalPhotoDetail.ets
+
 // 导入数据类型：图片信息结构定义
 import { ImageInfo } from "./LocalPhotoDataSource";
 // 导入全局常量：默认宽度、间距、显示数量等（统一配置，便于维护）
@@ -161,7 +163,7 @@ struct LocalPhotoDetail {
       // 栈布局（Stack）：大图区域在下层，小图导航在上层（底部对齐）
       Stack({ alignContent: Alignment.Bottom }) {
         // --------------- 大图展示区域（核心功能区）---------------
-        List({ scroller: this.bigScroller }) { // 横向列表承载大图
+        List({ scroller: this.bigScroller ,initialIndex:this.selectedIndex}) { // 横向列表承载大图
           // 循环渲染所有图片（基于接收的imageList）
           ForEach(
             this.params?.imageList || [], // 数据源：列表页传递的图片列表（空数组兜底）
