@@ -53,11 +53,15 @@ export function BigImagePageBuilder() {
 
 @Component
 export struct BigImagePage {
+  // 状态变量
   @State pageInfos: NavPathStack = new NavPathStack();
   @State animationProperties: AnimationProperties = new AnimationProperties(this.getUIContext());
   @State title: string = '';
   @State currentPictureFolder: string = '';
   @State currentPictureName: string = '';
+  // 新增：控制加载提示显示的状态变量
+  @State isLoading: boolean = false;
+
   private myNodeController: MyNodeController | undefined;
   private downloadWorker: worker.ThreadWorker | null = null;
   private pageId: number = -1;
@@ -93,6 +97,10 @@ export struct BigImagePage {
         console.log(`主线程收到 Worker 消息：${JSON.stringify(e.data)}`); // 打印完整消息
         const data = e.data;
         // 增加校验：如果 data 不存在，直接返回并提示错误
+
+        // 【关键修复3】无论结果如何，首先关闭加载提示
+        this.hideProgressDialog();
+
         if (!data) {
           console.error("主线程收到 Worker 消息，但 data 为 undefined");
           this.showToast("下载失败：消息解析异常");
@@ -150,6 +158,25 @@ export struct BigImagePage {
     return true;
   }
 
+
+  // 新增：显示进度弹窗的方法
+  private showProgressDialog() {
+    this.isLoading = true;
+    // 设置30秒超时，强制关闭并提示
+    setTimeout(() => {
+      if (this.isLoading) {
+        this.hideProgressDialog();
+        this.showToast("下载超时，请检查相机连接");
+      }
+    }, 30000);
+  }
+
+  // 新增：隐藏进度弹窗的方法
+  private hideProgressDialog() {
+    this.isLoading  = false;
+  }
+
+
   /**
    * @description 触发下载流程
    */
@@ -166,7 +193,9 @@ export struct BigImagePage {
       return;
     }
 
-    this.showToast("下载中...");
+    //this.showToast("下载中...");
+    this.showProgressDialog()
+
 
     try {
       // 构建沙箱临时路径（用 UIContext.filesDir，避免不存在的 API）
@@ -190,6 +219,7 @@ export struct BigImagePage {
     } catch (error) {
       const err = error as BusinessError;
       console.error(`创建临时路径失败：${err.message}`);
+      this.hideProgressDialog();
       this.showToast(`下载失败：无法创建临时文件`);
     }
   }
@@ -358,6 +388,34 @@ export struct BigImagePage {
           .alignItems(HorizontalAlign.Start)
         }
         .position({ y: this.animationProperties.positionValue })
+
+        if (this.isLoading){
+          // 加载动画文字
+          Column(){
+            Column(){
+              // 加载动画和文字
+              LoadingProgress()
+                .width(50)
+                .height(50)
+                .color(Color.Green)
+              Text(`正在从相机下载...`)
+                .fontSize(16)
+                .fontColor(Color.White)
+                .margin({top:8})
+            }
+            .justifyContent(FlexAlign.Center)
+            .alignItems(HorizontalAlign.Center)
+          }
+          .width('100%')
+          .height('100%')
+          .justifyContent(FlexAlign.Center)
+          .alignItems(HorizontalAlign.Center)
+          .backgroundColor('rgba(0,0,0,0.6)') // 深色半透明遮罩
+          .zIndex(999) // 确保位于最顶层
+
+
+        }
+
       }
       .scale({ x: this.animationProperties.scaleValue, y: this.animationProperties.scaleValue })
       .translate({ x: this.animationProperties.translateX, y: this.animationProperties.translateY })

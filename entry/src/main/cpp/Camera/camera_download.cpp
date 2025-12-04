@@ -693,24 +693,3 @@ napi_value DownloadPhoto(napi_env env, napi_callback_info info) {
     return result;
 }
 
-// ###########################################################################
-// 关键逻辑总结（帮你彻底搞懂）
-// ###########################################################################
-/*
-1. 数据传递流程（从相机 → C++内部 → ArkTS）：
-   相机 → gp_camera_file_get → CameraFile对象（libgphoto2管理）→ 
-   gp_file_get_data_and_size提取 → malloc分配独立内存 → memcpy拷贝 → 
-   photo_data（DownloadPhoto的变量）→ napi_create_buffer_copy → ArkTS的Buffer
-
-2. 核心传递原理（为什么用二级指针uint8_t** data）：
-   - C++中，函数参数默认是"值传递"，普通指针（uint8_t*）只能传递数据，不能修改指针本身的地址
-   - 二级指针（uint8_t**）本质是"指针的指针"，可以让InternalDownloadFile内部修改外部指针（photo_data）的地址
-   - 简单说：InternalDownloadFile在内部分配内存后，把内存地址通过*data传给photo_data，这样DownloadPhoto就能拿到数据了
-
-3. 返回给ArkTS的数据类型：
-   - 是ArkTS的【Buffer类型】（二进制缓冲区），不是普通字符串或对象
-   - ArkTS侧可以通过Buffer操作二进制数据，比如：
-     - 转成Uint8Array：new Uint8Array(buffer) → 操作单个字节
-     - 显示图片：通过Image组件的src属性加载（需配合Blob或Base64转换）
-     - 保存文件：通过文件系统API将Buffer写入本地文件（如.jpg格式）
-*/
