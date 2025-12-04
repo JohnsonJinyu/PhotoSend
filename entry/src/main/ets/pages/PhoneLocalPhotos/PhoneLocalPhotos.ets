@@ -6,9 +6,10 @@ import { ImageInfo, LocalPhotoDataSource } from './LocalPhotoDataSource';
 
 // 👇 新增：定义跳转详情页的参数接口（和 LocalPhotoDetail 中的 ReceiveParams 结构一致）
 interface PhotoDetailParams {
-  imageList: ImageInfo[];
   selectedIndex: number;
 }
+
+
 
 @Preview
 @Component
@@ -16,7 +17,7 @@ export struct PhoneLocalPhotos {
   @Consume('pageStack') pageStack: NavPathStack;
 
 
-  @State private dataSource: LocalPhotoDataSource = new LocalPhotoDataSource();
+  @State private dataSource: LocalPhotoDataSource = LocalPhotoDataSource.getInstance(); // 用单例
   @State isLoading: boolean = true;
   @State isRefreshing: boolean = false;
   @StorageLink('selectedIndex') selectedIndex:number = 0  // 记录当前选中的图片索引（用于传递给详情页）
@@ -72,17 +73,15 @@ export struct PhoneLocalPhotos {
           .dynamicRangeMode(DynamicRangeMode.HIGH)
           .orientation(ImageRotateOrientation.AUTO)
           .geometryTransition(item.uri,{follow:false})
+          // 跳转详情页时，无需传递 imageList（详情页直接从单例获取），仅传递选中索引即可
           .onClick(()=>{
-            if (!index) {
-              index=0
-            }
-            this.selectedIndex = index
-            this.pageStack.pushPathByName("LocalPhotoDetail",
-              {
-                imageList:this.dataSource.dataList,
-                selectedIndex: index // 选中索引
-              } as PhotoDetailParams,true)
-
+            this.selectedIndex = index;
+            // 1. 先创建符合接口的参数对象（显式类型约束）
+            const detailParams: PhotoDetailParams = {
+              selectedIndex: index
+            };
+            // 2. 传递参数（无需额外断言，类型已匹配）
+            this.pageStack.pushPathByName("LocalPhotoDetail", detailParams, true);
           })
 
 

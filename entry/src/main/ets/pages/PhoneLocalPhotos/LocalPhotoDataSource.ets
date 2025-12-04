@@ -21,9 +21,26 @@ export class LocalPhotoDataSource implements IDataSource{
   private appStoragePath:string=''
 
 
+  // 单例核心：静态实例 + 私有构造函数
+  private static instance:LocalPhotoDataSource
+
+
   // 构造函数：初始化路径
   constructor(initialPath:string='') {
     this.appStoragePath = initialPath
+  }
+
+
+  // 全局获取单例的方法
+  public static getInstance(initialPath:string=''):LocalPhotoDataSource{
+    if (!LocalPhotoDataSource.instance) {
+      LocalPhotoDataSource.instance = new LocalPhotoDataSource(initialPath);
+    }
+    // 如果传入了新路径，更新单例的路径（可选）
+    if (initialPath) {
+      LocalPhotoDataSource.instance.appStoragePath = initialPath;
+    }
+    return LocalPhotoDataSource.instance;
   }
 
 

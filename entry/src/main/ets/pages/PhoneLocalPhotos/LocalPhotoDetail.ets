@@ -1,7 +1,7 @@
 // LocalPhotoDetail.ets
 
 // 导入数据类型：图片信息结构定义
-import { ImageInfo } from "./LocalPhotoDataSource";
+import { ImageInfo, LocalPhotoDataSource } from "./LocalPhotoDataSource";
 // 导入全局常量：默认宽度、间距、显示数量等（统一配置，便于维护）
 import Constants from "../../common/constants/Constants";
 // 导入基础工具：错误类型定义（用于异常捕获）
@@ -17,7 +17,6 @@ import { display } from "@kit.ArkUI";
  * - selectedIndex：列表页点击的图片索引（从0开始）
  */
 interface ReceiveParams {
-  imageList: ImageInfo[];
   selectedIndex: number;
 }
 
@@ -35,6 +34,7 @@ export function LocalPhotoDetailBuilder() {
  */
 @Component
 struct LocalPhotoDetail {
+  private dataSource: LocalPhotoDataSource = LocalPhotoDataSource.getInstance(); // 全局单例
   // 1. 核心参数：存储列表页传递的图片列表和选中索引（初始为null，onReady中赋值）
   private params: ReceiveParams | null = null;
 
@@ -81,7 +81,7 @@ struct LocalPhotoDetail {
    */
   onPageShow() {
     // 校验：参数存在且图片列表非空（避免空指针）
-    if (this.params && this.params.imageList.length > 0) {
+    if (this.params && this.dataSource.totalCount()> 0) {
       // 同步选中索引（确保和列表页点击的一致）
       this.selectedIndex = this.params.selectedIndex;
       // 滚动大图到目标位置：索引 * 屏幕宽度 = 目标图片的横向偏移量
@@ -117,11 +117,11 @@ struct LocalPhotoDetail {
    */
   private onBigScroll(xOffset: number): void {
     // 校验：图片列表存在且非空（避免空指针）
-    if (!this.params?.imageList || this.params.imageList.length === 0) return;
+    if (!this.dataSource || this.dataSource.totalCount() === 0) return;
     // 计算当前显示的大图索引：偏移量 / 屏幕宽度 = 第N张图（向下取整避免小数误差）
     const currentIndex = Math.floor(xOffset / this.imageWidth);
     // 安全校验：索引不能小于0，也不能超过图片列表长度-1（避免越界）
-    const validIndex = Math.max(0, Math.min(currentIndex, this.params.imageList.length - 1));
+    const validIndex = Math.max(0, Math.min(currentIndex, this.dataSource.totalCount() - 1));
     // 索引变化时才更新（避免频繁触发同步）
     if (validIndex !== this.selectedIndex) {
       this.selectedIndex = validIndex;
@@ -166,7 +166,7 @@ struct LocalPhotoDetail {
         List({ scroller: this.bigScroller ,initialIndex:this.selectedIndex}) { // 横向列表承载大图
           // 循环渲染所有图片（基于接收的imageList）
           ForEach(
-            this.params?.imageList || [], // 数据源：列表页传递的图片列表（空数组兜底）
+            this.dataSource.dataList || [], // 数据源：列表页传递的图片列表（空数组兜底）
             (item: ImageInfo) => {
               ListItem() { // 每个大图对应的列表项
                 Image(item.uri) // 大图图片
@@ -201,7 +201,7 @@ struct LocalPhotoDetail {
         }) {
           // 循环渲染小图（和大图数据源一致）
           ForEach(
-            this.params?.imageList || [],
+            this.dataSource.dataList || [],
             (item: ImageInfo, index: number) => {
               ListItem() {
                 this.SmallImgItemBuilder(item, index); // 调用小图构建器（复用样式）
@@ -218,7 +218,7 @@ struct LocalPhotoDetail {
         // 小图滚动事件：获取滚动后的中间项索引，同步到大图
         .onScrollIndex((_firstIndex: number, _lastIndex: number, centerIndex: number) => {
           // 校验：图片列表存在且索引有效（避免越界）
-          if (this.params?.imageList && centerIndex >= 0 && centerIndex < this.params.imageList.length) {
+          if (this.dataSource.dataList && centerIndex >= 0 && centerIndex < this.dataSource.dataList.length) {
             this.selectedIndex = centerIndex; // 同步索引（小图高亮）
             // 滚动大图到对应位置（无动画，避免冲突）
             this.bigScroller.scrollTo({
@@ -237,7 +237,7 @@ struct LocalPhotoDetail {
       .height('100%');
     }
     // 导航栏标题：显示当前选中图片的名称（无名称时显示"图片详情"）
-    .title(this.params?.imageList[this.selectedIndex]?.name || '图片详情')
+    .title(this.dataSource.dataList[this.selectedIndex]?.name || '图片详情')
     .backgroundColor('#000') // 导航栏背景色（和大图背景一致，视觉统一）
     .hideBackButton(false) // 显示返回按钮（允许返回列表页）
     /**
