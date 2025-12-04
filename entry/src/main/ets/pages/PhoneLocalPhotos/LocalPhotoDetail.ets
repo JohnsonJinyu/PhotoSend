@@ -1,5 +1,4 @@
 // LocalPhotoDetail.ets
-
 // 导入数据类型：图片信息结构定义
 import { ImageInfo, LocalPhotoDataSource } from "./LocalPhotoDataSource";
 // 导入全局常量：默认宽度、间距、显示数量等（统一配置，便于维护）
@@ -9,11 +8,8 @@ import { BusinessError } from '@kit.BasicServicesKit';
 // 导入UI工具：获取设备屏幕信息（适配不同设备尺寸）
 import { display } from "@kit.ArkUI";
 
-
-
 /**
  * 接收路由参数的接口定义（列表页→详情页的通信契约）
- * - imageList：需要展示的所有图片数据
  * - selectedIndex：列表页点击的图片索引（从0开始）
  */
 interface ReceiveParams {
@@ -34,21 +30,22 @@ export function LocalPhotoDetailBuilder() {
  */
 @Component
 struct LocalPhotoDetail {
-  private dataSource: LocalPhotoDataSource = LocalPhotoDataSource.getInstance(); // 全局单例
-  // 1. 核心参数：存储列表页传递的图片列表和选中索引（初始为null，onReady中赋值）
+  // 全局单例数据源（保留你的优势，避免重复加载文件）
+  private dataSource: LocalPhotoDataSource = LocalPhotoDataSource.getInstance();
+  // 核心参数：存储列表页传递的选中索引
   private params: ReceiveParams | null = null;
 
-  // 2. 滚动控制器：分别控制小图列表和大图列表的滚动
+  // 滚动控制器：分别控制小图列表和大图列表的滚动
   private smallScroller: Scroller = new Scroller(); // 小图列表滚动器
   private bigScroller: Scroller = new Scroller();   // 大图列表滚动器
 
-  // 3. 尺寸配置：适配不同设备屏幕（响应式更新）
+  // 尺寸配置：适配不同设备屏幕（响应式更新）
   @State deviceWidth: number = Constants.DEFAULT_WIDTH || 360; // 设备屏幕宽度（默认360px兜底）
   // 小图宽度：(屏幕宽度 - 间距*(显示数量-1)) / 显示数量（均匀分布小图）
   @State smallImgWidth: number = (this.deviceWidth - Constants.LIST_ITEM_SPACE * (Constants.SHOW_COUNT - 1)) / Constants.SHOW_COUNT;
   @State imageWidth: number = this.deviceWidth; // 大图宽度=屏幕宽度（保证全屏显示）
 
-  // 4. 响应式索引：全局同步的选中索引（@StorageLink实现跨组件同步，此处用于大图小图联动）
+  // 响应式索引：全局同步的选中索引（@StorageLink实现跨组件同步）
   @StorageLink('selectedIndex') selectedIndex: number = 0;
 
   // 固定常量：倍数配置（复用全局常量，避免硬编码）
@@ -76,20 +73,19 @@ struct LocalPhotoDetail {
   }
 
   /**
-   * 生命周期：页面显示时执行（同步大图位置）
-   * 作用：确保UI完全渲染后再滚动大图，避免"滚动时机过早导致失效"
+   * 生命周期：页面显示时执行（同步大图/小图位置，核心修复点）
+   * 参考官方示例：用scrollToIndex直接按索引滚动，无需计算偏移量
    */
   onPageShow() {
     // 校验：参数存在且图片列表非空（避免空指针）
-    if (this.params && this.dataSource.totalCount()> 0) {
-      // 同步选中索引（确保和列表页点击的一致）
-      this.selectedIndex = this.params.selectedIndex;
-      // 滚动大图到目标位置：索引 * 屏幕宽度 = 目标图片的横向偏移量
-      this.bigScroller.scrollTo({
-        xOffset: this.selectedIndex * this.imageWidth, // 核心计算：第N张图的位置
-        yOffset: 0, // 纵向无偏移（横向滚动）
-        animation: { duration: 0 } // 无动画，瞬间定位（避免和转场动画冲突）
-      });
+    if (this.params && this.dataSource.totalCount() > 0) {
+      // 安全校验索引：确保不越界
+      const targetIndex = Math.max(0, Math.min(this.params.selectedIndex, this.dataSource.totalCount() - 1));
+      this.selectedIndex = targetIndex;
+
+      // 核心修复：用官方的scrollToIndex（按索引滚动，无尺寸计算误差）
+      this.bigScroller.scrollToIndex(targetIndex);
+      this.smallScroller.scrollToIndex(targetIndex);
     }
   }
 
@@ -101,30 +97,35 @@ struct LocalPhotoDetail {
   private smallImgClickAction(index: number): void {
     // 避免重复点击（当前已选中的小图，点击无响应）
     if (index === this.selectedIndex) return;
-    this.selectedIndex = index; // 更新全局选中索引（小图高亮同步）
-    // 滚动大图到对应位置（带动画，提升体验）
-    this.bigScroller.scrollTo({
-      xOffset: index * this.imageWidth, // 目标图片位置计算
-      yOffset: 0,
-      animation: { duration: 150, curve: Curve.EaseOut } // 150ms缓动动画，过渡自然
-    });
+
+    // 安全校验索引
+    const validIndex = Math.max(0, Math.min(index, this.dataSource.totalCount() - 1));
+    this.selectedIndex = validIndex;
+
+    // 参考官方：用scrollToIndex滚动，无需计算xOffset
+    this.bigScroller.scrollToIndex(validIndex);
+    this.smallScroller.scrollToIndex(validIndex);
   }
 
   /**
-   * 核心交互：大图滚动同步事件
-   * 逻辑：大图滚动时→计算当前显示的图片索引→同步到小图（小图自动居中高亮）
+   * 核心交互：大图滚动同步事件（修复索引计算精度）
+   * 逻辑：大图滚动时→计算当前显示的图片索引→同步到小图
    * @param xOffset 大图横向滚动的偏移量
    */
   private onBigScroll(xOffset: number): void {
     // 校验：图片列表存在且非空（避免空指针）
     if (!this.dataSource || this.dataSource.totalCount() === 0) return;
-    // 计算当前显示的大图索引：偏移量 / 屏幕宽度 = 第N张图（向下取整避免小数误差）
-    const currentIndex = Math.floor(xOffset / this.imageWidth);
-    // 安全校验：索引不能小于0，也不能超过图片列表长度-1（避免越界）
+
+    // 修复：用Math.round（四舍五入）替代Math.floor，参考官方示例提升精度
+    const currentIndex = Math.round(xOffset / this.imageWidth);
+    // 安全校验：索引不能越界
     const validIndex = Math.max(0, Math.min(currentIndex, this.dataSource.totalCount() - 1));
+
     // 索引变化时才更新（避免频繁触发同步）
     if (validIndex !== this.selectedIndex) {
       this.selectedIndex = validIndex;
+      // 滚动中：轻量同步小图（无动画，避免卡顿）
+      this.smallScroller.scrollToIndex(validIndex, false);
     }
   }
 
@@ -148,9 +149,6 @@ struct LocalPhotoDetail {
       .borderWidth(this.selectedIndex === index ? 3 : 0)
       .borderColor('#ffffff') // 选中边框颜色
       .borderStyle(BorderStyle.Solid) // 边框样式：实线
-      // 可选优化：选中时轻微放大（取消注释即可启用）
-      // .scale(this.selectedIndex === index ? 1.05 : 1.0)
-      // .transition(Transition.all(150)) // 缩放过渡动画（平滑变化）
       .onClick(() => this.smallImgClickAction(index)); // 绑定小图点击事件
   }
 
@@ -162,11 +160,14 @@ struct LocalPhotoDetail {
     NavDestination() {
       // 栈布局（Stack）：大图区域在下层，小图导航在上层（底部对齐）
       Stack({ alignContent: Alignment.Bottom }) {
-        // --------------- 大图展示区域（核心功能区）---------------
-        List({ scroller: this.bigScroller ,initialIndex:this.selectedIndex}) { // 横向列表承载大图
-          // 循环渲染所有图片（基于接收的imageList）
+        // --------------- 大图展示区域（核心功能区，修复点：恢复initialIndex）---------------
+        List({
+          scroller: this.bigScroller,
+          initialIndex: this.selectedIndex // 参考官方：初始索引兜底，双保险
+        }) {
+          // 循环渲染所有图片（从单例数据源获取）
           ForEach(
-            this.dataSource.dataList || [], // 数据源：列表页传递的图片列表（空数组兜底）
+            this.dataSource.dataList || [], // 数据源：全局单例的图片列表
             (item: ImageInfo) => {
               ListItem() { // 每个大图对应的列表项
                 Image(item.uri) // 大图图片
@@ -182,10 +183,19 @@ struct LocalPhotoDetail {
           )
         }
         .scrollSnapAlign(ScrollSnapAlign.CENTER) // 滚动后自动居中（确保大图完整显示）
-        // 大图滚动事件：滚动中或惯性滚动时，同步索引到小图
+        // 大图滚动事件：滚动中/惯性滚动时，同步索引到小图
         .onDidScroll((xOffset: number, scrollState: ScrollState) => {
           if (scrollState === ScrollState.Scroll || scrollState === ScrollState.Fling) {
             this.onBigScroll(xOffset);
+          }
+        })
+        // 新增：滚动停止后精准校准（参考官方，避免惯性导致索引偏差）
+        .onScrollStop(() => {
+          const finalIndex = Math.round(this.bigScroller.currentOffset().xOffset / this.imageWidth);
+          const validIndex = Math.max(0, Math.min(finalIndex, this.dataSource.totalCount() - 1));
+          if (validIndex !== this.selectedIndex) {
+            this.selectedIndex = validIndex;
+            this.smallScroller.scrollToIndex(validIndex); // 同步小图到精准位置
           }
         })
         .scrollBar(BarState.Off) // 隐藏滚动条（优化全屏体验）
@@ -194,10 +204,11 @@ struct LocalPhotoDetail {
         .padding({ bottom: this.smallImgWidth + 20 }) // 底部预留小图区域（避免大图被遮挡）
         .listDirection(Axis.Horizontal); // 列表方向：横向滚动
 
-        // --------------- 小图导航区域（辅助切换区）---------------
+        // --------------- 小图导航区域（辅助切换区，修复点：加initialIndex+滚动停止校准）---------------
         List({
           scroller: this.smallScroller, // 小图滚动器
           space: Constants.LIST_ITEM_SPACE, // 小图之间的间距（全局常量统一配置）
+          initialIndex: this.selectedIndex // 参考官方：初始索引兜底
         }) {
           // 循环渲染小图（和大图数据源一致）
           ForEach(
@@ -215,17 +226,14 @@ struct LocalPhotoDetail {
         }
         .listDirection(Axis.Horizontal) // 横向滚动
         .scrollSnapAlign(ScrollSnapAlign.CENTER) // 滚动后自动居中（选中的小图在中间）
-        // 小图滚动事件：获取滚动后的中间项索引，同步到大图
-        .onScrollIndex((_firstIndex: number, _lastIndex: number, centerIndex: number) => {
-          // 校验：图片列表存在且索引有效（避免越界）
-          if (this.dataSource.dataList && centerIndex >= 0 && centerIndex < this.dataSource.dataList.length) {
-            this.selectedIndex = centerIndex; // 同步索引（小图高亮）
-            // 滚动大图到对应位置（无动画，避免冲突）
-            this.bigScroller.scrollTo({
-              xOffset: centerIndex * this.imageWidth,
-              yOffset: 0,
-              animation: { duration: 0 }
-            });
+        // 小图滚动停止后校准（参考官方，确保索引精准）
+        .onScrollStop(() => {
+          const smallItemWidth = this.smallImgWidth + Constants.LIST_ITEM_SPACE;
+          const centerIndex = Math.round(this.smallScroller.currentOffset().xOffset / smallItemWidth);
+          const validIndex = Math.max(0, Math.min(centerIndex, this.dataSource.totalCount() - 1));
+          if (validIndex !== this.selectedIndex) {
+            this.selectedIndex = validIndex;
+            this.bigScroller.scrollToIndex(validIndex); // 同步大图到精准位置
           }
         })
         .scrollBar(BarState.Off) // 隐藏小图滚动条
@@ -236,13 +244,18 @@ struct LocalPhotoDetail {
       .width('100%')
       .height('100%');
     }
-    // 导航栏标题：显示当前选中图片的名称（无名称时显示"图片详情"）
-    .title(this.dataSource.dataList[this.selectedIndex]?.name || '图片详情')
+    // 导航栏标题：显示当前选中图片的名称（安全校验索引，避免越界）
+    .title(() => {
+      if (this.dataSource.totalCount() === 0) {
+        return '图片详情';
+      }
+      const validIndex = Math.max(0, Math.min(this.selectedIndex, this.dataSource.totalCount() - 1));
+      return this.dataSource.dataList[validIndex]?.name || '图片详情';
+    })
     .backgroundColor('#000') // 导航栏背景色（和大图背景一致，视觉统一）
     .hideBackButton(false) // 显示返回按钮（允许返回列表页）
     /**
-     * 路由参数接收：页面初始化时执行
-     * 作用：从路由中获取列表页传递的图片列表和选中索引
+     * 路由参数接收：页面初始化时执行（保留，用于解析初始选中索引）
      */
     .onReady((ctx: NavDestinationContext) => {
       try {
@@ -251,12 +264,6 @@ struct LocalPhotoDetail {
         if (this.params) {
           // 初始化选中索引（和列表页点击的一致）
           this.selectedIndex = this.params.selectedIndex;
-          // 初始化大图位置（兜底：防止onPageShow未触发时的初始定位）
-          this.bigScroller.scrollTo({
-            xOffset: this.selectedIndex * this.imageWidth,
-            yOffset: 0,
-            animation: { duration: 0 }
-          });
         }
       } catch (e) {
         // 捕获参数解析异常（避免页面崩溃）
