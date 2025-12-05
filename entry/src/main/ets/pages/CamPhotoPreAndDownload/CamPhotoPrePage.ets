@@ -1,4 +1,4 @@
-//CameraPicturesPage.ets
+//CamPhotoPrePage.ets
 import nativeCamera, { ThumbnailInfo } from 'libentry.so'
 import image from '@ohos.multimedia.image';
 import { createMyNode, getMyNode, clearAllMyNodes } from '../../NodeContainer/CustomComponent';
