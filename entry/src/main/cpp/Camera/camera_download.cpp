@@ -1,15 +1,17 @@
-//
+// camera_download.cpp
 // Created on 2025/11/10.
 // 负责从机内下载照片
 // Node APIs are not fully supported. To solve the compilation error of the interface cannot be found,
 // please include "napi/native_api.h".
 // C++ 层需要实现的核心功能：获取缩略图列表和下载选中照片
+#include "Camera/camera_download.h"
 #include "Camera/native_common.h"
 #include "gphoto2/gphoto2-list.h"
 #include "gphoto2/gphoto2-port-result.h"
 #include <cstddef>
 #include <cstdint>
 #include <hilog/log.h>
+#include <set>
 #include <string>
 #include <fstream> 
 #include <stdarg.h>
@@ -17,31 +19,12 @@
 #define LOG_DOMAIN 0x0005         // 日志域（自定义标识，区分不同模块日志）
 #define LOG_TAG "Camera_Download" // 日志标签（日志中显示的模块名）
 
-// 内部结构体：存储单张照片的缩略图信息
-struct ThumbnailInfo {
-    std::string folder;   // 相机中的文件夹路径
-    std::string fileName; // 文件名
-    uint8_t *thumbData;   // 缩略图二进制数据
-    size_t thumbSize;     // 缩略图大小
-};
-
-// 存储异步任务所需数据（输入参数、结果、回调）
-struct AsyncThumbnailData {
-    napi_env env;                      // NAPI环境
-    napi_ref callback;                 // ArkTS层传入的回调函数引用
-    std::vector<ThumbnailInfo> result; // 异步操作结果
-    int errorCode;                     // 错误码（0表示成功）
-    std::string errorMsg;              // 错误信息
-};
 
 
-// 用于在回调函数之间传递的进度信息结构体
-struct DownloadProgressData {
-    std::string fileName;  // 正在下载的文件名
-    float currentProgress; // 当前下载进度 (0.0 ~ 1.0)
-    float totalSize;       // 新增：文件总大小（从progress_start_cb的target获取）
-};
-
+// 全局变量：温存文件列表（提高性能）
+static std::vector<PhotoMeta> g_cachedFileList;
+static bool g_isFileListCached = false;
+static std::mutex g_cacheMutex;
 
 
 
@@ -377,6 +360,231 @@ static void ExecuteAsyncWork(napi_env env, void *data) {
 }
 
 
+
+
+
+
+// ###########################################################################
+// 优化部分:1、获取机内照片总数的实现
+// ###########################################################################
+
+/**
+ * @brief 内部函数：获取照片总数（不加载缩略图）
+ */
+static int InternalGetPhotoTotalCount(){
+    if (!g_connected || !g_context || !g_camera) {
+        OH_LOG_PrintMsg(LOG_APP, LOG_ERROR, LOG_DOMAIN, LOG_TAG, "相机未连接，无法获取照片总数");
+        return 0;;
+    }
+    
+    // 如果缓存已存在，直接返回缓存数量
+    {
+        std::lock_guard<std::mutex> lock(g_cacheMutex);
+        if (g_isFileListCached) {
+            OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, 
+                        "使用缓存的文件列表，照片总数: %{public}zu", g_cachedFileList.size());
+            return static_cast<int>(g_cachedFileList.size());
+        }
+    }
+    
+    // 扫描相机获取文件列表（不获取缩略图）
+    std::vector<PhotoMeta> fileList = InternalScanPhotoFilesOnly();
+    
+    {
+        std::lock_guard<std::mutex> lock(g_cacheMutex);
+        g_cachedFileList = fileList;
+        g_isFileListCached = true;
+        OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, 
+                    "扫描完成，照片总数: %{public}zu", g_cachedFileList.size());
+    }
+    
+    return static_cast<int>(fileList.size());
+}
+
+
+/**
+ * @brief 内部函数：仅扫描照片文件，不下载缩略图
+ */
+
+static std::vector<PhotoMeta> InternalScanPhotoFilesOnly(){
+    std::vector<PhotoMeta> fileList;
+    
+    if (!g_connected || !g_context || !g_camera) {
+        return fileList;
+    }
+    
+     OH_LOG_PrintMsg(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "开始扫描照片文件...");
+    
+    // 1. 寻找DCIM目录（复用原有逻辑）
+    std::string dcimFolder = FindDcimFolder();
+    if (dcimFolder.empty()) {
+        OH_LOG_PrintMsg(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "未找到DCIM目录");
+        return fileList;
+    }
+    
+    // 2. 获取照片目录
+    std::string photoFolder = FindPhotoFolder(dcimFolder);
+    if (photoFolder.empty()) {
+        photoFolder = dcimFolder;
+    }
+     OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, 
+                "扫描照片目录: %{public}s", photoFolder.c_str());
+    
+    // 3. 获取文件列表
+    CameraList *files = nullptr;
+    gp_list_new(&files);
+    int ret = gp_camera_folder_list_files(g_camera, photoFolder.c_str(), files, g_context);
+    
+    if (ret != GP_OK) {
+        OH_LOG_Print(LOG_APP, LOG_ERROR, LOG_DOMAIN, LOG_TAG, 
+                    "获取文件列表失败: %{public}s", gp_result_as_string(ret));
+        gp_list_free(files);
+        return fileList;
+    }
+    
+    // 4. 构建元信息列表
+    int numFiles = gp_list_count(files);
+    for (int i = 0; i < numFiles; i++) {
+        const char *fileName;
+        gp_list_get_name(files, i, &fileName);
+
+        // 筛选照片文件
+        if (IsPhotoFile(fileName)) {
+            PhotoMeta meta;
+            meta.folder = photoFolder;
+            meta.fileName = fileName;
+            
+            // 可选：获取文件大小（如果性能允许）
+            // 注意：获取文件大小可能需要额外调用，影响性能
+            meta.fileSize = 0; // 暂时不获取，需要时再获取
+            
+            fileList.push_back(meta);
+        }
+    }
+
+    gp_list_free(files);
+    OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, 
+                "扫描完成，找到 %{public}zu 个照片文件", fileList.size());
+    
+    return fileList;
+    
+}
+
+
+
+/**
+ * @brief 内部辅助函数：查找DCIM目录
+ */
+static std::string FindDcimFolder(){
+    CameraList *rootFolders = nullptr;
+    gp_list_new(&rootFolders);
+    std::string dcimFolder;
+    
+    int ret = gp_camera_folder_list_folders(g_camera, "/", rootFolders, g_context);
+    if (ret == GP_OK) {
+        int numRootFolders = gp_list_count(rootFolders);
+        for (int i = 0; i < numRootFolders; i++) {
+            const char *storageFolder;
+            gp_list_get_name(rootFolders, i, &storageFolder);
+            std::string absoluteStoragePath = '/' + std::string(storageFolder);
+            
+            // 检查存储文件夹下的子目录
+            CameraList *storageSubFolders = nullptr;
+            gp_list_new(&storageSubFolders);
+            
+            if (gp_camera_folder_list_folders(g_camera, absoluteStoragePath.c_str(), 
+                                             storageSubFolders, g_context) == GP_OK) {
+                int numSubFolders = gp_list_count(storageSubFolders);
+                for (int j = 0; j < numSubFolders; j++) {
+                    const char *subFolderName;
+                    gp_list_get_name(storageSubFolders, j, &subFolderName);
+                    
+                    if (strstr(subFolderName, "DCIM") != nullptr) {
+                        dcimFolder = absoluteStoragePath + "/" + subFolderName;
+                        gp_list_free(storageSubFolders);
+                        goto found_dcim;
+                    }
+                }
+            }
+            gp_list_free(storageSubFolders);
+        }
+    }
+    
+found_dcim:
+    gp_list_free(rootFolders);
+    return dcimFolder;
+}
+
+/**
+ * @brief 内部辅助函数：查找照片目录
+ */
+static std::string FindPhotoFolder(const std::string& dcimFolder){
+     CameraList *dcimSubFolders = nullptr;
+    gp_list_new(&dcimSubFolders);
+    std::string photoFolder;
+    
+    if (gp_camera_folder_list_folders(g_camera, dcimFolder.c_str(), 
+                                     dcimSubFolders, g_context) == GP_OK) {
+        if (gp_list_count(dcimSubFolders) > 0) {
+            const char *subFolderName;
+            gp_list_get_name(dcimSubFolders, 0, &subFolderName);
+            
+            std::string dcimPathStr = dcimFolder;
+            if (!dcimPathStr.empty() && dcimPathStr.back() == '/') {
+                dcimPathStr.pop_back();
+            }
+            photoFolder = dcimPathStr + "/" + subFolderName;
+        }
+    }
+    
+    gp_list_free(dcimSubFolders);
+    return photoFolder;
+}
+
+/**
+ * @brief 内部辅助函数：判断是否为照片文件
+ */
+static bool IsPhotoFile(const char* fileName){
+    if (!fileName) return false;
+    
+    // 获取文件扩展名
+    const char* dot = strrchr(fileName, '.');
+    if (!dot) return false;
+    
+    std::string ext = dot + 1;
+    std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
+    
+    // 支持的图片格式
+    static const std::set<std::string> photoExtensions = {
+        "jpg", "jpeg", "nef", "cr2", "arw", "dng", "rw2", "orf"
+    };
+    
+    return photoExtensions.find(ext) != photoExtensions.end();
+}
+
+/**
+ * @brief NAPI接口：获取照片总数
+ */
+napi_value GetPhotoTotalCount(napi_env env, napi_callback_info info) {
+    napi_value result;
+    
+    // 调用内部函数获取照片总数
+    int totalCount = InternalGetPhotoTotalCount();
+    
+    // 创建NAPI整数值
+    napi_create_int32(env, totalCount, &result);
+    
+    OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, 
+                "GetPhotoTotalCount 返回: %{public}d", totalCount);
+    
+    return result;
+}
+
+// ###########################################################################
+// 优化部分，获取机内照片总数的实现截止
+// ###########################################################################
+
+
 /**
  * 异步NAPI接口：接收ArkTS层的回调函数，在后台获取缩略图列表后触发回调
  * 调用方式（ArkTS）：GetThumbnailList((err, list) => { ... })
@@ -426,6 +634,12 @@ napi_value GetThumbnailList(napi_env env, napi_callback_info info) {
 
 
 
+// ###########################################################################
+// 优化部分，主要优化获取机内照片信息，实现按需加载
+// ###########################################################################
+/**
+ * @brief 内部函数： 获取照片的总数
+ * */
 
 
 
