@@ -7,6 +7,15 @@
 #ifndef PHOTOSEND_CAMERA_DOWNLOAD_H
 #define PHOTOSEND_CAMERA_DOWNLOAD_H
 
+#include <string>
+
+// 照片元信息，不含缩略图数据
+struct PhotoMeta{
+    std::string folder; //文件夹路径
+    std::string fileName; //文件名
+    size_t fileSize;  //文件大小
+};
+
 
 
 /**
@@ -30,5 +39,23 @@ extern napi_value DownloadPhoto(napi_env env, napi_callback_info info);
 
 // 新增异步下载接口声明
 extern napi_value DownloadPhotoAsync(napi_env env, napi_callback_info info);
+
+
+/**
+ * @brief 获取照片总数
+ * */
+extern napi_value GetPhotoTotalCount(napi_env env,napi_callback_info info);
+
+/**
+ * @brief 分页获取照片元信息，不包含缩略图
+ * */
+extern napi_value GetPhotoMetaList(napi_env env,napi_callback_info info);
+
+/**
+ * @brief 单独下载单张照片的缩略图
+ * */
+extern napi_value DownloadSingleThumbnail(napi_env env,napi_callback_info info);
+
+
 
 #endif //PHOTOSEND_CAMERA_DOWNLOAD_H
