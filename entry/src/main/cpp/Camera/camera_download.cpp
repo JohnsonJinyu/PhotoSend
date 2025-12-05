@@ -581,8 +581,277 @@ napi_value GetPhotoTotalCount(napi_env env, napi_callback_info info) {
 }
 
 // ###########################################################################
-// 优化部分，获取机内照片总数的实现截止
+// 优化部分，获取机内照片总数的实现截止到此
 // ###########################################################################
+
+
+
+// ###########################################################################
+// 优化部分，分也获取照片元信息
+// ###########################################################################
+/**
+ * @brief NAPI接口：分页获取照片元信息
+ */
+
+napi_value GetPhotoMetaList(napi_env env, napi_callback_info info){
+    // 1. 解析参数
+    size_t argc = 2;
+    napi_value args[2];
+    napi_value thisArg;
+    
+    napi_status status = napi_get_cb_info(env, info, &argc, args, &thisArg, nullptr);
+    if (status != napi_ok || argc < 2) {
+        OH_LOG_PrintMsg(LOG_APP, LOG_ERROR, LOG_DOMAIN, LOG_TAG, 
+                       "GetPhotoMetaList 参数错误：需要pageIndex和pageSize");
+        napi_value emptyArray;
+        napi_create_array(env, &emptyArray);
+        return emptyArray;
+    }
+    
+    // 2. 获取分页参数
+    int32_t pageIndex, pageSize;
+    napi_get_value_int32(env, args[0], &pageIndex);
+    napi_get_value_int32(env, args[1], &pageSize);
+    
+    OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, 
+                "GetPhotoMetaList 参数: pageIndex=%{public}d, pageSize=%{public}d", 
+                pageIndex, pageSize);
+    
+    // 3. 确保文件列表已缓存
+    {
+        std::lock_guard<std::mutex> lock(g_cacheMutex);
+        if (!g_isFileListCached) {
+            OH_LOG_PrintMsg(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, 
+                          "文件列表未缓存，开始扫描...");
+            g_cachedFileList = InternalScanPhotoFilesOnly();
+            g_isFileListCached = true;
+        }
+    }
+    
+    // 4. 计算分页范围
+    std::lock_guard<std::mutex> lock(g_cacheMutex);
+    size_t startIndex = pageIndex * pageSize;
+    size_t endIndex = std::min(startIndex + pageSize, g_cachedFileList.size());
+    
+    if (startIndex >= g_cachedFileList.size()) {
+        napi_value emptyArray;
+        napi_create_array(env, &emptyArray);
+        return emptyArray;
+    }
+    
+    // 5. 创建返回数组
+    napi_value resultArray;
+    napi_create_array(env, &resultArray);
+    
+    for (size_t i = startIndex; i < endIndex; i++) {
+        const PhotoMeta& meta = g_cachedFileList[i];
+        
+        napi_value metaObj;
+        napi_create_object(env, &metaObj);
+        
+        // 设置属性
+        napi_set_named_property(env, metaObj, "folder", 
+                              CreateNapiString(env, meta.folder.c_str()));
+        napi_set_named_property(env, metaObj, "filename", 
+                              CreateNapiString(env, meta.fileName.c_str()));
+        
+        // 如果有文件大小，也返回
+        if (meta.fileSize > 0) {
+            napi_value sizeValue;
+            napi_create_int64(env, meta.fileSize, &sizeValue);
+            napi_set_named_property(env, metaObj, "size", sizeValue);
+        }
+        
+        // 添加到数组
+        napi_set_element(env, resultArray, i - startIndex, metaObj);
+    }
+    
+    OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, 
+                "GetPhotoMetaList 返回 %{public}zu 条记录", endIndex - startIndex);
+    
+    return resultArray;
+    
+    
+}
+
+
+
+// ###########################################################################
+// 优化部分，下载单张缩略图
+// ###########################################################################
+/**
+ * @brief 内部函数：下载单张缩略图
+ */
+static std::vector<uint8_t> InternalDownloadSingleThumbnail(const char* folder, const char* filename) {
+    std::vector<uint8_t> thumbnailData;
+    
+    if (!g_connected || !g_context || !g_camera) {
+        OH_LOG_PrintMsg(LOG_APP, LOG_ERROR, LOG_DOMAIN, LOG_TAG, 
+                       "相机未连接，无法下载缩略图");
+        return thumbnailData;
+    }
+    
+    CameraFile *thumbFile = nullptr;
+    gp_file_new(&thumbFile);
+    
+    OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, 
+                "开始下载缩略图: %{public}s/%{public}s", folder, filename);
+    
+    // 获取缩略图
+    int ret = gp_camera_file_get(g_camera, folder, filename, 
+                                GP_FILE_TYPE_PREVIEW, thumbFile, g_context);
+    
+    if (ret != GP_OK) {
+        OH_LOG_Print(LOG_APP, LOG_WARN, LOG_DOMAIN, LOG_TAG, 
+                    "下载缩略图失败: %{public}s", gp_result_as_string(ret));
+        gp_file_unref(thumbFile);
+        return thumbnailData;
+    }
+    
+    // 提取数据
+    const char *thumbData;
+    unsigned long thumbSize;
+    gp_file_get_data_and_size(thumbFile, &thumbData, &thumbSize);
+    
+    if (thumbData && thumbSize > 0) {
+        // 复制数据到vector
+        thumbnailData.assign(thumbData, thumbData + thumbSize);
+        
+        OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, 
+                    "缩略图下载成功: %{public}s, 大小: %{public}lu", 
+                    filename, thumbSize);
+    }
+    
+    gp_file_unref(thumbFile);
+    return thumbnailData;
+}
+
+/**
+ * @brief NAPI接口：异步下载单张缩略图
+ */
+napi_value DownloadSingleThumbnail(napi_env env, napi_callback_info info) {
+    // 1. 解析参数
+    size_t argc = 3; // folder, filename, callback
+    napi_value args[3];
+    napi_value thisArg;
+    
+    napi_status status = napi_get_cb_info(env, info, &argc, args, &thisArg, nullptr);
+    if (status != napi_ok || argc < 3) {
+        OH_LOG_PrintMsg(LOG_APP, LOG_ERROR, LOG_DOMAIN, LOG_TAG, 
+                       "DownloadSingleThumbnail 参数错误");
+        return nullptr;
+    }
+    
+    // 2. 验证回调函数
+    napi_valuetype argType;
+    napi_typeof(env, args[2], &argType);
+    if (argType != napi_function) {
+        OH_LOG_PrintMsg(LOG_APP, LOG_ERROR, LOG_DOMAIN, LOG_TAG, 
+                       "第三个参数必须是回调函数");
+        return nullptr;
+    }
+    
+    // 3. 获取参数
+    char folder[256] = {0};
+    char filename[256] = {0};
+    napi_get_value_string_utf8(env, args[0], folder, sizeof(folder), nullptr);
+    napi_get_value_string_utf8(env, args[1], filename, sizeof(filename), nullptr);
+    
+    // 4. 创建异步任务数据
+    struct AsyncThumbnailTaskData {
+        napi_env env;
+        napi_ref callback;
+        std::string folder;
+        std::string filename;
+        std::vector<uint8_t> thumbnailData;
+        bool success;
+        std::string errorMsg;
+    };
+    
+    AsyncThumbnailTaskData* taskData = new AsyncThumbnailTaskData();
+    taskData->env = env;
+    taskData->folder = folder;
+    taskData->filename = filename;
+    taskData->success = false;
+    
+    // 保存回调函数
+    napi_create_reference(env, args[2], 1, &taskData->callback);
+    
+    // 5. 创建异步工作
+    napi_value workName;
+    napi_create_string_utf8(env, "DownloadSingleThumbnail", NAPI_AUTO_LENGTH, &workName);
+    napi_async_work work;
+    
+    // 工作函数（在后台线程执行）
+    auto executeWork = [](napi_env env, void* data) {
+        AsyncThumbnailTaskData* taskData = static_cast<AsyncThumbnailTaskData*>(data);
+        
+        try {
+            taskData->thumbnailData = InternalDownloadSingleThumbnail(
+                taskData->folder.c_str(), taskData->filename.c_str());
+            taskData->success = !taskData->thumbnailData.empty();
+        } catch (const std::exception& e) {
+            taskData->errorMsg = e.what();
+            taskData->success = false;
+        }
+    };
+    
+    // 完成函数（在主线程执行）
+    auto completeWork = [](napi_env env, napi_status status, void* data) {
+        AsyncThumbnailTaskData* taskData = static_cast<AsyncThumbnailTaskData*>(data);
+        
+        napi_value callback;
+        napi_get_reference_value(env, taskData->callback, &callback);
+        
+        napi_value args[2];
+        if (taskData->success) {
+            // 创建Buffer返回缩略图数据
+            void* bufferData = nullptr;
+            napi_value buffer;
+            
+            napi_create_buffer_copy(env, taskData->thumbnailData.size(),
+                                   taskData->thumbnailData.data(),
+                                   &bufferData, &buffer);
+            
+            napi_get_null(env, &args[0]); // 错误为null
+            args[1] = buffer;
+        } else {
+            // 返回错误
+            napi_create_string_utf8(env, taskData->errorMsg.c_str(), 
+                                   NAPI_AUTO_LENGTH, &args[0]);
+            napi_get_null(env, &args[1]);
+        }
+        
+        // 调用回调函数
+        napi_value global;
+        napi_get_global(env, &global);
+        napi_make_callback(env, nullptr, global, callback, 2, args, nullptr);
+        
+        // 清理资源
+        napi_delete_reference(env, taskData->callback);
+        delete taskData;
+    };
+    
+    // 创建并排队异步工作
+    napi_create_async_work(env, nullptr, workName, executeWork, completeWork, 
+                          taskData, &work);
+    napi_queue_async_work(env, work);
+    
+    // 返回undefined（异步操作）
+    napi_value result;
+    napi_get_undefined(env, &result);
+    return result;
+}
+
+// 清理缓存函数（可选，在断开相机连接时调用）
+void ClearPhotoCache() {
+    std::lock_guard<std::mutex> lock(g_cacheMutex);
+    g_cachedFileList.clear();
+    g_isFileListCached = false;
+    OH_LOG_PrintMsg(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, 
+                   "已清理照片缓存");
+}
+
 
 
 /**
