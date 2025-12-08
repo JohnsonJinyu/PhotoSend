@@ -17,6 +17,14 @@ export interface ImageInfoWithPixelMap {
 }
 
 
+export interface PhotoMeta {
+  folder: string;
+  filename: string;
+  size?: number; // 可选的文件大小
+}
+
+
+
 // 定义跳转到大图页的参数接口
 export interface BigImageParams {
   imageInfo: ImageInfoWithPixelMap; // 包含要传递的图片信息
@@ -52,6 +60,15 @@ export struct CamPhotoPrePage {
     }
     }
   ];
+
+  @State currentPage: number = 0;
+  @State pageSize: number = 20; // 每页显示数量
+  @State hasMore: boolean = true;
+  @State totalCount: number = 0;
+  @State isRefreshing: boolean = false;
+
+
+
   // 1. 声明单例变量（用于存储通过getInstance()获取的实例）
   private camManager: CamConnectionManager | null = null;
 
@@ -71,6 +88,12 @@ export struct CamPhotoPrePage {
 
 
   }
+
+
+
+
+
+
 
   // 🔥 3. 修改转场回调：接收唯一标识，精准归位节点
 

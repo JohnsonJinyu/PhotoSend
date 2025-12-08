@@ -132,6 +132,8 @@ static napi_value Init(napi_env env, napi_value exports) {
         {"GetPhotoTotalCount", nullptr, GetPhotoTotalCount, nullptr, nullptr, nullptr, napi_default, nullptr},
         {"DownloadSingleThumbnail", nullptr, DownloadSingleThumbnail, nullptr, nullptr, nullptr, napi_default, nullptr},
         {"GetPhotoMetaList", nullptr, GetPhotoMetaList, nullptr, nullptr, nullptr, napi_default, nullptr},
+        {"ClearPhotoCache", nullptr, ClearPhotoCacheNapi, nullptr, nullptr, nullptr, napi_default, nullptr}
+    
 
         
         

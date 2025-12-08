@@ -855,6 +855,25 @@ void ClearPhotoCache() {
 }
 
 
+
+
+/**
+ * @brief NAPI接口：清理照片缓存
+ * 注意：必须是napi_value返回类型，接受env和info参数
+ */
+napi_value ClearPhotoCacheNapi(napi_env env, napi_callback_info info) {
+    OH_LOG_PrintMsg(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "调用 ClearPhotoCacheNapi");
+    
+    // 清理缓存
+    ClearPhotoCache();
+    
+    // 返回 undefined（因为ArkTS层声明为 void 返回值）
+    napi_value result;
+    napi_get_undefined(env, &result);
+    return result;
+}
+
+
 // ###########################################################################
 // 优化部分，下载单张缩略图，到此截止
 // ###########################################################################

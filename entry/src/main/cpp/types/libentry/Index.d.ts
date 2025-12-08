@@ -64,7 +64,6 @@ interface CameraStatus {
   exposureMeterMode: string;
 }
 
-
 /**
  * 相机配置参数项接口，包含参数名称、显示名称、类型、当前值及可选值列表
  */
@@ -85,11 +84,19 @@ interface ConfigItem {
   choices: string[];
 }
 
+/**
+ * 照片元信息接口（用于懒加载优化）
+ */
+interface PhotoMeta {
+  /** 照片在相机中的文件夹路径（如"/DCIM/100NIKON"） */
+  folder: string;
 
+  /** 照片文件名（如"DSC_0001.NEF"） */
+  filename: string;
 
-
-
-
+  /** 文件大小（单位：字节，可选） */
+  size?: number;
+}
 
 /**
  * 回调函数接收的参数类型，包含参数的可选值
@@ -99,8 +106,6 @@ interface ParamOptions {
   shutterspeed?: string[];
   // 这里可以根据实际情况添加其他可能的参数
 }
-
-
 
 /**
  * 缩略图信息接口，包含照片在相机中的路径、文件名及缩略图二进制数据
@@ -112,16 +117,9 @@ interface ThumbnailInfo {
   /** 照片文件名（如"DSC_0001.NEF"） */
   filename: string;
 
-  /** 缩略图二进制数据（ArrayBuffer格式， */
+  /** 缩略图二进制数据（ArrayBuffer格式） */
   thumbnail: ArrayBuffer;
-
 }
-
-
-
-
-
-
 
 /**
  * 获取相机所有配置参数（包含参数名、显示名、类型、当前值及可选值）
@@ -134,7 +132,6 @@ export const GetCameraConfig: () => ConfigItem[];
  * @returns 可用相机列表，每个元素为"型号|路径"格式的字符串
  */
 export const GetAvailableCameras: () => string[];
-
 
 /**
  * 获取相机的状态信息（电量、参数、存储等）
@@ -149,7 +146,6 @@ export const GetCameraStatus: () => CameraStatus;
  * @returns 设置成功返回 true
  */
 export const SetGPhotoLibDirs: (camlibDir: string) => boolean;
-
 
 /**
  * 连接指定相机
@@ -183,10 +179,10 @@ export const GetPreview: () => ArrayBuffer;
  * 从相机下载照片
  * @param folder 照片所在文件夹路径
  * @param name 照片文件名
+ * @param tempFilePath 临时文件路径（沙箱路径）
  * @returns 照片的二进制数据（ArrayBuffer）
  */
-
-export const DownloadPhoto: (folder: string, name: string,tempFilePath) => boolean;
+export const DownloadPhoto: (folder: string, name: string, tempFilePath: string) => boolean;
 
 /**
  * 断开与相机的连接
@@ -194,9 +190,11 @@ export const DownloadPhoto: (folder: string, name: string,tempFilePath) => boole
  */
 export const Disconnect: () => boolean;
 
-
-export const IsCameraConnected: () => boolean
-
+/**
+ * 检查相机是否已连接
+ * @returns 已连接返回true，否则返回false
+ */
+export const IsCameraConnected: () => boolean;
 
 /**
  * 获取指定相机参数的可选值列表（从配置树缓存中读取，避免重复通信）
@@ -205,14 +203,11 @@ export const IsCameraConnected: () => boolean
  */
 export const GetParamOptions: (paramName: string) => string[];
 
-
 /**
  * 注册参数回调函数
  * @param callback 回调函数，接收一个ParamOptions类型的参数
  */
 export const RegisterParamCallback: (callback: (params: ParamOptions) => void) => void;
-
-
 
 /**
  * 获取相机内所有照片的缩略图列表（异步接口，通过回调返回结果）
@@ -223,3 +218,67 @@ export const RegisterParamCallback: (callback: (params: ParamOptions) => void) =
 export const GetThumbnailList: (
   callback: (err: string | null, result: ThumbnailInfo[]) => void
 ) => void;
+
+/**
+ * 获取相机内照片的总数
+ * @returns 照片总数（整数）
+ * @description 此函数仅扫描相机中的照片文件并计数，不下载任何缩略图数据，因此速度很快。
+ *              用于实现懒加载和分页功能。
+ * @example
+* const total = GetPhotoTotalCount();
+ * console.log(`相机内共有 ${total} 张照片`);
+ */
+export const GetPhotoTotalCount: () => number;
+
+/**
+ * 分页获取照片元信息（不包含缩略图）
+ * @param pageIndex 页码，从0开始
+ * @param pageSize 每页大小
+ * @returns 照片元信息列表（PhotoMeta数组）
+ * @description 此函数返回指定页码的照片元信息（文件夹、文件名等），不包含缩略图数据。
+ *              用于实现懒加载，先显示文件名，再按需加载缩略图。
+ * @example
+* const page1 = GetPhotoMetaList(0, 20); // 获取第1页，每页20张
+ * const page2 = GetPhotoMetaList(1, 20); // 获取第2页，每页20张
+ */
+export const GetPhotoMetaList: (pageIndex: number, pageSize: number) => PhotoMeta[];
+
+/**
+ * 异步下载单张照片的缩略图
+ * @param folder 照片所在文件夹路径
+ * @param filename 照片文件名
+ * @param callback 回调函数，用于接收异步结果
+ *   - 第一个参数：错误信息（成功时为null，失败时为错误描述字符串）
+ *   - 第二个参数：缩略图二进制数据（成功时为ArrayBuffer，失败时为null）
+ * @description 此函数用于按需加载单张照片的缩略图，优化大量照片时的加载性能。
+ *              建议在用户滚动到可见区域时调用此函数。
+ * @example
+* DownloadSingleThumbnail(
+ *   "/DCIM/100NIKON",
+ *   "DSC_0001.NEF",
+ *   (err, buffer) => {
+ *     if (err) {
+ *       console.error("下载缩略图失败:", err);
+ *     } else {
+ *       console.log("缩略图数据:", buffer);
+ *       // 将buffer转换为PixelMap显示
+ *     }
+ *   }
+ * );
+ */
+export const DownloadSingleThumbnail: (
+  folder: string,
+  filename: string,
+  callback: (err: string | null, buffer: ArrayBuffer | null) => void
+) => void;
+
+/**
+ * 清理照片缓存
+ * @description 清理已缓存的照片文件列表和元信息。
+ *              在相机断开连接或需要重新扫描时调用此函数。
+ * @returns void
+ * @example
+* ClearPhotoCache(); // 清理缓存，下次调用GetPhotoTotalCount会重新扫描
+ */
+export const ClearPhotoCache: () => void;
+
