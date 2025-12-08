@@ -80,6 +80,12 @@ extern napi_value GetPhotoMetaList(napi_env env,napi_callback_info info);
  * */
 extern napi_value DownloadSingleThumbnail(napi_env env,napi_callback_info info);
 
+/**
+ * @brief 清理缓存函数（可选，在断开相机连接时调用）
+ * */
+
+extern void ClearPhotoCache();
+
 
 
 
