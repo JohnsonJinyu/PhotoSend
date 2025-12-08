@@ -209,15 +209,6 @@ export const GetParamOptions: (paramName: string) => string[];
  */
 export const RegisterParamCallback: (callback: (params: ParamOptions) => void) => void;
 
-/**
- * 获取相机内所有照片的缩略图列表（异步接口，通过回调返回结果）
- * @param callback - 回调函数，用于接收异步结果
- *   - 第一个参数：错误信息（成功时为null，失败时为错误描述字符串）
- *   - 第二个参数：缩略图列表（成功时为ThumbnailInfo数组，失败时为空数组）
- */
-export const GetThumbnailList: (
-  callback: (err: string | null, result: ThumbnailInfo[]) => void
-) => void;
 
 /**
  * 获取相机内照片的总数

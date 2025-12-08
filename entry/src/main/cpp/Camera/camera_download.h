@@ -24,32 +24,11 @@ struct DownloadProgressData {
     float totalSize;       // 新增：文件总大小（从progress_start_cb的target获取）
 };
 
-// 内部结构体：存储单张照片的缩略图信息
-struct ThumbnailInfo {
-    std::string folder;   // 相机中的文件夹路径
-    std::string fileName; // 文件名
-    uint8_t *thumbData;   // 缩略图二进制数据
-    size_t thumbSize;     // 缩略图大小
-};
-
-// 存储异步任务所需数据（输入参数、结果、回调）
-struct AsyncThumbnailData {
-    napi_env env;                      // NAPI环境
-    napi_ref callback;                 // ArkTS层传入的回调函数引用
-    std::vector<ThumbnailInfo> result; // 异步操作结果
-    int errorCode;                     // 错误码（0表示成功）
-    std::string errorMsg;              // 错误信息
-};
 
 
-/**
- * NAPI接口声明：获取相机内照片的缩略图列表
- * @param env NAPI环境
- * @param info NAPI回调信息（包含ArkTS传入的参数）
- * @return napi_value 返回缩略图列表的NAPI数组对象
- */
-#include <js_native_api_types.h>
-extern napi_value GetThumbnailList(napi_env env, napi_callback_info info);
+
+
+
 
 
 /**
@@ -59,10 +38,6 @@ extern napi_value GetThumbnailList(napi_env env, napi_callback_info info);
  * @return napi_value 返回ArkTS的Buffer（存储照片二进制数据），失败返回nullptr
  */
 extern napi_value DownloadPhoto(napi_env env, napi_callback_info info);
-
-
-// 新增异步下载接口声明
-extern napi_value DownloadPhotoAsync(napi_env env, napi_callback_info info);
 
 
 /**
