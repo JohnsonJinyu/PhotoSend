@@ -1,5 +1,5 @@
 // CamPhotoPrePage.ets
-import nativeCamera, { ThumbnailInfo } from 'libentry.so'
+import nativeCamera from 'libentry.so'
 import image from '@ohos.multimedia.image';
 import { createMyNode, getMyNode, clearAllMyNodes } from '../../NodeContainer/CustomComponent';
 import { CustomTransition } from '../../CustomTransition/CustomNavigationUtils';
@@ -8,31 +8,6 @@ import { WindowUtils } from '../../utils/animation/WindowUtils';
 import { CamConnectionManager } from '../../utils/tools/CamConnectManager';
 
 // 定义懒加载数据源
-class ImageDataSource {
-  private dataArray: ImageInfoWithPixelMap[] = [];
-
-  constructor(data: ImageInfoWithPixelMap[] = []) {
-    this.dataArray = data;
-  }
-
-  totalCount(): number {
-    return this.dataArray.length;
-  }
-
-  getData(index: number): ImageInfoWithPixelMap {
-    return this.dataArray[index];
-  }
-
-  updateData(newData: ImageInfoWithPixelMap[]): void {
-    this.dataArray = newData;
-  }
-
-  updateItem(index: number, item: ImageInfoWithPixelMap): void {
-    if (index >= 0 && index < this.dataArray.length) {
-      this.dataArray[index] = item;
-    }
-  }
-}
 
 export interface ImageInfoWithPixelMap {
   folder: string;
@@ -507,3 +482,28 @@ export struct CamPhotoPrePage {
     });
   }
 }
+
+
+
+
+/**
+ *
+ * 实现逻辑
+ * aboutToAppear()
+↓
+loadPhotoTotalCount()
+↓
+GetPhotoTotalCount() // C++层获取总数
+↓
+loadPhotoMetaList(0) // 加载第一页元信息
+↓
+GetPhotoMetaList() // C++层获取元信息（无缩略图）
+↓
+转换为 ImageInfoWithPixelMap[] // 创建基本数据结构
+↓
+preloadThumbnailsForPage() // 预加载前5张缩略图
+ *
+ *
+
+ *
+ * */
