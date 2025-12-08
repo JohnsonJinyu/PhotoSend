@@ -1,4 +1,4 @@
-//CamPhotoPrePage.ets
+// CamPhotoPrePage.ets
 import nativeCamera, { ThumbnailInfo } from 'libentry.so'
 import image from '@ohos.multimedia.image';
 import { createMyNode, getMyNode, clearAllMyNodes } from '../../NodeContainer/CustomComponent';
@@ -7,27 +7,48 @@ import { ComponentAttrUtils, RectInfoInPx } from '../../utils/animation/Componen
 import { WindowUtils } from '../../utils/animation/WindowUtils';
 import { CamConnectionManager } from '../../utils/tools/CamConnectManager';
 
+// 定义懒加载数据源
+class ImageDataSource {
+  private dataArray: ImageInfoWithPixelMap[] = [];
+
+  constructor(data: ImageInfoWithPixelMap[] = []) {
+    this.dataArray = data;
+  }
+
+  totalCount(): number {
+    return this.dataArray.length;
+  }
+
+  getData(index: number): ImageInfoWithPixelMap {
+    return this.dataArray[index];
+  }
+
+  updateData(newData: ImageInfoWithPixelMap[]): void {
+    this.dataArray = newData;
+  }
+
+  updateItem(index: number, item: ImageInfoWithPixelMap): void {
+    if (index >= 0 && index < this.dataArray.length) {
+      this.dataArray[index] = item;
+    }
+  }
+}
+
 export interface ImageInfoWithPixelMap {
   folder: string;
   filename: string;
   pixelMap: image.PixelMap | null;
-
-  // 新增：保存原始buffer用于大图（可选，根据需要）
-  thumbnail: ArrayBuffer;
+  thumbnail?: ArrayBuffer; // 改为可选
 }
-
 
 export interface PhotoMeta {
   folder: string;
   filename: string;
-  size?: number; // 可选的文件大小
+  size?: number;
 }
 
-
-
-// 定义跳转到大图页的参数接口
 export interface BigImageParams {
-  imageInfo: ImageInfoWithPixelMap; // 包含要传递的图片信息
+  imageInfo: ImageInfoWithPixelMap;
 }
 
 @Builder
@@ -35,266 +56,432 @@ export function CameraPicturesPageBuilder() {
   CamPhotoPrePage();
 }
 
-
 @Component
 export struct CamPhotoPrePage {
   @Consume('pageStack') pageStack: NavPathStack;
-  private pageId: number = -1
-  //@State myNodeController:MyNodeController|undefined= new MyNodeController(false)
+  private pageId: number = -1;
+  private currentNodeKey: string = '';
 
-  // 🔥 1. 删除单例nodeController，改为动态获取（不再初始化单例）
-  private currentNodeKey: string = ''; // 记录当前点击的GridItem唯一标识
-  // 1. 新增状态：记录当前正在转场的index（初始为-1，代表无转场）
   @State transitioningIndex: number = -1;
-  @State thumbnails: ThumbnailInfo[] = [];
-  @State imageInfos: ImageInfoWithPixelMap[] = [];
   @State isLoading: boolean = true;
   @State errorMsg: string = '';
+
   @State menuItems: Array<NavigationMenuItem> = [
     {
-      value: '多选', action: () => {
-    }
+      value: '多选', action: () => {}
     },
     {
-      value: '菜单', icon: $r('sys.media.ohos_ic_public_more'), action: () => {
-    }
+      value: '菜单', icon: $r('sys.media.ohos_ic_public_more'), action: () => {}
     }
   ];
 
   @State currentPage: number = 0;
-  @State pageSize: number = 20; // 每页显示数量
+  @State pageSize: number = 20;
   @State hasMore: boolean = true;
   @State totalCount: number = 0;
   @State isRefreshing: boolean = false;
 
+  // 使用简单的数据源
+  @State imageInfos: ImageInfoWithPixelMap[] = [];
 
-
-  // 1. 声明单例变量（用于存储通过getInstance()获取的实例）
   private camManager: CamConnectionManager | null = null;
+  private loadMoreLock: boolean = false; // 防止重复加载
 
   aboutToAppear(): void {
-
-    // 2. 通过静态方法获取实例（复用EntryAbility创建的单例）
     this.camManager = CamConnectionManager.getInstance();
     if (!this.camManager) {
       console.error("CameraPage 获取CamConnectionManager实例失败！");
       return;
     }
-    // 进入页面：暂停检测（仅执行一次，无后续覆盖）
+
     this.camManager.pauseCheck();
     console.log("CameraPicturesPage：进入页面，暂停检测");
 
-    this.loadThumbnails();
-
-
+    // 初始化懒加载
+    this.loadPhotoTotalCount();
   }
 
+  // 加载照片总数
+  async loadPhotoTotalCount() {
+    try {
+      this.totalCount = nativeCamera.GetPhotoTotalCount();
+      console.log(`照片总数: ${this.totalCount}`);
 
-
-
-
-
-
-  // 🔥 3. 修改转场回调：接收唯一标识，精准归位节点
-
-  private doFinishTransition(uniqueKey: string): void {
-    // 回退时，通过key获取对应的节点，重新绑定到GridItem
-    const node = getMyNode(uniqueKey);
-    if (node) {
-      // 无需重新赋值给全局变量，GridItem会通过key获取最新节点
+      // 加载第一页数据
+      await this.loadPhotoMetaList(0);
+    } catch (error) {
+      console.error(`获取照片总数失败: ${error}`);
+      this.errorMsg = `加载失败: ${error}`;
+      this.isLoading = false;
     }
   }
 
+  // 加载照片元信息列表
+  async loadPhotoMetaList(pageIndex: number): Promise<void> {
+    if (this.isLoading && pageIndex > 0) return;
+    if (this.loadMoreLock) return;
+
+    this.isLoading = true;
+    this.loadMoreLock = true;
+
+    try {
+      const photoMetas: PhotoMeta[] = nativeCamera.GetPhotoMetaList(pageIndex, this.pageSize);
+      console.log(`加载第${pageIndex + 1}页，获取到${photoMetas.length}条数据`);
+
+      if (photoMetas.length === 0) {
+        this.hasMore = false;
+      } else {
+        // 转换元信息 - 修复类型问题
+        const newImageInfos: ImageInfoWithPixelMap[] = [];
+        for (let i = 0; i < photoMetas.length; i++) {
+          const meta = photoMetas[i];
+          const item: ImageInfoWithPixelMap = {
+            folder: meta.folder,
+            filename: meta.filename,
+            pixelMap: null
+          };
+          newImageInfos.push(item);
+        }
+
+        // 合并数据
+        let allImageInfos: ImageInfoWithPixelMap[];
+        if (pageIndex === 0) {
+          allImageInfos = newImageInfos;
+        } else {
+          // 不使用展开运算符，使用concat方法
+          allImageInfos = this.imageInfos.concat(newImageInfos);
+        }
+
+        // 更新数据
+        this.imageInfos = allImageInfos;
+
+        this.currentPage = pageIndex;
+        this.hasMore = photoMetas.length === this.pageSize;
+
+        // 预加载缩略图
+        this.preloadThumbnailsForPage(pageIndex);
+      }
+    } catch (error) {
+      console.error(`加载照片列表失败: ${error}`);
+      this.errorMsg = `加载失败: ${error}`;
+    } finally {
+      this.isLoading = false;
+      this.isRefreshing = false;
+      this.loadMoreLock = false;
+    }
+  }
+
+  // 预加载缩略图
+  preloadThumbnailsForPage(pageIndex: number) {
+    const startIndex = pageIndex * this.pageSize;
+    const endIndex = Math.min(startIndex + this.pageSize, this.imageInfos.length);
+
+    const preloadCount = Math.min(5, endIndex - startIndex);
+    for (let i = 0; i < preloadCount; i++) {
+      const index = startIndex + i;
+      if (index < this.imageInfos.length && !this.imageInfos[index].pixelMap) {
+        this.loadSingleThumbnail(index);
+      }
+    }
+  }
+
+  // 按需加载单张缩略图
+  async loadSingleThumbnail(index: number) {
+    if (index < 0 || index >= this.imageInfos.length) return;
+
+    const imageInfo = this.imageInfos[index];
+    if (!imageInfo || imageInfo.pixelMap) return;
+
+    try {
+      const thumbnailBuffer = await new Promise<ArrayBuffer>((resolve, reject) => {
+        nativeCamera.DownloadSingleThumbnail(
+          imageInfo.folder,
+          imageInfo.filename,
+          (err: string | null, buffer: ArrayBuffer) => {
+            if (err) {
+              reject(new Error(err));
+            } else {
+              resolve(buffer);
+            }
+          }
+        );
+      });
+
+      if (thumbnailBuffer && thumbnailBuffer.byteLength > 0) {
+        const pixelMap = await this.convertArrayBufferToPixelMap(thumbnailBuffer, imageInfo.filename);
+
+        // 修复：不使用扩展运算符，而是创建新对象
+        const updatedImageInfo: ImageInfoWithPixelMap = {
+          folder: imageInfo.folder,
+          filename: imageInfo.filename,
+          pixelMap: pixelMap,
+          thumbnail: thumbnailBuffer
+        };
+
+        // 更新数组中的对应元素
+        this.imageInfos[index] = updatedImageInfo;
+
+        // 触发UI更新（使用新数组）
+        this.imageInfos = this.imageInfos.slice();
+      }
+    } catch (error) {
+      console.error(`加载缩略图失败: ${error}, 文件: ${imageInfo.filename}`);
+    }
+  }
+
+  // 处理滚动事件
+  onGridScroll(scrollOffset: number, visibleSize: number, contentSize: number) {
+    if (this.imageInfos.length === 0) return;
+
+    // 按需加载可见区域的缩略图
+    const itemsPerRow = 4;
+    const itemHeight = visibleSize / (this.imageInfos.length / itemsPerRow);
+    const visibleStartIndex = Math.floor(scrollOffset / itemHeight) * itemsPerRow;
+    const visibleEndIndex = Math.min(visibleStartIndex + 20, this.imageInfos.length);
+
+    for (let i = Math.max(0, visibleStartIndex); i < visibleEndIndex; i++) {
+      if (!this.imageInfos[i].pixelMap) {
+        this.loadSingleThumbnail(i);
+      }
+    }
+
+    // 滚动到底部加载更多
+    if (!this.isLoading && this.hasMore && scrollOffset + visibleSize >= contentSize - 100) {
+      this.loadPhotoMetaList(this.currentPage + 1);
+    }
+  }
+
+  // 下拉刷新
+  async onRefresh() {
+    this.isRefreshing = true;
+    this.hasMore = true;
+    this.currentPage = 0;
+
+    // 清空缓存
+    if (typeof nativeCamera.ClearPhotoCache === 'function') {
+      nativeCamera.ClearPhotoCache();
+    }
+
+    // 重置数据
+    this.imageInfos = [];
+
+    await this.loadPhotoTotalCount();
+  }
+
+  private doFinishTransition(uniqueKey: string): void {
+    const node = getMyNode(uniqueKey);
+    // 无需额外操作
+  }
+
   private registerCustomTransition(): void {
-    // 注册自定义动画协议
     CustomTransition.getInstance().registerNavParam(this.pageId,
       (isPush: boolean, isExit: boolean, transitionProxy: NavigationTransitionProxy) => {
       }, 500);
   }
 
-  // 🔥 4. 修改GridItem点击逻辑：传递唯一标识（index）
-  // 3. 修改onGridItemClicked：开始转场时记录index，转场结束后重置
   private onGridItemClicked(index: number): void {
-    // 1. 获取当前点击的图片数据
+    if (index < 0 || index >= this.imageInfos.length) return;
+
     const currentImage = this.imageInfos[index];
-    if (!currentImage) {
-      return;
-    }
+    if (!currentImage) return;
 
-
-    // 唯一标识：用index转字符串（和GridItem中的key一致）
     this.currentNodeKey = index.toString();
-    // 🔥 开始转场：标记当前转场的index，隐藏原图片
     this.transitioningIndex = index;
-    // 2. 获取点击图片元素的位置信息（需给Image设置唯一id）
+
     const imageRect: RectInfoInPx = ComponentAttrUtils.getRectInfoById(
       WindowUtils.window.getUIContext(),
-      `shared-image-${index}` // 与GridItem中Image的id对应
+      `shared-image-${index}`
     );
 
-    // 3. 构建转场参数（包含图片数据、位置信息、转场回调） 新增传递uniqueKey（唯一标识）
     const param: Record<string, Object> = {
       "imageInfo": currentImage,
       "cardItemInfo": imageRect,
-      "uniqueKey": this.currentNodeKey, // 传递给BigImagePage，用于获取对应节点
+      "uniqueKey": this.currentNodeKey,
       "doDefaultTransition": () => {
-        this.doFinishTransition(this.currentNodeKey); // 回退时归位当前节点
+        this.doFinishTransition(this.currentNodeKey);
       }
     };
 
-    // 4. 跳转大图页并触发转场
     this.pageStack.pushPath({ name: 'BigImagePage', param: param });
 
-
-    // 4. 跳转后，延迟重置（确保转场动画结束后再显示原图片，避免回退时异常）
     setTimeout(() => {
       this.transitioningIndex = -1;
-    }, 500); // 时长和转场动画一致（CustomTransition里的500ms）
+    }, 500);
 
-    // 🔥 获取当前点击的节点并下树（不再操作全局单例）
     const currentNode = getMyNode(this.currentNodeKey);
     if (currentNode) {
       currentNode.onRemove();
     }
   }
 
-  // 加载缩略图数据
-  loadThumbnails() {
-    this.isLoading = true;
-    nativeCamera.GetThumbnailList((err: string | null, result: ThumbnailInfo[]) => {
-      if (err) {
-        this.errorMsg = `获取失败：${err}`;
-        this.isLoading = false;
-        return;
-      }
-
-      this.convertThumbnailsToPixelMaps(result).then(() => {
-        this.isLoading = false;
-      }).catch(() => {
-        this.isLoading = false;
-      });
-    });
-  }
-
-  // 批量转换缩略图（修复for循环解构问题）
-  async convertThumbnailsToPixelMaps(thumbnails: ThumbnailInfo[]) {
-    const newImageInfos: ImageInfoWithPixelMap[] = [];
-    for (let i = 0; i < thumbnails.length; i++) {
-      const item = thumbnails[i];
-      try {
-        if (!item.thumbnail || item.thumbnail.byteLength === 0) {
-          throw new Error('无效的缩略图数据');
-        }
-        // 转换为PixelMap（复用你的现有方法）
-        const pixelMap = await this.convertArrayBufferToPixelMap(item.thumbnail, item.filename);
-        newImageInfos.push({
-          folder: item.folder,
-          filename: item.filename,
-          pixelMap: pixelMap,
-          thumbnail: item.thumbnail // 保存原始buffer，方便大图使用
-        });
-      } catch (err) {
-        console.error(`转换失败：${(err as Error).message}`);
-        newImageInfos.push({
-          folder: item.folder,
-          filename: item.filename,
-          pixelMap: null,
-          thumbnail: item.thumbnail || new ArrayBuffer(0)
-        });
-      }
-    }
-    this.imageInfos = newImageInfos;
-  }
-
-  // 单个buffer转PixelMap（修复imageInfo.format问题）
+  // 单个buffer转PixelMap
   async convertArrayBufferToPixelMap(buffer: ArrayBuffer, filename: string): Promise<image.PixelMap> {
     const uint8Buffer = new Uint8Array(buffer);
     if (uint8Buffer.length < 2 || uint8Buffer[0] !== 0xFF || uint8Buffer[1] !== 0xD8) {
       throw new Error(`不是有效的JPEG数据`);
     }
+
     const imageSource = image.createImageSource(buffer);
     if (!imageSource) {
       throw new Error(`创建ImageSource失败`);
     }
+
     const imageInfo = await imageSource.getImageInfo();
     if (!imageInfo || imageInfo.size.width === 0 || imageInfo.size.height === 0) {
       throw new Error(`获取图片信息失败`);
     }
+
     const pixelMapOptions: image.InitializationOptions = {
       size: { width: imageInfo.size.width, height: imageInfo.size.height },
       pixelFormat: image.PixelMapFormat.RGBA_8888,
       alphaType: image.AlphaType.OPAQUE,
       editable: false
     };
+
     const pixelMap = await imageSource.createPixelMap(pixelMapOptions);
     if (!pixelMap) {
       throw new Error(`创建PixelMap失败`);
     }
+
     return pixelMap;
   }
 
   build() {
     NavDestination() {
       Column() {
-        if (this.isLoading) {
+        if (this.isLoading && this.imageInfos.length === 0) {
           Column({ space: 10 }) {
             LoadingProgress().size({ width: 40, height: 40 });
             Text('正在检索照片...').fontSize(16);
-          }.margin({ top: 50 });
+          }
+          .margin({ top: 50 })
+          .width('100%')
+          .height('100%')
+          .justifyContent(FlexAlign.Center)
+          .alignItems(HorizontalAlign.Center)
         } else if (this.errorMsg) {
           Text(this.errorMsg).fontSize(16).padding(20);
         } else {
-          Text(`共找到 ${this.imageInfos.length} 张照片`).fontSize(14).padding({ left: 16, top: 10 });
+          // 显示照片统计
+          Row() {
+            Text(`共 ${this.totalCount} 张照片`)
+              .fontSize(14)
+              .fontColor(Color.Gray);
+
+            if (this.isRefreshing) {
+              LoadingProgress()
+                .size({ width: 20, height: 20 })
+                .margin({ left: 10 });
+            }
+          }
+          .padding({ left: 16, top: 10, bottom: 5 })
+          .width('100%')
+
+          // 使用ForEach，因为Grid有自己的虚拟滚动
           Grid() {
             ForEach(this.imageInfos, (item: ImageInfoWithPixelMap, index: number) => {
-
               GridItem() {
-                // 用 Stack 让图片和 NodeContainer 重叠（视觉上还是图片，NodeContainer 是转场载体）
                 Stack() {
-                  // 图片组件（独立存在，不嵌套在 NodeContainer 内）
-                  // 2. GridItem内的原图片组件，添加visibility控制
+                  // 图片组件
                   Column() {
-                    Image(item.pixelMap || $r('app.media.ic_placeholder'))
+                    if (item.pixelMap) {
+                      // 已加载缩略图
+                      Image(item.pixelMap)
+                        .width('100%')
+                        .height('100%')
+                        .objectFit(ImageFit.Cover)
+                        .id(`shared-image-${index}`)
+                        .visibility(this.transitioningIndex === index ? Visibility.None : Visibility.Visible)
+                    } else {
+                      // 缩略图未加载，显示占位符
+                      Column() {
+                        Image($r('app.media.ic_placeholder'))
+                          .width(40)
+                          .height(40)
+                        Text('加载中...')
+                          .fontSize(12)
+                          .fontColor(Color.Gray)
+                          .margin({ top: 5 })
+                      }
                       .width('100%')
                       .height('100%')
-                      .objectFit(ImageFit.Fill)
-                      .id(`shared-image-${index}`) // 唯一ID，用于获取位置
-                      // 🔥 转场时隐藏原图片（transitioningIndex === index时隐藏）
-                      .visibility(this.transitioningIndex === index ? Visibility.None : Visibility.Visible)
-                      .zIndex(1) // 原图片层级低于NodeContainer，转场时不冲突
+                      .justifyContent(FlexAlign.Center)
+                      .alignItems(HorizontalAlign.Center)
+                      .backgroundColor(Color.White)
+                      .border({ width: 1, color: '#f0f0f0' })
+                    }
                   }
                   .width('100%')
                   .height('100%')
 
-                  // 🔥 动态创建当前GridItem的NodeController并绑定
-                  // 🔥 直接用index.toString()作为uniqueKey，无需单独声明变量
-                  NodeContainer(getMyNode(index.toString()))   // 通过key获取专属节点
+                  // NodeContainer
+                  NodeContainer(getMyNode(index.toString()))
                     .width('100%')
                     .height('100%')
                     .onAppear(() => {
-                      // 节点显示时，若不存在则创建（懒加载，避免一次性创建所有节点）
                       if (!getMyNode(index.toString())) {
                         createMyNode(this.getUIContext(), index.toString(), item.pixelMap);
                       }
                     })
                 }
-                // 点击事件绑定到 Stack（触发转场）
-                .onClick(() => this.onGridItemClicked(index))
-
-                // 移除冗余的 TapGesture（避免重复触发）
+                .onClick(() => {
+                  if (!item.pixelMap) {
+                    this.loadSingleThumbnail(index).then(() => {
+                      this.onGridItemClicked(index);
+                    });
+                  } else {
+                    this.onGridItemClicked(index);
+                  }
+                })
               }
               .aspectRatio(1)
-
-            }, (item: ImageInfoWithPixelMap) => item.filename + item.folder);
+            }, (item: ImageInfoWithPixelMap) => `${item.folder}-${item.filename}`)
           }
-          // 关键：设置4列网格，自适应屏幕宽度
-          .columnsTemplate('1fr 1fr 1fr 1fr') // 4列平均分配宽度
-          .multiSelectable(true)
-          .supportAnimation(true)
-          .columnsGap(2) // 列间距
-          .rowsGap(0) // 行间距
+          .columnsTemplate('1fr 1fr 1fr 1fr')
+          .columnsGap(2)
+          .rowsGap(2)
           .height('100%')
           .width('100%')
+          .scrollBar(BarState.Off)
+          .onScroll((scrollOffset: number, scrollState: ScrollState) => {
+            // Grid的onScroll回调接收两个参数：scrollOffset和scrollState
+            // 我们需要获取Grid的尺寸来计算可见区域
+            // 这里简化处理：只根据滚动位置触发懒加载
+            if (scrollOffset > 0) {
+              // 计算可见区域的大致索引
+              const visibleStartIndex = Math.floor(scrollOffset / 100) * 4; // 假设每项高度100px
+              const visibleEndIndex = visibleStartIndex + 20; // 预加载多一些
+
+              for (let i = Math.max(0, visibleStartIndex); i < Math.min(visibleEndIndex, this.imageInfos.length); i++) {
+                if (!this.imageInfos[i].pixelMap) {
+                  this.loadSingleThumbnail(i);
+                }
+              }
+
+              // 滚动到底部加载更多
+              if (!this.isLoading && this.hasMore) {
+                // 我们不知道总高度，所以使用简单策略：当加载了足够多项目时自动加载下一页
+                if (this.imageInfos.length > 0 && visibleEndIndex >= this.imageInfos.length - 10) {
+                  this.loadPhotoMetaList(this.currentPage + 1);
+                }
+              }
+            }
+          })
+
+          // 底部加载更多提示
+          if (this.isLoading && this.imageInfos.length > 0) {
+            Row() {
+              LoadingProgress().size({ width: 20, height: 20 });
+              Text('加载更多...').fontSize(14).margin({ left: 10 });
+            }
+            .width('100%')
+            .justifyContent(FlexAlign.Center)
+            .padding(20)
+          }
+
+          if (!this.hasMore && this.imageInfos.length > 0) {
+            Text('没有更多照片了').fontSize(14).fontColor(Color.Gray).padding(20);
+          }
         }
       }
       .width('100%')
@@ -304,24 +491,15 @@ export struct CamPhotoPrePage {
     .menus(this.menuItems)
     .width('100%')
     .height('100%')
-    // 新增：注册转场、获取页面信息
     .onReady((context: NavDestinationContext) => {
       this.pageStack = context.pathStack;
       this.pageId = this.pageStack.getAllPathName().length - 1;
       this.registerCustomTransition();
-      /*if (this.camManager) {
-        this.camManager.resumeCheck()
-      }*/
-
     })
-    // 新增：注销转场、节点下树
     .onDisAppear(() => {
       CustomTransition.getInstance().unRegisterNavParam(this.pageId);
-
-      // 🔥 页面卸载时，清空所有NodeController，避免内存泄漏
       clearAllMyNodes();
 
-      // 🔥 离开页面：恢复检测（补充分配，确保后续页面检测正常）
       if (this.camManager) {
         this.camManager.resumeCheck();
         console.log("CameraPicturesPage：离开页面，恢复检测");
