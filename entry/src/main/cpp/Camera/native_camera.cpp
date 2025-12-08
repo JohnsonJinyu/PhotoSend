@@ -130,6 +130,7 @@ static napi_value Init(napi_env env, napi_value exports) {
         {"RegisterParamCallback", nullptr, RegisterParamCallback, nullptr, nullptr, nullptr, napi_default, nullptr},
         {"GetThumbnailList", nullptr, GetThumbnailList, nullptr, nullptr, nullptr, napi_default, nullptr},
         {"GetPhotoTotalCount", nullptr, GetPhotoTotalCount, nullptr, nullptr, nullptr, napi_default, nullptr},
+        {"DownloadSingleThumbnail", nullptr, DownloadSingleThumbnail, nullptr, nullptr, nullptr, napi_default, nullptr},
         
         
     };
