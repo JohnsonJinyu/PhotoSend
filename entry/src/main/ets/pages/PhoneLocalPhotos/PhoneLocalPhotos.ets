@@ -1,6 +1,7 @@
 // PhoneLocalPhotos.ets
 // 以Gird显示的图片里表页面
 import { promptAction } from "@kit.ArkUI";
+import { ExifReader } from "./ExifReader";
 import { ImageInfo, LocalPhotoDataSource } from './LocalPhotoDataSource';
 
 
@@ -60,30 +61,46 @@ export struct PhoneLocalPhotos {
   @Builder
   private ImageGridItem(item: ImageInfo,index:number) {
     // 这里就是单个 GridItem 的布局，和常规 UI 写法完全一致
+
     GridItem() {
       Column() {
-        Image(item.uri)
-          .width('100%')
-          .aspectRatio(1)
-          .objectFit(ImageFit.Cover)
-          .borderRadius(4)
-          .syncLoad(false) // 必须开启异步加载，避免卡顿
-          .autoResize(true)
-          //.priority(ImagePriority.HIGH) // 提升缓存优先级，减少重新加载
-          .dynamicRangeMode(DynamicRangeMode.HIGH)
-          .orientation(ImageRotateOrientation.AUTO)
-          .geometryTransition(item.uri,{follow:false})
-          // 跳转详情页时，无需传递 imageList（详情页直接从单例获取），仅传递选中索引即可
-          .onClick(()=>{
-            this.selectedIndex = index;
-            // 1. 先创建符合接口的参数对象（显式类型约束）
-            const detailParams: PhotoDetailParams = {
-              selectedIndex: index
-            };
-            // 2. 传递参数（无需额外断言，类型已匹配）
-            this.pageStack.pushPathByName("LocalPhotoDetail", detailParams, true);
-          })
+        // 使用Stack来叠加图片和RAW标记
+        Stack() {
+          Image(item.uri)
+            .width('100%')
+            .aspectRatio(1)
+            .objectFit(ImageFit.Cover)
+            .borderRadius(4)
+            .syncLoad(false) // 必须开启异步加载，避免卡顿
+            .autoResize(true)
+            .dynamicRangeMode(DynamicRangeMode.HIGH)
+            // 移除.orientation(ImageRotateOrientation.AUTO)，使用手动旋转
+            .rotate({ angle: item.rotationAngle || 0 }) // 使用数据层计算好的旋转角度
+            .geometryTransition(item.uri,{follow:false})
+            // 跳转详情页时，无需传递 imageList（详情页直接从单例获取），仅传递选中索引即可
+            .onClick(()=>{
+              this.selectedIndex = index;
+              // 1. 先创建符合接口的参数对象（显式类型约束）
+              const detailParams: PhotoDetailParams = {
+                selectedIndex: index
+              };
+              // 2. 传递参数（无需额外断言，类型已匹配）
+              this.pageStack.pushPathByName("LocalPhotoDetail", detailParams, true);
+            })
 
+          // RAW文件标记 - 条件渲染（这是UI组件语法允许的）
+          if (item.isRawFile) {
+            Text('RAW')
+              .fontSize(10)
+              .fontColor('#ffffff')
+              .backgroundColor('rgba(0, 0, 0, 0.7)')
+              .padding({ left: 4, right: 4, top: 2, bottom: 2 })
+              .borderRadius(2)
+              .position({ x: 4, y: 4 });
+          }
+        }
+        .width('100%')
+        .aspectRatio(1)
 
         Text(item.name)
           .fontSize(12)

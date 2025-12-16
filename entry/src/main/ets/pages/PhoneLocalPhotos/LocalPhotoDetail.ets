@@ -114,18 +114,31 @@ struct LocalPhotoDetail {
    */
   @Builder
   private SmallImgItemBuilder(item: ImageInfo, index: number): void {
-    Image(item.uri)
-      .width(this.smallImgWidth)
-      .height(this.smallImgWidth)
-      .orientation(ImageRotateOrientation.AUTO)
-      .aspectRatio(1)
-      .objectFit(ImageFit.Cover)
-      .borderRadius(4)
-      .backgroundColor('rgba(0,0,0,0.3)')
-      .borderWidth(this.selectedIndex === index ? 3 : 0)
-      .borderColor('#ffffff')
-      .borderStyle(BorderStyle.Solid)
-      .onClick(() => this.smallImgClickAction(index));
+    Stack({ alignContent: Alignment.BottomEnd }) {
+      Image(item.uri)
+        .width(this.smallImgWidth)
+        .height(this.smallImgWidth)
+        .aspectRatio(1)
+        .objectFit(ImageFit.Cover)
+        .borderRadius(4)
+        .rotate({ angle: item.rotationAngle || 0 }) // 使用数据层计算好的旋转角度
+        .backgroundColor('rgba(0,0,0,0.3)')
+        .borderWidth(this.selectedIndex === index ? 3 : 0)
+        .borderColor('#ffffff')
+        .borderStyle(BorderStyle.Solid)
+        .onClick(() => this.smallImgClickAction(index));
+
+      // RAW文件角标
+      if (item.isRawFile) {
+        Text('RAW')
+          .fontSize(8)
+          .fontColor('#ffffff')
+          .backgroundColor('rgba(0, 0, 0, 0.7)')
+          .padding({ left: 2, right: 2, top: 1, bottom: 1 })
+          .borderRadius(1)
+          .margin({ right: 2, bottom: 2 });
+      }
+    }
   }
 
   build() {

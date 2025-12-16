@@ -2,14 +2,21 @@
 // LocalPhotoDataSource实现了IDataSource接口，用于管理listener监听，以及通知LazyForEach数据更新
 
 import fs from '@ohos.file.fs';
-
+import { ExifReader, ExifInfo } from './ExifReader'; // 新增导入
 
 // 导出图片模型
-export interface ImageInfo{
-  uri:string;
-  name:string;
-  modifyTime:number;
-  dateStr:string;
+export interface ImageInfo {
+  uri: string;
+  name: string;
+  modifyTime: number;
+  dateStr: string;
+  orientation?: number;     // EXIF方向信息
+  rotationAngle?: number;   // 旋转角度
+  width?: number;          // 图片宽度
+  height?: number;         // 图片高度
+  make?: string;           // 相机制造商
+  model?: string;          // 相机型号
+  isRawFile?: boolean;     // 是否为RAW文件
 }
 
 
@@ -107,11 +114,40 @@ export class LocalPhotoDataSource implements IDataSource{
           const modifyTime = stat.mtime;
           const dateStr = this.formatDate(new Date(modifyTime));
 
+          // 获取文件扩展名
+          const ext = fileName.substring(fileName.lastIndexOf('.')).toLowerCase();
+          const isRawFile = ext === '.nef' || ext === '.raw' || ext === '.arw' || ext === '.cr2';
+
+          // 读取EXIF信息（特别针对RAW文件）
+          let exifInfo: ExifInfo;
+
+          try {
+            exifInfo = ExifReader.getExifInfo(filePath);
+            console.log(`文件 ${fileName} 的EXIF信息:`, exifInfo);
+          } catch (error) {
+            console.warn(`读取 ${fileName} 的EXIF信息失败:`, error);
+            exifInfo = {
+              orientation: 1,
+              width: 0,
+              height: 0,
+              make: '',
+              model: ''
+            };
+          }
+
+
           imageFiles.push({
             uri: `file://${filePath}`,
             name: fileName,
             modifyTime: modifyTime,
-            dateStr: dateStr
+            dateStr: dateStr,
+            orientation: exifInfo.orientation,
+            rotationAngle: ExifReader.getRotationAngle(exifInfo.orientation),
+            width: exifInfo.width,
+            height: exifInfo.height,
+            make: exifInfo.make,
+            model: exifInfo.model,
+            isRawFile: isRawFile
           });
         }
       }

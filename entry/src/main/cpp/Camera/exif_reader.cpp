@@ -13,6 +13,8 @@
 #include <cstring>
 #include <string>
 
+#define LOG_DOMAIN 0x0006       // 日志域（自定义标识，区分不同模块日志）
+#define LOG_TAG "exif_reader" // 日志标签（日志中显示的模块名）
 
 /**
  * @brief 内部函数：读取图片的EXIF方向信息
@@ -35,7 +37,7 @@ static int get_image_orientation(const char* filepath){
         orientation = exif_get_short(entry->data, byteOrder);
         
         OH_LOG_Print(LOG_APP, LOG_DEBUG, LOG_DOMAIN, LOG_TAG,
-                    "文件 %{public}s 的EXIF方向: %d", filepath, orientation);
+                    "文件 %{public}s 的EXIF方向: %{public}d", filepath, orientation);
     } else {
         OH_LOG_Print(LOG_APP, LOG_DEBUG, LOG_DOMAIN, LOG_TAG,
                     "文件 %{public}s 没有方向标签，使用默认值", filepath);
