@@ -13,6 +13,7 @@
 #include <napi/native_api.h>
 #include "Camera/camera_device.h"
 #include "Camera/camera_download.h"
+#include "Camera/exif_reader.h"
 #include "napi/native_api.h"
 // libgphoto2头文件：相机操作核心接口（相机对象、文件、配置、端口管理）
 #include <gphoto2/gphoto2.h>
@@ -132,8 +133,11 @@ static napi_value Init(napi_env env, napi_value exports) {
         {"GetPhotoTotalCount", nullptr, GetPhotoTotalCount, nullptr, nullptr, nullptr, napi_default, nullptr},
         {"DownloadSingleThumbnail", nullptr, DownloadSingleThumbnail, nullptr, nullptr, nullptr, napi_default, nullptr},
         {"GetPhotoMetaList", nullptr, GetPhotoMetaList, nullptr, nullptr, nullptr, napi_default, nullptr},
-        {"ClearPhotoCache", nullptr, ClearPhotoCacheNapi, nullptr, nullptr, nullptr, napi_default, nullptr}
+        {"ClearPhotoCache", nullptr, ClearPhotoCacheNapi, nullptr, nullptr, nullptr, napi_default, nullptr},
+        {"GetImageOrientationNapi", nullptr, GetImageOrientationNapi, nullptr, nullptr, nullptr, napi_default, nullptr},
+        {"GetImageExifInfoNapi", nullptr, GetImageExifInfoNapi, nullptr, nullptr, nullptr, napi_default, nullptr},
     
+        
 
         
         

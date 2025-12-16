@@ -273,3 +273,22 @@ export const DownloadSingleThumbnail: (
  */
 export const ClearPhotoCache: () => void;
 
+
+
+/**
+ *  @description 获取Raw照片的方向
+ * */
+export const GetImageOrientationNapi: (filePath: string) => number;
+
+
+/**
+ *  @description 获取Raw照片的Exif信息
+ * */
+export const GetImageExifInfoNapi: (filePath: string) => {
+  orientation: number;
+  width: number;
+  height: number;
+  make: string;
+  model: string;
+};
+

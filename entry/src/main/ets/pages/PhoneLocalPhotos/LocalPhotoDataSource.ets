@@ -131,7 +131,9 @@ export class LocalPhotoDataSource implements IDataSource{
 
   // --------------- 数据层辅助方法（纯工具逻辑）---------------
   private isImageFile(fileName: string): boolean {
-    const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp'];
+    //const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp'];
+    // 支持的图片格式列表
+    const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp', '.nef', '.raw', '.arw', '.cr2', '.dng'];
     const ext = fileName.substring(fileName.lastIndexOf('.')).toLowerCase();
     return imageExtensions.includes(ext);
   }
