@@ -31,14 +31,15 @@ export class ExifReader{
         return 1;
       }
 
-      const orientation = native.GetImageOrientationNapi(filePath);
-
-      // 确保返回值在有效范围内
-      if (orientation >= 1 && orientation <= 8) {
-        return orientation;
+      // 根据文件类型调用不同的Native方法
+      if (ExifReader.isRawFile(filePath)) {
+        // 调用专门处理RAW的Native接口
+        const orientation = native.GetRawImageOrientationNapi(filePath);
+        return (orientation >= 1 && orientation <= 8) ? orientation : 1;
       } else {
-        console.warn(`无效的方向值: ${orientation}，使用默认值1`);
-        return 1;
+        // 调用原有的处理普通图片的接口
+        const orientation = native.GetImageOrientationNapi(filePath);
+        return (orientation >= 1 && orientation <= 8) ? orientation : 1;
       }
     } catch (error) {
       console.error('读取EXIF方向失败:', error);
@@ -69,7 +70,14 @@ export class ExifReader{
         return defaultInfo;
       }
 
-      const exifInfo = native.GetImageExifInfoNapi(filePath);
+      let exifInfo: ExifInfo | null = null;
+
+      // 根据文件类型调用不同的Native方法
+      if (ExifReader.isRawFile(filePath)) {
+        exifInfo = native.GetRawImageExifInfoNapi(filePath);
+      } else {
+        exifInfo = native.GetImageExifInfoNapi(filePath);
+      }
 
       if (!exifInfo) {
         return defaultInfo;
@@ -121,5 +129,17 @@ export class ExifReader{
   static isPortrait(orientation: number): boolean {
     return orientation === 6 || orientation === 8;
   }
+
+
+  // 新增：判断是否为RAW文件的辅助函数
+  private static isRawFile(filePath: string): boolean {
+    if (!filePath) return false;
+
+    const ext = filePath.substring(filePath.lastIndexOf('.')).toLowerCase();
+    const rawExtensions = ['.nef', '.cr2', '.arw', '.dng', '.raw', '.rw2', '.orf', '.pef', '.raf', '.srw'];
+    return rawExtensions.includes(ext);
+  }
+
+
 
 }

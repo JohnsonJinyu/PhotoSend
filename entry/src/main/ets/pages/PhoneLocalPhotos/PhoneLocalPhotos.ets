@@ -59,9 +59,7 @@ export struct PhoneLocalPhotos {
 
   // --------------- 关键：用 @Builder 封装单个 GridItem 布局（直观易懂）---------------
   @Builder
-  private ImageGridItem(item: ImageInfo,index:number) {
-    // 这里就是单个 GridItem 的布局，和常规 UI 写法完全一致
-
+  private ImageGridItem(item: ImageInfo, index: number) {
     GridItem() {
       Column() {
         // 使用Stack来叠加图片和RAW标记
@@ -71,24 +69,20 @@ export struct PhoneLocalPhotos {
             .aspectRatio(1)
             .objectFit(ImageFit.Cover)
             .borderRadius(4)
-            .syncLoad(false) // 必须开启异步加载，避免卡顿
+            .syncLoad(false)
             .autoResize(true)
             .dynamicRangeMode(DynamicRangeMode.HIGH)
-            // 移除.orientation(ImageRotateOrientation.AUTO)，使用手动旋转
-            .rotate({ angle: item.rotationAngle || 0 }) // 使用数据层计算好的旋转角度
-            .geometryTransition(item.uri,{follow:false})
-            // 跳转详情页时，无需传递 imageList（详情页直接从单例获取），仅传递选中索引即可
-            .onClick(()=>{
+            .rotate({ angle: item.rotationAngle || 0 })
+            .geometryTransition(item.uri, { follow: false })
+            .onClick(() => {
               this.selectedIndex = index;
-              // 1. 先创建符合接口的参数对象（显式类型约束）
               const detailParams: PhotoDetailParams = {
                 selectedIndex: index
               };
-              // 2. 传递参数（无需额外断言，类型已匹配）
               this.pageStack.pushPathByName("LocalPhotoDetail", detailParams, true);
             })
 
-          // RAW文件标记 - 条件渲染（这是UI组件语法允许的）
+          // RAW文件标记 - 使用position和margin的组合
           if (item.isRawFile) {
             Text('RAW')
               .fontSize(10)
@@ -96,7 +90,12 @@ export struct PhoneLocalPhotos {
               .backgroundColor('rgba(0, 0, 0, 0.7)')
               .padding({ left: 4, right: 4, top: 2, bottom: 2 })
               .borderRadius(2)
-              .position({ x: 4, y: 4 });
+              // 关键修改：position使用百分比 + 负的margin
+              .position({
+                right: 4,  // 距离右边4px
+                bottom: 4  // 距离底部4px
+              })
+              .hitTestBehavior(HitTestMode.None) // 关键：让点击事件穿透
           }
         }
         .width('100%')

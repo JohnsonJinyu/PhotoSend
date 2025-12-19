@@ -136,7 +136,9 @@ static napi_value Init(napi_env env, napi_value exports) {
         {"ClearPhotoCache", nullptr, ClearPhotoCacheNapi, nullptr, nullptr, nullptr, napi_default, nullptr},
         {"GetImageOrientationNapi", nullptr, GetImageOrientationNapi, nullptr, nullptr, nullptr, napi_default, nullptr},
         {"GetImageExifInfoNapi", nullptr, GetImageExifInfoNapi, nullptr, nullptr, nullptr, napi_default, nullptr},
-    
+        {"GetRawImageOrientationNapi", nullptr, GetRawImageOrientationNapi, nullptr, nullptr, nullptr, napi_default, nullptr},
+        {"GetRawImageExifInfoNapi", nullptr, GetRawImageExifInfoNapi, nullptr, nullptr, nullptr, napi_default, nullptr},
+
         
 
         

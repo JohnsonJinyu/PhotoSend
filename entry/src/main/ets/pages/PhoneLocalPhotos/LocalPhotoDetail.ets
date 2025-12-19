@@ -156,7 +156,7 @@ struct LocalPhotoDetail {
                 Image(item.uri)
                   .width('100%')
                   .height('100%')
-                  .orientation(ImageRotateOrientation.AUTO)
+                  .rotate({ angle: item.rotationAngle || 0 })
                   .objectFit(ImageFit.Contain)
                   .backgroundColor('#000');
               }

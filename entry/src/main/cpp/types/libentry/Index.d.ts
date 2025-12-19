@@ -292,3 +292,22 @@ export const GetImageExifInfoNapi: (filePath: string) => {
   model: string;
 };
 
+/**
+ * @description 获取RAW照片的EXIF方向
+ * @param filePath RAW文件路径（如 .NEF）
+ * @returns EXIF方向值 (1-8)，失败返回1
+ */
+export const GetRawImageOrientationNapi: (filePath: string) => number;
+
+/**
+ * @description 获取RAW照片的完整EXIF信息
+ * @param filePath RAW文件路径（如 .NEF）
+ * @returns EXIF信息对象
+ */
+export const GetRawImageExifInfoNapi: (filePath: string) => {
+  orientation: number;
+  width: number;
+  height: number;
+  make: string;
+  model: string;
+};

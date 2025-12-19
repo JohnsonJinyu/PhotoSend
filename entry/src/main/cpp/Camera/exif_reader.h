@@ -30,7 +30,8 @@ napi_value GetImageExifInfoNapi(napi_env env, napi_callback_info info);
 
 
 // ========== 新增：用于RAW文件的函数 ==========
-// 通用EXIF读取函数（自动判断格式）
-napi_value GetUniversalExifInfoNapi(napi_env env, napi_callback_info info);
+// ========== 新增：用于RAW文件的函数声明 ==========
+napi_value GetRawImageOrientationNapi(napi_env env, napi_callback_info info);
+napi_value GetRawImageExifInfoNapi(napi_env env, napi_callback_info info);
 
 #endif //PHOTOSEND_EXIF_READER_H
