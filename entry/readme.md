@@ -1,3 +1,6 @@
+# 20251219
+补充，引入libraw解析raw图片
+
 # 20250922
 src/main/ets/
 ├── components/
