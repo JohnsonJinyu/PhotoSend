@@ -13,6 +13,7 @@
 #include <cstring>
 #include <string>
 
+
 #define LOG_DOMAIN 0x0006       // 日志域（自定义标识，区分不同模块日志）
 #define LOG_TAG "exif_reader" // 日志标签（日志中显示的模块名）
 
