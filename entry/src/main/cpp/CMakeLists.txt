@@ -58,6 +58,7 @@ target_link_libraries(entry PUBLIC
     # 鸿蒙系统库（保持不变）
     hilog_ndk.z
     ace_napi.z
+    raw_r
 )
 
 # 8. 保留 NativeRender 配置（不变）
