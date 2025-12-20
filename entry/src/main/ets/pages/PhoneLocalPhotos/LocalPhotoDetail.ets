@@ -116,15 +116,15 @@ struct LocalPhotoDetail {
   private SmallImgItemBuilder(item: ImageInfo, index: number): void {
     Stack({ alignContent: Alignment.BottomEnd }) {
       Image(item.uri)
-        .width(this.smallImgWidth)
-        .height(this.smallImgWidth)
+        .width(this.selectedIndex === index ? this.smallImgWidth + 4 : this.smallImgWidth)
+        .height(this.selectedIndex === index ? this.smallImgWidth + 4 : this.smallImgWidth)
         .aspectRatio(1)
         .objectFit(ImageFit.Cover)
         .borderRadius(4)
-        .rotate({ angle: item.rotationAngle || 0 }) // 使用数据层计算好的旋转角度
+        .rotate({ angle: item.rotationAngle || 0 })
         .backgroundColor('rgba(0,0,0,0.3)')
-        .borderWidth(this.selectedIndex === index ? 3 : 0)
-        .borderColor('#ffffff')
+        .borderWidth(this.selectedIndex === index ? 2 : 0)  // 减小边框宽度
+        .borderColor('#ff4081')  // 使用更醒目的颜色
         .borderStyle(BorderStyle.Solid)
         .onClick(() => this.smallImgClickAction(index));
 
@@ -141,18 +141,48 @@ struct LocalPhotoDetail {
     }
   }
 
+
+  // 一个获取图片名称的方法
+  private getTitle(): string {
+    if (this.dataSource.totalCount() === 0) {
+      return '图片详情';
+    }
+
+    const validIndex = Math.max(0, Math.min(this.selectedIndex, this.dataSource.totalCount() - 1));
+    const item = this.dataSource.dataList[validIndex];
+
+    /*if (item) {
+      const fileName = item.name || '';
+      // 去除文件扩展名
+      return fileName.lastIndexOf('.') > 0
+        ? fileName.substring(0, fileName.lastIndexOf('.'))
+        : fileName;
+    }*/
+
+    if (item) {
+      return item.name || '图片详情';
+    }
+
+    return '图片详情';
+  }
+
+
+
   build() {
     NavDestination() {
       Stack({ alignContent: Alignment.Bottom }) {
+
         // --------------- 大图List ---------------
         List({
           scroller: this.bigScroller,
           initialIndex: this.selectedIndex
         }) {
+
           ForEach(
             this.dataSource.dataList || [],
             (item: ImageInfo) => {
               ListItem() {
+
                 Image(item.uri)
                   .width('100%')
                   .height('100%')
@@ -164,7 +194,7 @@ struct LocalPhotoDetail {
                       : ImageRotateOrientation.AUTO
                   )
                   .objectFit(ImageFit.Contain)
-                  .backgroundColor('#000');
+
               }
               .width(this.imageWidth);
             },
@@ -242,12 +272,8 @@ struct LocalPhotoDetail {
       .width('100%')
       .height('100%');
     }
-    .title(() => {
-      if (this.dataSource.totalCount() === 0) return '图片详情';
-      const validIndex = Math.max(0, Math.min(this.selectedIndex, this.dataSource.totalCount() - 1));
-      return this.dataSource.dataList[validIndex]?.name || '图片详情';
-    })
-    .backgroundColor('#000')
+    .title(this.getTitle())
+    //.backgroundColor('#000')
     .hideBackButton(false)
     .onReady((ctx: NavDestinationContext) => {
       try {
