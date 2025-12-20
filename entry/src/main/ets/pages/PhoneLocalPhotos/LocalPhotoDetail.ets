@@ -156,7 +156,13 @@ struct LocalPhotoDetail {
                 Image(item.uri)
                   .width('100%')
                   .height('100%')
-                  .rotate({ angle: item.rotationAngle || 0 })
+                  // 关键修改：使用orientation属性而不是rotate
+                  .orientation(
+                    // 根据是否为RAW文件决定使用orientation还是rotate
+                    item.imageOrientation !== undefined && item.imageOrientation !== 0
+                      ? item.imageOrientation
+                      : ImageRotateOrientation.AUTO
+                  )
                   .objectFit(ImageFit.Contain)
                   .backgroundColor('#000');
               }

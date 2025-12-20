@@ -96,6 +96,32 @@ export class ExifReader{
     }
   }
 
+
+  /**
+   * 将EXIF方向值转换为Image组件的orientation属性值
+   * @param orientation EXIF方向值 (1-8)
+   * @param isRawFile 是否为RAW文件
+   * @returns Image组件的orientation属性值
+   */
+  static convertToImageOrientation(orientation: number, isRawFile: boolean): number {
+    if (!isRawFile) {
+      return 0; // 非RAW文件，使用ImageRotateOrientation.AUTO
+    }
+
+    // RAW文件：根据EXIF方向值映射
+    switch (orientation) {
+      case 1: return 0; // ImageRotateOrientation.AUTO
+      case 2: return 0; // 水平翻转（ArkTS不支持，使用AUTO）
+      case 3: return 0; // 旋转180度（使用AUTO）
+      case 4: return 0; // 垂直翻转（使用AUTO）
+      case 5: return 0; // 顺时针90度+水平翻转（使用AUTO）
+      case 6: return 2; // 顺时针90度（对应ImageRotateOrientation.ROTATE_90）
+      case 7: return 0; // 顺时针90度+垂直翻转（使用AUTO）
+      case 8: return 4; // 逆时针90度（对应ImageRotateOrientation.ROTATE_270）
+      default: return 0; // 默认AUTO
+    }
+  }
+
   /**
    * 根据方向值获取旋转角度
    * @param orientation EXIF方向值

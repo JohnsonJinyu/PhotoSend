@@ -17,6 +17,7 @@ export interface ImageInfo {
   make?: string;           // 相机制造商
   model?: string;          // 相机型号
   isRawFile?: boolean;     // 是否为RAW文件
+  imageOrientation?: number; // Image组件的orientation属性值（新增）
 }
 
 
@@ -135,6 +136,8 @@ export class LocalPhotoDataSource implements IDataSource{
             };
           }
 
+          // 计算Image组件的orientation属性值
+          const imageOrientation = ExifReader.convertToImageOrientation(exifInfo.orientation, isRawFile);
 
           imageFiles.push({
             uri: `file://${filePath}`,
@@ -147,7 +150,8 @@ export class LocalPhotoDataSource implements IDataSource{
             height: exifInfo.height,
             make: exifInfo.make,
             model: exifInfo.model,
-            isRawFile: isRawFile
+            isRawFile: isRawFile,
+            imageOrientation: imageOrientation // 新增字段
           });
         }
       }
