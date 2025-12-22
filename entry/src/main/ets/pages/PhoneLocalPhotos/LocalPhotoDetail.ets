@@ -3,6 +3,9 @@ import { ImageInfo, LocalPhotoDataSource } from "./LocalPhotoDataSource";
 import Constants from "../../common/constants/Constants";
 import { BusinessError } from '@kit.BasicServicesKit';
 import { display } from "@kit.ArkUI";
+import { Context } from "@ohos.abilityAccessCtrl";
+import { systemShare } from "@kit.ShareKit";
+import { fileUri } from "@kit.CoreFileKit";
 
 interface ReceiveParams {
   selectedIndex: number;
@@ -31,6 +34,37 @@ struct LocalPhotoDetail {
   @State selectedIndex: number = 0;
   // 同步来源标记：避免循环触发（1=小图滚动, 2=大图滚动, 3=小图点击）
   @State syncSource: number = 0;
+
+
+  @State menuItems: Array<NavigationMenuItem> = [
+    {
+      value: '分享',
+      icon:$r('sys.media.ohos_ic_public_share'),
+      action: () => {
+
+      }
+    },
+
+  ];
+
+
+
+  /**
+   * 分享文件
+   * */
+  sharePhoto(){
+    let uiContext:UIContext = this.getUIContext()
+    let contextFaker:Context = uiContext.getHostContext() as Context
+
+    const validIndex = Math.max(0, Math.min(this.selectedIndex, this.dataSource.totalCount() - 1));
+    const item = this.dataSource.dataList[validIndex];
+    let filePath = item.uri
+
+
+  }
+
+
+
 
   /**
    * 生命周期：初始化设备尺寸
@@ -274,6 +308,7 @@ struct LocalPhotoDetail {
       .height('100%');
     }
     .title(this.getTitle())
+    .menus(this.menuItems)
     //.backgroundColor('#000')
     .hideBackButton(false)
     .onReady((ctx: NavDestinationContext) => {
