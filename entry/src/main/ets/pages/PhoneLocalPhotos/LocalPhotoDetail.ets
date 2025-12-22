@@ -3,11 +3,11 @@ import { ImageInfo, LocalPhotoDataSource } from "./LocalPhotoDataSource";
 import Constants from "../../common/constants/Constants";
 import { BusinessError } from '@kit.BasicServicesKit';
 import { display } from "@kit.ArkUI";
-import { Context } from "@ohos.abilityAccessCtrl";
 import { systemShare } from "@kit.ShareKit";
 import { fileUri } from "@kit.CoreFileKit";
 import { uniformTypeDescriptor as utd } from '@kit.ArkData';
 import { common } from '@kit.AbilityKit';
+import { promptAction } from '@kit.ArkUI';
 
 
 interface ReceiveParams {
@@ -59,6 +59,11 @@ struct LocalPhotoDetail {
     try {
       // 获取UIAbilityContext
       const context = getContext(this) as common.UIAbilityContext;
+      if (!context) {
+        console.error('无法获取UIAbilityContext');
+        promptAction.showToast({ message: '分享失败：无法获取上下文' });
+        return;
+      }
 
       const validIndex = Math.max(0, Math.min(this.selectedIndex, this.dataSource.totalCount() - 1));
       const item = this.dataSource.dataList[validIndex];
@@ -67,25 +72,82 @@ struct LocalPhotoDetail {
       let filePath = item.uri;
       console.info('分享文件路径:', filePath);
 
-      // 检查文件路径格式
-      // 如果是以 file:// 开头的URI，直接使用
-      // 如果是相对路径，需要转换为绝对路径
-      if (!filePath.startsWith('file://')) {
-        // 如果是相对路径，尝试转换为绝对路径
-        filePath = 'file://' + filePath;
+      // 移除 file:// 前缀，获取纯路径
+      let purePath = filePath;
+      if (purePath.startsWith('file://')) {
+        purePath = purePath.substring(7); // 移除 "file://"
       }
 
-      console.info('处理后的文件路径:', filePath);
+      console.info('处理后的纯路径:', purePath);
 
-      // 获取UTD类型
-      let fileExtension = filePath.split('.').pop()?.toLowerCase() || 'jpg';
-      let utdTypeId = utd.getUniformDataTypeByFilenameExtension(`.${fileExtension}`, utd.UniformDataType.IMAGE);
-      console.info('UTD类型:', utdTypeId);
+      // 使用 fileUri.getUriFromPath 获取正确的URI
+      let shareUri: string;
+      try {
+        shareUri = fileUri.getUriFromPath(purePath);
+        console.info('fileUri转换后的URI:', shareUri);
+      } catch (uriError) {
+        console.warn('使用fileUri转换失败，尝试直接使用路径:', purePath);
+        // 如果转换失败，尝试使用原始URI
+        shareUri = filePath;
+      }
 
-      // 创建分享数据
+      // 获取文件扩展名
+      const fileName = item.name || '';
+      let fileExtension = '';
+      const dotIndex = fileName.lastIndexOf('.');
+      if (dotIndex > 0) {
+        fileExtension = fileName.substring(dotIndex).toLowerCase();
+      }
+
+      // 根据文件扩展名设置MIME类型
+      let mimeType = 'image/jpeg'; // 默认值
+      if (fileExtension === '.png') {
+        mimeType = 'image/png';
+      } else if (fileExtension === '.gif') {
+        mimeType = 'image/gif';
+      } else if (fileExtension === '.bmp') {
+        mimeType = 'image/bmp';
+      } else if (fileExtension === '.webp') {
+        mimeType = 'image/webp';
+      } else if (fileExtension === '.nef' || fileExtension === '.raw' ||
+        fileExtension === '.arw' || fileExtension === '.cr2' ||
+        fileExtension === '.dng') {
+        // RAW格式使用通用的image/x-raw
+        mimeType = 'image/x-raw';
+      }
+
+      console.info('文件扩展名:', fileExtension, 'MIME类型:', mimeType);
+
+      // 获取UTD类型 - 简化处理，使用通用的IMAGE类型
+      // 注意：utd.UniformDataType.IMAGE 是一个枚举值，我们需要将其转换为数字
+      let utdType: string;
+
+      // 尝试直接使用预定义的IMAGE类型
+      // 根据API，UniformDataType.IMAGE 应该对应一个数字ID
+      try {
+        // 先尝试通过MIME类型获取UTD
+        utdType = utd.getUniformDataTypeByMIMEType(mimeType, utd.UniformDataType.IMAGE);
+        console.info('通过MIME类型获取UTD成功:', utdType);
+      } catch (utdError) {
+        console.warn('通过MIME类型获取UTD失败，尝试使用扩展名:', fileExtension);
+        try {
+          // 如果MIME类型失败，尝试使用扩展名
+          const extWithDot = fileExtension ? (fileExtension.startsWith('.') ? fileExtension : `.${fileExtension}`) : '.jpg';
+          utdType = utd.getUniformDataTypeByFilenameExtension(extWithDot, utd.UniformDataType.IMAGE);
+          console.info('通过扩展名获取UTD成功:', utdType);
+        } catch (extError) {
+          console.error('获取UTD类型失败，使用默认IMAGE类型');
+          // 直接使用IMAGE的枚举值
+          utdType = utd.UniformDataType.IMAGE
+        }
+      }
+
+      console.info('最终使用的UTD类型:', utdType);
+
+      // 创建分享数据 - 直接使用utdType
       let shareData: systemShare.SharedData = new systemShare.SharedData({
-        utd: utdTypeId,
-        uri: filePath, // 直接使用URI字符串
+        utd: utdType, // 直接使用数字类型的UTD
+        uri: shareUri, // 使用转换后的URI
         title: item.name || '图片分享',
         description: '来自应用分享的图片',
       });
@@ -101,7 +163,7 @@ struct LocalPhotoDetail {
 
       // 监听事件
       shareController.on('shareCompleted', (result: systemShare.ShareOperationResult) => {
-        console.info('分享完成，目标应用:', result.targetAbilityInfo.name);
+        console.info('分享完成，目标应用:', result.targetAbilityInfo?.name || '未知');
       });
 
       shareController.on('dismiss', () => {
@@ -112,6 +174,12 @@ struct LocalPhotoDetail {
     } catch (error) {
       const err = error as BusinessError;
       console.error(`分享失败: 错误码=${err.code}, 错误信息=${err.message}`);
+
+      // 添加用户提示
+      promptAction.showToast({
+        message: `分享失败: ${err.code === 401 ? '参数错误' : err.message}`,
+        duration: 3000
+      });
     }
   }
 
