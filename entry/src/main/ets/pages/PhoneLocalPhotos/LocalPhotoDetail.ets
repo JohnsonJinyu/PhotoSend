@@ -6,6 +6,9 @@ import { display } from "@kit.ArkUI";
 import { Context } from "@ohos.abilityAccessCtrl";
 import { systemShare } from "@kit.ShareKit";
 import { fileUri } from "@kit.CoreFileKit";
+import { uniformTypeDescriptor as utd } from '@kit.ArkData';
+import { common } from '@kit.AbilityKit';
+
 
 interface ReceiveParams {
   selectedIndex: number;
@@ -41,7 +44,7 @@ struct LocalPhotoDetail {
       value: '分享',
       icon:$r('sys.media.ohos_ic_public_share'),
       action: () => {
-
+        this.sharePhoto()
       }
     },
 
@@ -52,16 +55,66 @@ struct LocalPhotoDetail {
   /**
    * 分享文件
    * */
-  sharePhoto(){
-    let uiContext:UIContext = this.getUIContext()
-    let contextFaker:Context = uiContext.getHostContext() as Context
+  async sharePhoto() {
+    try {
+      // 获取UIAbilityContext
+      const context = getContext(this) as common.UIAbilityContext;
 
-    const validIndex = Math.max(0, Math.min(this.selectedIndex, this.dataSource.totalCount() - 1));
-    const item = this.dataSource.dataList[validIndex];
-    let filePath = item.uri
+      const validIndex = Math.max(0, Math.min(this.selectedIndex, this.dataSource.totalCount() - 1));
+      const item = this.dataSource.dataList[validIndex];
 
+      // 获取文件URI
+      let filePath = item.uri;
+      console.info('分享文件路径:', filePath);
 
+      // 检查文件路径格式
+      // 如果是以 file:// 开头的URI，直接使用
+      // 如果是相对路径，需要转换为绝对路径
+      if (!filePath.startsWith('file://')) {
+        // 如果是相对路径，尝试转换为绝对路径
+        filePath = 'file://' + filePath;
+      }
+
+      console.info('处理后的文件路径:', filePath);
+
+      // 获取UTD类型
+      let fileExtension = filePath.split('.').pop()?.toLowerCase() || 'jpg';
+      let utdTypeId = utd.getUniformDataTypeByFilenameExtension(`.${fileExtension}`, utd.UniformDataType.IMAGE);
+      console.info('UTD类型:', utdTypeId);
+
+      // 创建分享数据
+      let shareData: systemShare.SharedData = new systemShare.SharedData({
+        utd: utdTypeId,
+        uri: filePath, // 直接使用URI字符串
+        title: item.name || '图片分享',
+        description: '来自应用分享的图片',
+      });
+
+      // 创建ShareController
+      let shareController = new systemShare.ShareController(shareData);
+
+      // 显示分享面板
+      await shareController.show(context, {
+        previewMode: systemShare.SharePreviewMode.DEFAULT,
+        selectionMode: systemShare.SelectionMode.SINGLE,
+      });
+
+      // 监听事件
+      shareController.on('shareCompleted', (result: systemShare.ShareOperationResult) => {
+        console.info('分享完成，目标应用:', result.targetAbilityInfo.name);
+      });
+
+      shareController.on('dismiss', () => {
+        console.info('分享面板已关闭');
+      });
+
+      console.info('分享面板调起成功');
+    } catch (error) {
+      const err = error as BusinessError;
+      console.error(`分享失败: 错误码=${err.code}, 错误信息=${err.message}`);
+    }
   }
+
 
 
 
