@@ -202,6 +202,7 @@ struct LocalPhotoDetail {
           )
         }
         .scrollSnapAlign(ScrollSnapAlign.CENTER)
+        .friction(10)
         .onScrollStop(() => {
           if (this.dataSource.totalCount() === 0 || this.syncSource !== 0) return;
 
