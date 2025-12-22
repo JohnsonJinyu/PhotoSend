@@ -1,6 +1,7 @@
 import { CustomContentDialog, promptAction } from "@kit.ArkUI"
 import { pasteboard } from "@kit.BasicServicesKit"
 import { TestType } from "@ohos/hypium";
+import { common, wantConstant } from "@kit.AbilityKit";
 
 
 const systemPasteboard: pasteboard.SystemPasteboard = pasteboard.getSystemPasteboard();
@@ -28,7 +29,34 @@ export struct FeedbackDialog {
   }
 
   private sendEmail() {
-    // 这里实现发送邮件的逻辑
+    let context = this.getUIContext().getHostContext() as common.UIAbilityContext;
+    let wantParam: Record<string, Object> = {
+      'sceneType': 1,
+      'email': [encodeURI('xxx@example.com'), encodeURI(this.email)], // 收件人邮箱地址，多值以逗号分隔，对数组内容使用encodeURI()方法进行url编码
+      //'cc': [encodeURI('xxx@example.com'), encodeURI('xxx@example.com')], // 抄收人邮箱地址，多值以逗号分隔，对数组内容使用encodeURI()方法进行url编码
+      //'bcc': [encodeURI('xxx@example.com'), encodeURI('xxx@example.com')], // 密送人邮箱地址，多值以逗号分隔，对数组内容使用encodeURI()方法进行url编码
+      'subject': encodeURI('PhotoSend应用意见反馈'), // 邮件主题，对内容使用encodeURI()方法进行url编码
+      'body': encodeURI('请提交你的反馈意见······'), // 邮件正文，对内容使用encodeURI()方法进行url编码
+      'ability.params.stream': [encodeURI('附件uri1'), encodeURI('附件uri2')], // 附件uri，多值以逗号分隔，对数组内容使用encodeURI()方法进行url编码
+      'ability.want.params.uriPermissionFlag': wantConstant.Flags.FLAG_AUTH_READ_URI_PERMISSION
+    };
+    let abilityStartCallback: common.AbilityStartCallback = {
+      onError: (code: number, name: string, message: string) => {
+        console.error(`onError code ${code} name: ${name} message: ${message}`);
+      },
+      onResult: (result) => {
+        console.info(`onResult result: ${JSON.stringify(result)}`);
+      }
+    }
+
+    context.startAbilityByType("mail", wantParam, abilityStartCallback,
+      (err) => {
+        if (err) {
+          console.error(`startAbilityByType fail, err: ${JSON.stringify(err)}`);
+        } else {
+          console.info(`success`);
+        }
+      });
   }
 
   build() {
@@ -43,11 +71,9 @@ export struct FeedbackDialog {
       // 邮箱地址显示
       Text(this.email)
         .fontSize(16)
-        .fontColor('#666666')
-        .backgroundColor('#F7F9FC')
-        .padding(12)
+        .align(Alignment.Center)
         .borderRadius(8)
-        .width('90%')
+        .height(30)
         .margin({ bottom: 20 })
 
       // 按钮区域
