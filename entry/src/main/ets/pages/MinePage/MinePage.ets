@@ -1,5 +1,17 @@
+// MinePage.ets
+
+import { FeedbackDialog } from "../../component/CameraControlDialog/FeedbackDialog";
+
 @Component
 export struct MinePage {
+
+
+  // 意见反馈自定义弹窗
+  FeedBackDialogController: CustomDialogController = new CustomDialogController({
+    builder:FeedbackDialog()
+  });
+
+
   @Builder
   menuItem(icon: Resource, title: string, onClick: () => void) {
     Row() {
@@ -25,13 +37,6 @@ export struct MinePage {
   build() {
     Column() {
       List() {
-        ListItem() {
-          this.menuItem($r('app.media.ic_settings'), '设置', () => {
-            // 跳转设置页逻辑
-          })
-        }
-        .border({ width: { bottom: 1 }, color: '#F1F3F5' })
-
 
         ListItem() {
           this.menuItem($r('app.media.ic_about'), '关于', () => {
@@ -43,9 +48,10 @@ export struct MinePage {
 
         ListItem() {
           this.menuItem($r('app.media.ic_feedback'), '意见反馈', () => {
-            // 跳转反馈页逻辑
+            this.FeedBackDialogController.open()
           })
         }
+
       }
       .width('100%')
       .height('auto')
