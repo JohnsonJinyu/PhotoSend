@@ -124,10 +124,18 @@ struct LocalPhotoDetail {
       let controller: systemShare.ShareController = new systemShare.ShareController(shareData);
 
       // 显示分享面板
-      controller.show(context, {
-        previewMode: systemShare.SharePreviewMode.DEFAULT,
-        selectionMode: systemShare.SelectionMode.SINGLE
-      });
+      if (canIUse("SystemCapability.Collaboration.SystemShare")) {
+        controller.show(context, {
+          previewMode: systemShare.SharePreviewMode.DEFAULT,
+          selectionMode: systemShare.SelectionMode.SINGLE
+        }).catch(() => {
+          return
+        });
+      } else {
+        this.getUIContext().getPromptAction().showToast({
+          message:"系统版本过低，暂不支持分享"
+        })
+      }
 
 
       console.info('分享面板调起成功');
