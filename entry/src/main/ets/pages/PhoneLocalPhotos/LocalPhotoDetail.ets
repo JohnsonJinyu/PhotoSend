@@ -34,6 +34,9 @@ struct LocalPhotoDetail {
   @State selectedIndex: number = 0;
   // 同步来源标记：避免循环触发（1=小图滚动, 2=大图滚动, 3=小图点击）
   @State syncSource: number = 0;
+  // 工具栏高度
+  @State toolbarHeight: number = 120;
+  // 菜单项
   @State menuItems: Array<NavigationMenuItem> = [
     {
       value: '分享',
@@ -42,7 +45,6 @@ struct LocalPhotoDetail {
         this.sharePhoto()
       }
     },
-
   ];
 
   /**
@@ -133,7 +135,7 @@ struct LocalPhotoDetail {
         });
       } else {
         this.getUIContext().getPromptAction().showToast({
-          message:"系统版本过低，暂不支持分享"
+          message: "系统版本过低，暂不支持分享"
         })
       }
 
@@ -161,6 +163,8 @@ struct LocalPhotoDetail {
       this.deviceWidth = width;
       this.smallImgWidth = (width - Constants.LIST_ITEM_SPACE * (Constants.SHOW_COUNT - 1)) / Constants.SHOW_COUNT;
       this.imageWidth = width;
+      // 计算工具栏高度（小图高度 + 位置信息栏高度 + 间距）
+      this.toolbarHeight = this.smallImgWidth + 40;
     } catch (error) {
       const err = error as BusinessError;
       console.error(`获取屏幕尺寸失败: 错误码=${err.code}, 错误信息=${err.message}`);
@@ -267,6 +271,82 @@ struct LocalPhotoDetail {
     }
   }
 
+  // 自定义工具栏构建器
+  @Builder
+  private ToolbarBuilder() {
+    Column() {
+      // 位置信息栏
+      Row() {
+        Blank()
+
+        // 当前图片位置信息
+        Text(`${this.selectedIndex + 1}/${this.dataSource.totalCount()}`)
+          .fontSize(16)
+          .fontColor('#ffffff')
+          .fontWeight(FontWeight.Medium)
+          .textAlign(TextAlign.Center)
+
+        Blank()
+      }
+      .width('100%')
+      .height(25)
+
+
+      //.backgroundColor('rgba(0, 0, 0, 0.3)')
+
+      // 小图List
+      List({
+        scroller: this.smallScroller,
+        space: Constants.LIST_ITEM_SPACE,
+        initialIndex: this.selectedIndex
+      }) {
+        ForEach(
+          this.dataSource.dataList || [],
+          (item: ImageInfo, index: number) => {
+            ListItem() {
+              this.SmallImgItemBuilder(item, index);
+            }
+            .width(this.smallImgWidth)
+            .aspectRatio(1)
+            .padding(1);
+          },
+          (item: ImageInfo) => item.uri
+        )
+      }
+      .listDirection(Axis.Horizontal)
+      .scrollSnapAlign(ScrollSnapAlign.CENTER) // 保留原生拖动居中
+      // 小图滚动同步到大图
+      .onScrollIndex((_firstIndex: number, _lastIndex: number, centerIndex: number) => {
+        if (this.dataSource.totalCount() === 0 || this.syncSource !== 0) {
+          return;
+        }
+
+        const validCenterIndex = Math.max(0, Math.min(centerIndex, this.dataSource.totalCount() - 1));
+
+        if (validCenterIndex !== this.selectedIndex) {
+          this.syncSource = 1;
+          this.selectedIndex = validCenterIndex;
+          // 大图同步
+          this.bigScroller.scrollToIndex(validCenterIndex, false);
+
+          setTimeout(() => {
+            this.syncSource = 0;
+          }, 200);
+        }
+      })
+      .scrollBar(BarState.Off)
+      .margin({ top: 4, bottom: 4 })
+      .height(this.smallImgWidth + 8)
+      .width('100%')
+    }
+    .width('100%')
+    //.height('100%')
+    .padding({top:8})
+
+    //.backgroundColor('rgba(0, 0, 0, 0.5)')
+    .backdropBlur(10)
+  }
+
   // 一个获取图片名称的方法
   private getTitle(): string {
     if (this.dataSource.totalCount() === 0) {
@@ -275,14 +355,6 @@ struct LocalPhotoDetail {
 
     const validIndex = Math.max(0, Math.min(this.selectedIndex, this.dataSource.totalCount() - 1));
     const item = this.dataSource.dataList[validIndex];
-
-    /*if (item) {
-      const fileName = item.name || '';
-      // 去除文件扩展名
-      return fileName.lastIndexOf('.') > 0
-        ? fileName.substring(0, fileName.lastIndexOf('.'))
-        : fileName;
-    }*/
 
     if (item) {
       return item.name || '图片详情';
@@ -293,116 +365,69 @@ struct LocalPhotoDetail {
 
   build() {
     NavDestination() {
-      Stack({ alignContent: Alignment.Bottom }) {
 
-        // --------------- 大图List ---------------
-        List({
-          scroller: this.bigScroller,
-          initialIndex: this.selectedIndex
-        }) {
-
-          ForEach(
-            this.dataSource.dataList || [],
-            (item: ImageInfo) => {
-              ListItem() {
-
-                Image(item.uri)
-                  .width('100%')
-                  .height('100%')
-                  // 关键修改：使用orientation属性而不是rotate
-                  .orientation(
-                    // 根据是否为RAW文件决定使用orientation还是rotate
-                    item.imageOrientation !== undefined && item.imageOrientation !== 0
-                      ? item.imageOrientation
-                      : ImageRotateOrientation.AUTO
-                  )
-                  .objectFit(ImageFit.Contain)
-
-              }
-              .width(this.imageWidth);
-            },
-            (item: ImageInfo) => item.uri
-          )
-        }
-        .scrollSnapAlign(ScrollSnapAlign.CENTER)
-        .friction(10)
-        .onScrollStop(() => {
-          if (this.dataSource.totalCount() === 0 || this.syncSource !== 0) {
-            return;
-          }
-
-          // 计算大图最终索引
-          const finalIndex = Math.round(this.bigScroller.currentOffset().xOffset / this.imageWidth);
-          const validIndex = Math.max(0, Math.min(finalIndex, this.dataSource.totalCount() - 1));
-
-          if (validIndex !== this.selectedIndex) {
-            this.syncSource = 2;
-            this.selectedIndex = validIndex;
-            // 小图强制居中（核心修复）
-            this.scrollSmallToCenter(validIndex);
-
-            setTimeout(() => {
-              this.syncSource = 0;
-            }, 200);
-          }
-        })
-        .scrollBar(BarState.Off)
-        .width('100%')
-        .height('100%')
-        .padding({ bottom: this.smallImgWidth + 20 })
-        .listDirection(Axis.Horizontal);
-
-        // --------------- 小图List ---------------
-        List({
-          scroller: this.smallScroller,
-          space: Constants.LIST_ITEM_SPACE,
-          initialIndex: this.selectedIndex
-        }) {
-          ForEach(
-            this.dataSource.dataList || [],
-            (item: ImageInfo, index: number) => {
-              ListItem() {
-                this.SmallImgItemBuilder(item, index);
-              }
-              .width(this.smallImgWidth)
-              .aspectRatio(1)
-              .padding(1);
-            },
-            (item: ImageInfo) => item.uri
-          )
-        }
-        .listDirection(Axis.Horizontal)
-        .scrollSnapAlign(ScrollSnapAlign.CENTER) // 保留原生拖动居中
-        // 小图滚动同步到大图
-        .onScrollIndex((_firstIndex: number, _lastIndex: number, centerIndex: number) => {
-          if (this.dataSource.totalCount() === 0 || this.syncSource !== 0) {
-            return;
-          }
-
-          const validCenterIndex = Math.max(0, Math.min(centerIndex, this.dataSource.totalCount() - 1));
-
-          if (validCenterIndex !== this.selectedIndex) {
-            this.syncSource = 1;
-            this.selectedIndex = validCenterIndex;
-            // 大图同步
-            this.bigScroller.scrollToIndex(validCenterIndex, false);
-
-            setTimeout(() => {
-              this.syncSource = 0;
-            }, 200);
-          }
-        })
-        .scrollBar(BarState.Off)
-        .margin({ top: 16, bottom: 16 })
-        .height(this.smallImgWidth + 12)
-        .width('100%');
+      // --------------- 大图List ---------------
+      List({
+        scroller: this.bigScroller,
+        initialIndex: this.selectedIndex
+      }) {
+        ForEach(
+          this.dataSource.dataList || [],
+          (item: ImageInfo) => {
+            ListItem() {
+              Image(item.uri)
+                .width('100%')
+                .height('100%')
+                // 关键修改：使用orientation属性而不是rotate
+                .orientation(
+                  // 根据是否为RAW文件决定使用orientation还是rotate
+                  item.imageOrientation !== undefined && item.imageOrientation !== 0
+                    ? item.imageOrientation
+                    : ImageRotateOrientation.AUTO
+                )
+                .objectFit(ImageFit.Contain)
+            }
+            .width(this.imageWidth);
+          },
+          (item: ImageInfo) => item.uri
+        )
       }
+      .scrollSnapAlign(ScrollSnapAlign.CENTER)
+      .friction(10)
+      .onScrollStop(() => {
+        if (this.dataSource.totalCount() === 0 || this.syncSource !== 0) {
+          return;
+        }
+
+        // 计算大图最终索引
+        const finalIndex = Math.round(this.bigScroller.currentOffset().xOffset / this.imageWidth);
+        const validIndex = Math.max(0, Math.min(finalIndex, this.dataSource.totalCount() - 1));
+
+        if (validIndex !== this.selectedIndex) {
+          this.syncSource = 2;
+          this.selectedIndex = validIndex;
+          // 小图强制居中（核心修复）
+          this.scrollSmallToCenter(validIndex);
+
+          setTimeout(() => {
+            this.syncSource = 0;
+          }, 200);
+        }
+      })
+      .scrollBar(BarState.Off)
       .width('100%')
-      .height('100%');
+      .height('100%')
+      .listDirection(Axis.Horizontal);
+
     }
-    .title(this.getTitle())
+    .width('100%')
+    .height('100%')
+    .title(this.getTitle(), {
+      backgroundBlurStyle: BlurStyle.Thick,
+      barStyle: BarStyle.STACK
+    })
     .menus(this.menuItems)
-    //.backgroundColor('#000')
+    .toolbarConfiguration(this.ToolbarBuilder())
     .hideBackButton(false)
     .onReady((ctx: NavDestinationContext) => {
       try {
@@ -417,3 +442,4 @@ struct LocalPhotoDetail {
     });
   }
 }
+

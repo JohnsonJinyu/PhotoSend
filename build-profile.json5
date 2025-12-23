@@ -5,13 +5,13 @@
         "name": "default",
         "type": "HarmonyOS",
         "material": {
-          "certpath": "C:\\Users\\Lenovo\\.ohos\\config\\default_PhotoSend_-E1-jpnvmytC1EHRkcTfa9kM-i1BiP528Iz7D47ovPM=.cer",
+          "certpath": "C:\\Users\\JohnsonLingyu\\.ohos\\config\\default_PhotoSend_8B1ne70Y3sytPzXDhRCx2F_toIBbSO2RXNGZonyXViM=.cer",
           "keyAlias": "debugKey",
-          "keyPassword": "0000001A41BDC7E42E0F1DD5F9BCFF059A2DA575225094CCBAD77FE7668DE4972D1DB6E3DB87CA66E2BA",
-          "profile": "C:\\Users\\Lenovo\\.ohos\\config\\default_PhotoSend_-E1-jpnvmytC1EHRkcTfa9kM-i1BiP528Iz7D47ovPM=.p7b",
+          "keyPassword": "0000001AC986615BFE6DF38F4BF2572461598A2A9CB0D2443F58C88E8C16E553E6DEEC496DB427F885E6",
+          "profile": "C:\\Users\\JohnsonLingyu\\.ohos\\config\\default_PhotoSend_8B1ne70Y3sytPzXDhRCx2F_toIBbSO2RXNGZonyXViM=.p7b",
           "signAlg": "SHA256withECDSA",
-          "storeFile": "C:\\Users\\Lenovo\\.ohos\\config\\default_PhotoSend_-E1-jpnvmytC1EHRkcTfa9kM-i1BiP528Iz7D47ovPM=.p12",
-          "storePassword": "0000001A2D5E2B06870E096860E5634BF6E02C41A6B56FAAEDC5C9E25FC58614082A37C175E37E8333A6"
+          "storeFile": "C:\\Users\\JohnsonLingyu\\.ohos\\config\\default_PhotoSend_8B1ne70Y3sytPzXDhRCx2F_toIBbSO2RXNGZonyXViM=.p12",
+          "storePassword": "0000001A7E8956B411839DD3EC484BE5D7DD45A148C9FC3B5C30E26DBA8C4C67A971A3FCE2B1370D9475"
         }
       }
     ],
