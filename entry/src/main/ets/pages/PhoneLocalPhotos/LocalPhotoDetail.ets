@@ -5,7 +5,6 @@ import { BusinessError } from '@kit.BasicServicesKit';
 import { display } from "@kit.ArkUI";
 import { systemShare } from "@kit.ShareKit";
 import { fileUri } from "@kit.CoreFileKit";
-import { uniformTypeDescriptor as utd } from '@kit.ArkData';
 import { common } from '@kit.AbilityKit';
 import { promptAction } from '@kit.ArkUI';
 
@@ -23,26 +22,22 @@ export function LocalPhotoDetailBuilder() {
 struct LocalPhotoDetail {
   private dataSource: LocalPhotoDataSource = LocalPhotoDataSource.getInstance();
   private params: ReceiveParams | null = null;
-
   // 滚动控制器
   private smallScroller: Scroller = new Scroller();
   private bigScroller: Scroller = new Scroller();
-
   // 尺寸配置
   @State deviceWidth: number = Constants.DEFAULT_WIDTH || 360;
-  @State smallImgWidth: number = (this.deviceWidth - Constants.LIST_ITEM_SPACE * (Constants.SHOW_COUNT - 1)) / Constants.SHOW_COUNT;
+  @State smallImgWidth: number =
+    (this.deviceWidth - Constants.LIST_ITEM_SPACE * (Constants.SHOW_COUNT - 1)) / Constants.SHOW_COUNT;
   @State imageWidth: number = this.deviceWidth;
-
   // 局部状态管理索引
   @State selectedIndex: number = 0;
   // 同步来源标记：避免循环触发（1=小图滚动, 2=大图滚动, 3=小图点击）
   @State syncSource: number = 0;
-
-
   @State menuItems: Array<NavigationMenuItem> = [
     {
       value: '分享',
-      icon:$r('sys.media.ohos_ic_public_share'),
+      icon: $r('sys.media.ohos_ic_public_share'),
       action: () => {
         this.sharePhoto()
       }
@@ -50,18 +45,18 @@ struct LocalPhotoDetail {
 
   ];
 
-
-
   /**
    * 分享文件
    * */
   async sharePhoto() {
     try {
       // 获取UIAbilityContext
-      const context = getContext(this) as common.UIAbilityContext;
+      const context = this.getUIContext().getHostContext() as common.UIAbilityContext
       if (!context) {
         console.error('无法获取UIAbilityContext');
-        promptAction.showToast({ message: '分享失败：无法获取上下文' });
+        this.getUIContext().getPromptAction().showToast({
+          message: "分享失败：无法获取上下文"
+        })
         return;
       }
 
@@ -99,76 +94,41 @@ struct LocalPhotoDetail {
         fileExtension = fileName.substring(dotIndex).toLowerCase();
       }
 
-      // 根据文件扩展名设置MIME类型
-      let mimeType = 'image/jpeg'; // 默认值
+      // 有两种方案：1、文件后缀名获得UTD类型ID；2、根据MIME类型获取UTD类型ID
+      // 查询链接：https://developer.huawei.com/consumer/cn/doc/harmonyos-guides/uniform-data-type-list#%E5%9F%BA%E7%A1%80%E7%B1%BB%E5%9E%8B
+
+      // 尝试直接根据文件后缀名获取UTD类型ID，因为raw文件没有被包含在MIME类型里面
+      let utd_id = 'general.image' //设置UTD-ID的默认值为所有图片的基类型
       if (fileExtension === '.png') {
-        mimeType = 'image/png';
-      } else if (fileExtension === '.gif') {
-        mimeType = 'image/gif';
-      } else if (fileExtension === '.bmp') {
-        mimeType = 'image/bmp';
-      } else if (fileExtension === '.webp') {
-        mimeType = 'image/webp';
+        utd_id = 'general.png'
+      } else if (fileExtension === '.jpg' || fileExtension === 'jpeg' || fileExtension === '.jpe') {
+        utd_id = 'general.jpeg'
       } else if (fileExtension === '.nef' || fileExtension === '.raw' ||
         fileExtension === '.arw' || fileExtension === '.cr2' ||
         fileExtension === '.dng') {
-        // RAW格式使用通用的image/x-raw
-        mimeType = 'image/x-raw';
+        utd_id = 'general.raw-image'
       }
 
-      console.info('文件扩展名:', fileExtension, 'MIME类型:', mimeType);
+      console.info('文件扩展名:', fileExtension, 'utd_id:', utd_id);
 
-      // 获取UTD类型 - 简化处理，使用通用的IMAGE类型
-      // 注意：utd.UniformDataType.IMAGE 是一个枚举值，我们需要将其转换为数字
-      let utdType: string;
-
-      // 尝试直接使用预定义的IMAGE类型
-      // 根据API，UniformDataType.IMAGE 应该对应一个数字ID
-      try {
-        // 先尝试通过MIME类型获取UTD
-        utdType = utd.getUniformDataTypeByMIMEType(mimeType, utd.UniformDataType.IMAGE);
-        console.info('通过MIME类型获取UTD成功:', utdType);
-      } catch (utdError) {
-        console.warn('通过MIME类型获取UTD失败，尝试使用扩展名:', fileExtension);
-        try {
-          // 如果MIME类型失败，尝试使用扩展名
-          const extWithDot = fileExtension ? (fileExtension.startsWith('.') ? fileExtension : `.${fileExtension}`) : '.jpg';
-          utdType = utd.getUniformDataTypeByFilenameExtension(extWithDot, utd.UniformDataType.IMAGE);
-          console.info('通过扩展名获取UTD成功:', utdType);
-        } catch (extError) {
-          console.error('获取UTD类型失败，使用默认IMAGE类型');
-          // 直接使用IMAGE的枚举值
-          utdType = utd.UniformDataType.IMAGE
-        }
-      }
-
-      console.info('最终使用的UTD类型:', utdType);
 
       // 创建分享数据 - 直接使用utdType
       let shareData: systemShare.SharedData = new systemShare.SharedData({
-        utd: utdType, // 直接使用数字类型的UTD
+        utd: utd_id, // 直接使用string类型的UTD-ID
         uri: shareUri, // 使用转换后的URI
         title: item.name || '图片分享',
         description: '来自应用分享的图片',
       });
 
-      // 创建ShareController
-      let shareController = new systemShare.ShareController(shareData);
+      // 构建ShareController
+      let controller: systemShare.ShareController = new systemShare.ShareController(shareData);
 
       // 显示分享面板
-      await shareController.show(context, {
+      controller.show(context, {
         previewMode: systemShare.SharePreviewMode.DEFAULT,
-        selectionMode: systemShare.SelectionMode.SINGLE,
+        selectionMode: systemShare.SelectionMode.SINGLE
       });
 
-      // 监听事件
-      shareController.on('shareCompleted', (result: systemShare.ShareOperationResult) => {
-        console.info('分享完成，目标应用:', result.targetAbilityInfo?.name || '未知');
-      });
-
-      shareController.on('dismiss', () => {
-        console.info('分享面板已关闭');
-      });
 
       console.info('分享面板调起成功');
     } catch (error) {
@@ -182,10 +142,6 @@ struct LocalPhotoDetail {
       });
     }
   }
-
-
-
-
 
   /**
    * 生命周期：初始化设备尺寸
@@ -248,7 +204,9 @@ struct LocalPhotoDetail {
    * 小图点击事件：直接设置索引+强制居中
    */
   private smallImgClickAction(index: number): void {
-    if (index === this.selectedIndex || this.dataSource.totalCount() === 0) return;
+    if (index === this.selectedIndex || this.dataSource.totalCount() === 0) {
+      return;
+    }
 
     const validIndex = Math.max(0, Math.min(index, this.dataSource.totalCount() - 1));
     this.syncSource = 3;
@@ -289,13 +247,17 @@ struct LocalPhotoDetail {
           .fontSize(8)
           .fontColor('#ffffff')
           .backgroundColor('rgba(0, 0, 0, 0.7)')
-          .padding({ left: 2, right: 2, top: 1, bottom: 1 })
+          .padding({
+            left: 2,
+            right: 2,
+            top: 1,
+            bottom: 1
+          })
           .borderRadius(1)
           .margin({ right: 2, bottom: 2 });
       }
     }
   }
-
 
   // 一个获取图片名称的方法
   private getTitle(): string {
@@ -320,8 +282,6 @@ struct LocalPhotoDetail {
 
     return '图片详情';
   }
-
-
 
   build() {
     NavDestination() {
@@ -359,7 +319,9 @@ struct LocalPhotoDetail {
         .scrollSnapAlign(ScrollSnapAlign.CENTER)
         .friction(10)
         .onScrollStop(() => {
-          if (this.dataSource.totalCount() === 0 || this.syncSource !== 0) return;
+          if (this.dataSource.totalCount() === 0 || this.syncSource !== 0) {
+            return;
+          }
 
           // 计算大图最终索引
           const finalIndex = Math.round(this.bigScroller.currentOffset().xOffset / this.imageWidth);
@@ -405,7 +367,9 @@ struct LocalPhotoDetail {
         .scrollSnapAlign(ScrollSnapAlign.CENTER) // 保留原生拖动居中
         // 小图滚动同步到大图
         .onScrollIndex((_firstIndex: number, _lastIndex: number, centerIndex: number) => {
-          if (this.dataSource.totalCount() === 0 || this.syncSource !== 0) return;
+          if (this.dataSource.totalCount() === 0 || this.syncSource !== 0) {
+            return;
+          }
 
           const validCenterIndex = Math.max(0, Math.min(centerIndex, this.dataSource.totalCount() - 1));
 
