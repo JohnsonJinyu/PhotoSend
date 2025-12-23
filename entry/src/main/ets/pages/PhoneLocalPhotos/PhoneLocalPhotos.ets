@@ -1,6 +1,7 @@
 // PhoneLocalPhotos.ets
 // 以Gird显示的图片里表页面
 import { promptAction } from "@kit.ArkUI";
+import { MyNodeController } from "../../NodeContainer/CustomComponent";
 import { ExifReader } from "./ExifReader";
 import { ImageInfo, LocalPhotoDataSource } from './LocalPhotoDataSource';
 
@@ -16,6 +17,9 @@ interface PhotoDetailParams {
 @Component
 export struct PhoneLocalPhotos {
   @Consume('pageStack') pageStack: NavPathStack;
+  private pageId = 2
+  //@State myNodeController:MyNodeController|undefined = new MyNodeController()
+
 
 
   @State private dataSource: LocalPhotoDataSource = LocalPhotoDataSource.getInstance(); // 用单例

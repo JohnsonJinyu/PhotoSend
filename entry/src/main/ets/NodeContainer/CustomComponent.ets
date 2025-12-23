@@ -1,3 +1,4 @@
+//CustomComponent.ets
 import { BuilderNode, FrameNode, NodeController, UIContext } from '@kit.ArkUI';
 import { image } from '@kit.ImageKit';
 

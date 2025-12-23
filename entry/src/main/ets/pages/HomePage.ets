@@ -25,8 +25,11 @@ struct HomePage {
   private context = this.getUIContext().getHostContext() as common.UIAbilityContext;
 
   // 允许进行自定义转场的页面名称
-  private allowedCustomTransitionFromPageName: string[] = ['CameraPicturesPage'];
-  private allowedCustomTransitionToPageName: string[] = ['BigImagePage'];
+  private allowedCustomTransitionFromPageName: string[] = ['CameraPicturesPage','PhoneLocalPhotos'];
+  private allowedCustomTransitionToPageName: string[] = ['BigImagePage','LocalPhotoDetail'];
+
+
+
 
   private isCustomTransitionEnabled(fromName: string, toName: string): boolean {
     // 点击和返回均需要进行自定义转场，因此需要分别判断
@@ -42,17 +45,14 @@ struct HomePage {
   async aboutToAppear(): Promise<void> {
 
     // 创建download下的目录
-    //CreateLocalDirUtil.createOrGetDir(this.context);
     try {
       // 调用工具类获取目录路径（首次创建，后续直接读取）
       this.appStoragePath = await CreateLocalDirUtil.createOrGetDir(this.context);
       console.log(`获取到应用专属目录：${this.appStoragePath}`);
 
       // 后续逻辑：加载目录下的图片（示例）
-      //await this.loadImagesFromDir();
     } catch (error) {
       console.error(`获取目录失败：${JSON.stringify(error)}`);
-      //this.isLoading = false;
     }
   }
 
@@ -113,7 +113,7 @@ struct HomePage {
         return undefined;
       }
 
-      // 需要对专场页面是否注册了animation进行判断，来决定是否进行自定义转场
+      // 需要对转场页面是否注册了animation进行判断，来决定是否进行自定义转场
       let fromParam: AnimateCallback = CustomTransition.getInstance().getAnimateParam(from.index)
       let toParam: AnimateCallback = CustomTransition.getInstance().getAnimateParam(to.index)
       if (!fromParam.animation || !toParam.animation) {
