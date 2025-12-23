@@ -2,6 +2,7 @@
 // 以Gird显示的图片里表页面
 import { promptAction } from "@kit.ArkUI";
 import { MyNodeController } from "../../NodeContainer/CustomComponent";
+import { AsyncImage } from "./AsyncImage";
 import { ExifReader } from "./ExifReader";
 import { ImageInfo, LocalPhotoDataSource } from './LocalPhotoDataSource';
 
@@ -66,44 +67,14 @@ export struct PhoneLocalPhotos {
   private ImageGridItem(item: ImageInfo, index: number) {
     GridItem() {
       Column() {
-        // 使用Stack来叠加图片和RAW标记
-        Stack() {
-          Image(item.uri)
-            .width('100%')
-            .aspectRatio(1)
-            .objectFit(ImageFit.Cover)
-            .borderRadius(4)
-            .syncLoad(false)
-            .autoResize(true)
-            .dynamicRangeMode(DynamicRangeMode.HIGH)
-            .rotate({ angle: item.rotationAngle || 0 })
-            .geometryTransition(item.uri, { follow: false })
-            .onClick(() => {
-              this.selectedIndex = index;
-              const detailParams: PhotoDetailParams = {
-                selectedIndex: index
-              };
-              this.pageStack.pushPathByName("LocalPhotoDetail", detailParams, true);
-            })
-
-          // RAW文件标记 - 使用position和margin的组合
-          if (item.isRawFile) {
-            Text('RAW')
-              .fontSize(10)
-              .fontColor('#ffffff')
-              .backgroundColor('rgba(0, 0, 0, 0.7)')
-              .padding({ left: 4, right: 4, top: 2, bottom: 2 })
-              .borderRadius(2)
-              // 关键修改：position使用百分比 + 负的margin
-              .position({
-                right: 4,  // 距离右边4px
-                bottom: 4  // 距离底部4px
-              })
-              .hitTestBehavior(HitTestMode.None) // 关键：让点击事件穿透
-          }
-        }
-        .width('100%')
-        .aspectRatio(1)
+        AsyncImage({ item: item })
+          .onClick(() => {
+            this.selectedIndex = index;
+            const detailParams: PhotoDetailParams = {
+              selectedIndex: index
+            };
+            this.pageStack.pushPathByName("LocalPhotoDetail", detailParams, true);
+          })
 
         Text(item.name)
           .fontSize(12)
