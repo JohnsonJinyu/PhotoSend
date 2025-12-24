@@ -400,7 +400,10 @@ struct LocalPhotoDetail {
       .width('100%')
       .height('100%');
     }
-    .title(this.getTitle())
+    .title(this.getTitle(),{
+      backgroundBlurStyle:BlurStyle.Thick,
+      barStyle:BarStyle.STACK
+    })
     .menus(this.menuItems)
     //.backgroundColor('#000')
     .hideBackButton(false)

@@ -7,11 +7,11 @@
         "material": {
           "certpath": "C:\\Users\\Lenovo\\.ohos\\config\\default_PhotoSend_-E1-jpnvmytC1EHRkcTfa9kM-i1BiP528Iz7D47ovPM=.cer",
           "keyAlias": "debugKey",
-          "keyPassword": "0000001A41BDC7E42E0F1DD5F9BCFF059A2DA575225094CCBAD77FE7668DE4972D1DB6E3DB87CA66E2BA",
+          "keyPassword": "0000001BDD63FC14EABB85267D24BC889D4FB741441BF359FFA99EBF32077206B71A51E681FCF439520A8F",
           "profile": "C:\\Users\\Lenovo\\.ohos\\config\\default_PhotoSend_-E1-jpnvmytC1EHRkcTfa9kM-i1BiP528Iz7D47ovPM=.p7b",
           "signAlg": "SHA256withECDSA",
           "storeFile": "C:\\Users\\Lenovo\\.ohos\\config\\default_PhotoSend_-E1-jpnvmytC1EHRkcTfa9kM-i1BiP528Iz7D47ovPM=.p12",
-          "storePassword": "0000001A2D5E2B06870E096860E5634BF6E02C41A6B56FAAEDC5C9E25FC58614082A37C175E37E8333A6"
+          "storePassword": "0000001B711993A41DBB9B49C84B99CA75A0A84DD5488A7250A33487BE586C30D77E6EFF77597CE844EDF0"
         }
       }
     ],
