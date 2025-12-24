@@ -486,24 +486,3 @@ export struct CamPhotoPrePage {
 
 
 
-/**
- *
- * 实现逻辑
- * aboutToAppear()
-↓
-loadPhotoTotalCount()
-↓
-GetPhotoTotalCount() // C++层获取总数
-↓
-loadPhotoMetaList(0) // 加载第一页元信息
-↓
-GetPhotoMetaList() // C++层获取元信息（无缩略图）
-↓
-转换为 ImageInfoWithPixelMap[] // 创建基本数据结构
-↓
-preloadThumbnailsForPage() // 预加载前5张缩略图
- *
- *
-
- *
- * */
