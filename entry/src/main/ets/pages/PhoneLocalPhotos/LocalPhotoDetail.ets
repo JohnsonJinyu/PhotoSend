@@ -34,6 +34,7 @@ struct LocalPhotoDetail {
   @State selectedIndex: number = 0;
   // 同步来源标记：避免循环触发（1=小图滚动, 2=大图滚动, 3=小图点击）
   @State syncSource: number = 0;
+  @State isTitleBarDisplay:boolean = false
   @State menuItems: Array<NavigationMenuItem> = [
     {
       value: '分享',
@@ -291,6 +292,19 @@ struct LocalPhotoDetail {
     return '图片详情';
   }
 
+  /**
+   *  切换标题栏是否显示
+   * */
+  private changeTitleBarDisplayStatus(){
+    if (this.isTitleBarDisplay) {
+      this.isTitleBarDisplay=false
+    }else if (this.isTitleBarDisplay == false) {
+      this.isTitleBarDisplay=true
+    }
+  }
+
+
+
   build() {
     NavDestination() {
       Stack({ alignContent: Alignment.Bottom }) {
@@ -404,9 +418,13 @@ struct LocalPhotoDetail {
       backgroundBlurStyle:BlurStyle.Thick,
       barStyle:BarStyle.STACK
     })
+    .hideTitleBar(this.isTitleBarDisplay)
     .menus(this.menuItems)
     //.backgroundColor('#000')
     .hideBackButton(false)
+    .onClick(()=>{
+      this.changeTitleBarDisplayStatus()
+    })
     .onReady((ctx: NavDestinationContext) => {
       try {
         this.params = ctx.pathInfo.param as ReceiveParams;
