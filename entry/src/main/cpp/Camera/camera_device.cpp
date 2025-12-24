@@ -7,7 +7,7 @@
 #include "ltdl.h"
 #include "native_common.h"
 #include "camera_config.h"
-
+#include "Camera/camera_download.h"
 
 #include "hilog/log.h"
 #include "native_common.h"
@@ -197,6 +197,10 @@ bool InternalConnectCamera(const char *model, const char *path) {
     // 第十八步：连接成功，更新全局状态
     OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "相机连接成功");
     g_connected = true;
+    
+    // 新增：初始化缩略图下载信号量
+    InitThumbnailSemaphore();
+    OH_LOG_PrintMsg(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "缩略图信号量已初始化");
 
     /*// 连接成功后查询配置树
     std::vector<ConfigItem> items;
@@ -434,6 +438,62 @@ napi_value ConnectCamera(napi_env env, napi_callback_info info) {
     bool success = InternalConnectCamera(model, path);
 
     // 转换结果为ArkTS布尔值并返回
+    napi_value result;
+    napi_get_boolean(env, success, &result);
+    return result;
+}
+
+
+
+/**
+ * @brief 内部函数：断开相机连接
+ */
+bool InternalDisconnectCamera() {
+    if (!g_connected) {
+        OH_LOG_PrintMsg(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "相机未连接");
+        return true;
+    }
+    
+    // 清理缩略图下载信号量
+    CleanupThumbnailSemaphore();
+    OH_LOG_PrintMsg(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "缩略图信号量已清理");
+    
+    // 清理扫描相关资源
+    if (g_isScanning) {
+        g_scanCancelled = true;
+        // 等待扫描线程结束
+        if (g_scanThread.joinable()) {
+            g_scanThread.join();
+        }
+    }
+    
+    // 清理照片缓存
+    ClearPhotoCache();
+    
+    // 原有的断开连接逻辑
+    if (g_camera) {
+        gp_camera_exit(g_camera, g_context);
+        gp_camera_unref(g_camera);
+        g_camera = nullptr;
+    }
+    
+    if (g_context) {
+        gp_context_unref(g_context);
+        g_context = nullptr;
+    }
+    
+    g_connected = false;
+    OH_LOG_PrintMsg(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "相机已断开连接");
+    
+    return true;
+}
+
+
+
+// camera_device.cpp - 添加NAPI断开连接函数
+napi_value DisconnectCamera(napi_env env, napi_callback_info info) {
+    bool success = InternalDisconnectCamera();
+    
     napi_value result;
     napi_get_boolean(env, success, &result);
     return result;

@@ -1,7 +1,7 @@
 // CameraHelper.ets
 import nativeCamera from 'libentry.so';
 
-import { ParamOptions } from 'ets/types';
+import { ParamOptions } from 'ets/types/types';
 
 const instanceCallbackMap = new WeakMap<CameraHelper, (params: ParamOptions) => void>();
 

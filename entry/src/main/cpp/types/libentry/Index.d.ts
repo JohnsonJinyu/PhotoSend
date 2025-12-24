@@ -121,6 +121,15 @@ interface ThumbnailInfo {
   thumbnail: ArrayBuffer;
 }
 
+
+export interface ScanProgressInfo {
+  scanning: boolean;
+  current: number;
+  total: number;
+  cached: boolean;
+  count?: number;
+}
+
 /**
  * 获取相机所有配置参数（包含参数名、显示名、类型、当前值及可选值）
  * @returns 配置参数列表，每个元素为符合ConfigItem接口的对象
@@ -311,3 +320,19 @@ export const GetRawImageExifInfoNapi: (filePath: string) => {
   make: string;
   model: string;
 };
+
+
+
+
+export const StartAsyncScan: () => boolean;
+export const IsScanComplete: () => boolean;
+export const GetScanProgress: () => {
+  scanning: boolean;
+  current: number;
+  total: number;
+  cached: boolean;
+  count?: number;
+};
+
+// 断开连接函数
+export const DisconnectCamera: () => boolean;

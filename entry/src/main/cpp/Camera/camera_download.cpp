@@ -15,22 +15,52 @@
 #include <string>
 #include <fstream> 
 #include <stdarg.h>
+#include <atomic>
+#include <thread>
+#include <condition_variable>
+
+#include <semaphore.h>
 
 #define LOG_DOMAIN 0x0005         // 日志域（自定义标识，区分不同模块日志）
 #define LOG_TAG "Camera_Download" // 日志标签（日志中显示的模块名）
 
 
 
-// 全局变量：温存文件列表（提高性能）
-static std::vector<PhotoMeta> g_cachedFileList;
-static bool g_isFileListCached = false;
-static std::mutex g_cacheMutex;
 
 
 
 
 
 
+
+
+
+
+
+// ========== 添加初始化函数（在相机连接成功时调用） ==========
+void InitThumbnailSemaphore() {
+    if (!g_semaphoreInitialized) {
+        int ret = sem_init(&g_thumbnailSemaphore, 0, MAX_CONCURRENT_THUMBNAILS);
+        if (ret == 0) {
+            g_semaphoreInitialized = true;
+            OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, 
+                           "缩略图信号量初始化成功，最大并发数: %d", MAX_CONCURRENT_THUMBNAILS);
+        } else {
+            OH_LOG_PrintMsg(LOG_APP, LOG_ERROR, LOG_DOMAIN, LOG_TAG, 
+                           "缩略图信号量初始化失败");
+        }
+    }
+}
+
+
+// ========== 添加清理函数（在相机断开时调用） ==========
+void CleanupThumbnailSemaphore() {
+    if (g_semaphoreInitialized) {
+        sem_destroy(&g_thumbnailSemaphore);
+        g_semaphoreInitialized = false;
+        OH_LOG_PrintMsg(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "缩略图信号量已清理");
+    }
+}
 
 
 
@@ -41,10 +71,10 @@ static std::mutex g_cacheMutex;
 /**
  * @brief 内部函数：获取照片总数（不加载缩略图）
  */
-static int InternalGetPhotoTotalCount(){
+static int InternalGetPhotoTotalCount() {
     if (!g_connected || !g_context || !g_camera) {
         OH_LOG_PrintMsg(LOG_APP, LOG_ERROR, LOG_DOMAIN, LOG_TAG, "相机未连接，无法获取照片总数");
-        return 0;;
+        return 0;
     }
     
     // 如果缓存已存在，直接返回缓存数量
@@ -57,20 +87,207 @@ static int InternalGetPhotoTotalCount(){
         }
     }
     
-    // 扫描相机获取文件列表（不获取缩略图）
-    std::vector<PhotoMeta> fileList = InternalScanPhotoFilesOnly();
-    
-    {
-        std::lock_guard<std::mutex> lock(g_cacheMutex);
-        g_cachedFileList = fileList;
-        g_isFileListCached = true;
-        OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, 
-                    "扫描完成，照片总数: %{public}zu", g_cachedFileList.size());
+    // 如果正在扫描中，返回0表示正在扫描
+    if (g_isScanning) {
+        OH_LOG_PrintMsg(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "正在扫描中...");
+        return 0;
     }
     
-    return static_cast<int>(fileList.size());
+    // 启动异步扫描
+    StartAsyncScanInternal();
+    
+    return 0; // 返回0，表示扫描中
 }
 
+
+
+// ========== 添加异步扫描内部函数 ==========
+static void StartAsyncScanInternal() {
+    if (g_isScanning) {
+        return;
+    }
+    
+    g_isScanning = true;
+    g_scanCancelled = false;
+    g_scanProgressCurrent = 0;
+    g_scanProgressTotal = 0;
+    
+    g_scanThread = std::thread([]() {
+        OH_LOG_PrintMsg(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "异步扫描开始");
+        
+        try {
+            std::vector<PhotoMeta> fileList;
+            
+            // 1. 寻找DCIM目录
+            std::string dcimFolder = FindDcimFolder();
+            if (dcimFolder.empty()) {
+                OH_LOG_PrintMsg(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "未找到DCIM目录");
+                g_isScanning = false;
+                return;
+            }
+            
+            // 2. 获取照片目录
+            std::string photoFolder = FindPhotoFolder(dcimFolder);
+            if (photoFolder.empty()) {
+                photoFolder = dcimFolder;
+            }
+            
+            OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, 
+                        "扫描照片目录: %{public}s", photoFolder.c_str());
+            
+            // 3. 获取文件列表
+            CameraList *files = nullptr;
+            gp_list_new(&files);
+            int ret = gp_camera_folder_list_files(g_camera, photoFolder.c_str(), files, g_context);
+            
+            if (ret != GP_OK) {
+                OH_LOG_Print(LOG_APP, LOG_ERROR, LOG_DOMAIN, LOG_TAG, 
+                            "获取文件列表失败: %{public}s", gp_result_as_string(ret));
+                gp_list_free(files);
+                g_isScanning = false;
+                return;
+            }
+            
+            // 4. 获取文件总数用于进度
+            int numFiles = gp_list_count(files);
+            g_scanProgressTotal = numFiles;
+            
+            // 5. 构建元信息列表
+            for (int i = 0; i < numFiles; i++) {
+                // 检查是否被取消
+                if (g_scanCancelled) {
+                    OH_LOG_PrintMsg(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "扫描被取消");
+                    break;
+                }
+                
+                const char *fileName;
+                gp_list_get_name(files, i, &fileName);
+                
+                if (IsPhotoFile(fileName)) {
+                    PhotoMeta meta;
+                    meta.folder = photoFolder;
+                    meta.fileName = fileName;
+                    meta.fileSize = 0;
+                    
+                    fileList.push_back(meta);
+                }
+                
+                // 更新进度
+                g_scanProgressCurrent = i + 1;
+                
+                // 每扫描100个文件记录一次
+                if (i % 100 == 0 || i == numFiles - 1) {
+                    OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, 
+                                "扫描进度: %{public}d/%{public}d", i + 1, numFiles);
+                }
+            }
+            
+            gp_list_free(files);
+            
+            if (!g_scanCancelled) {
+                // 6. 更新缓存
+                {
+                    std::lock_guard<std::mutex> lock(g_cacheMutex);
+                    g_cachedFileList = fileList;
+                    g_isFileListCached = true;
+                }
+                
+                OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, 
+                            "异步扫描完成，找到 %{public}zu 个照片文件", fileList.size());
+            }
+            
+        } catch (const std::exception& e) {
+            OH_LOG_Print(LOG_APP, LOG_ERROR, LOG_DOMAIN, LOG_TAG, 
+                        "异步扫描异常: %{public}s", e.what());
+        } catch (...) {
+            OH_LOG_PrintMsg(LOG_APP, LOG_ERROR, LOG_DOMAIN, LOG_TAG, "异步扫描未知异常");
+        }
+        
+        g_isScanning = false;
+    });
+    
+    g_scanThread.detach(); // 分离线程
+}
+
+
+// ========== 添加新的NAPI函数 ==========
+
+/**
+ * @brief 启动异步扫描
+ */
+napi_value StartAsyncScan(napi_env env, napi_callback_info info) {
+    if (!g_connected || !g_context || !g_camera) {
+        OH_LOG_PrintMsg(LOG_APP, LOG_ERROR, LOG_DOMAIN, LOG_TAG, "相机未连接");
+        napi_value result;
+        napi_get_boolean(env, false, &result);
+        return result;
+    }
+    
+    if (g_isScanning) {
+        OH_LOG_PrintMsg(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "扫描已经在进行中");
+        napi_value result;
+        napi_get_boolean(env, false, &result);
+        return result;
+    }
+    
+    StartAsyncScanInternal();
+    
+    napi_value result;
+    napi_get_boolean(env, true, &result);
+    return result;
+}
+
+
+
+/**
+ * @brief 检查扫描是否完成
+ */
+napi_value IsScanComplete(napi_env env, napi_callback_info info) {
+    bool isComplete = !g_isScanning && g_isFileListCached;
+    
+    napi_value result;
+    napi_get_boolean(env, isComplete, &result);
+    return result;
+}
+
+
+/**
+ * @brief 获取扫描进度
+ */
+napi_value GetScanProgress(napi_env env, napi_callback_info info) {
+    napi_value result;
+    napi_create_object(env, &result);
+    
+    // 添加扫描中状态
+    napi_value scanningValue;
+    napi_get_boolean(env, g_isScanning, &scanningValue);
+    napi_set_named_property(env, result, "scanning", scanningValue);
+    
+    // 添加当前进度
+    napi_value currentValue;
+    napi_create_int32(env, g_scanProgressCurrent, &currentValue);
+    napi_set_named_property(env, result, "current", currentValue);
+    
+    // 添加总进度
+    napi_value totalValue;
+    napi_create_int32(env, g_scanProgressTotal, &totalValue);
+    napi_set_named_property(env, result, "total", totalValue);
+    
+    // 添加缓存状态
+    napi_value cachedValue;
+    napi_get_boolean(env, g_isFileListCached, &cachedValue);
+    napi_set_named_property(env, result, "cached", cachedValue);
+    
+    // 添加照片总数（如果缓存存在）
+    if (g_isFileListCached) {
+        std::lock_guard<std::mutex> lock(g_cacheMutex);
+        napi_value countValue;
+        napi_create_int32(env, static_cast<int>(g_cachedFileList.size()), &countValue);
+        napi_set_named_property(env, result, "count", countValue);
+    }
+    
+    return result;
+}
 
 /**
  * @brief 内部函数：仅扫描照片文件，不下载缩略图
@@ -265,7 +482,7 @@ napi_value GetPhotoTotalCount(napi_env env, napi_callback_info info) {
  * @brief NAPI接口：分页获取照片元信息
  */
 
-napi_value GetPhotoMetaList(napi_env env, napi_callback_info info){
+napi_value GetPhotoMetaList(napi_env env, napi_callback_info info) {
     // 1. 解析参数
     size_t argc = 2;
     napi_value args[2];
@@ -289,14 +506,15 @@ napi_value GetPhotoMetaList(napi_env env, napi_callback_info info){
                 "GetPhotoMetaList 参数: pageIndex=%{public}d, pageSize=%{public}d", 
                 pageIndex, pageSize);
     
-    // 3. 确保文件列表已缓存
+    // 3. 检查缓存状态 - 如果正在扫描，返回空数组
     {
         std::lock_guard<std::mutex> lock(g_cacheMutex);
         if (!g_isFileListCached) {
             OH_LOG_PrintMsg(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, 
-                          "文件列表未缓存，开始扫描...");
-            g_cachedFileList = InternalScanPhotoFilesOnly();
-            g_isFileListCached = true;
+                          "文件列表未缓存，返回空数组");
+            napi_value emptyArray;
+            napi_create_array(env, &emptyArray);
+            return emptyArray;
         }
     }
     
@@ -342,8 +560,6 @@ napi_value GetPhotoMetaList(napi_env env, napi_callback_info info){
                 "GetPhotoMetaList 返回 %{public}zu 条记录", endIndex - startIndex);
     
     return resultArray;
-    
-    
 }
 
 
@@ -358,9 +574,23 @@ static std::vector<uint8_t> InternalDownloadSingleThumbnail(const char* folder, 
     std::vector<uint8_t> thumbnailData;
     
     if (!g_connected || !g_context || !g_camera) {
-        OH_LOG_PrintMsg(LOG_APP, LOG_ERROR, LOG_DOMAIN, LOG_TAG, 
-                       "相机未连接，无法下载缩略图");
+        OH_LOG_Print(LOG_APP, LOG_ERROR, LOG_DOMAIN, LOG_TAG, 
+                   "相机未连接，无法下载缩略图");
         return thumbnailData;
+    }
+    
+    // 等待信号量（最多等待1秒）
+    if (g_semaphoreInitialized) {
+        struct timespec ts;
+        clock_gettime(CLOCK_REALTIME, &ts);
+        ts.tv_sec += 1; // 等待1秒
+        
+        int semRet = sem_timedwait(&g_thumbnailSemaphore, &ts);
+        if (semRet != 0) {
+            OH_LOG_Print(LOG_APP, LOG_WARN, LOG_DOMAIN, LOG_TAG, 
+                       "等待缩略图下载信号量超时: %{public}s/%{public}s", folder, filename);
+            return thumbnailData;
+        }
     }
     
     CameraFile *thumbFile = nullptr;
@@ -369,9 +599,20 @@ static std::vector<uint8_t> InternalDownloadSingleThumbnail(const char* folder, 
     OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, 
                 "开始下载缩略图: %{public}s/%{public}s", folder, filename);
     
-    // 获取缩略图
-    int ret = gp_camera_file_get(g_camera, folder, filename, 
+    int ret = GP_OK;
+    try {
+        // 获取缩略图
+        ret = gp_camera_file_get(g_camera, folder, filename, 
                                 GP_FILE_TYPE_PREVIEW, thumbFile, g_context);
+    } catch (...) {
+        OH_LOG_PrintMsg(LOG_APP, LOG_ERROR, LOG_DOMAIN, LOG_TAG, "下载缩略图异常");
+        ret = GP_ERROR;
+    }
+    
+    // 释放信号量
+    if (g_semaphoreInitialized) {
+        sem_post(&g_thumbnailSemaphore);
+    }
     
     if (ret != GP_OK) {
         OH_LOG_Print(LOG_APP, LOG_WARN, LOG_DOMAIN, LOG_TAG, 
@@ -392,6 +633,8 @@ static std::vector<uint8_t> InternalDownloadSingleThumbnail(const char* folder, 
         OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, 
                     "缩略图下载成功: %{public}s, 大小: %{public}lu", 
                     filename, thumbSize);
+    } else {
+        OH_LOG_PrintMsg(LOG_APP, LOG_WARN, LOG_DOMAIN, LOG_TAG, "缩略图数据为空");
     }
     
     gp_file_unref(thumbFile);

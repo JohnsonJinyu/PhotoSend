@@ -138,7 +138,10 @@ static napi_value Init(napi_env env, napi_value exports) {
         {"GetImageExifInfoNapi", nullptr, GetImageExifInfoNapi, nullptr, nullptr, nullptr, napi_default, nullptr},
         {"GetRawImageOrientationNapi", nullptr, GetRawImageOrientationNapi, nullptr, nullptr, nullptr, napi_default, nullptr},
         {"GetRawImageExifInfoNapi", nullptr, GetRawImageExifInfoNapi, nullptr, nullptr, nullptr, napi_default, nullptr},
-
+        {"StartAsyncScan", nullptr, StartAsyncScan, nullptr, nullptr, nullptr, napi_default, nullptr},
+        {"IsScanComplete", nullptr, IsScanComplete, nullptr, nullptr, nullptr, napi_default, nullptr},
+        {"GetScanProgress", nullptr, GetScanProgress, nullptr, nullptr, nullptr, napi_default, nullptr},
+        {"DisconnectCamera", nullptr, DisconnectCamera, nullptr, nullptr, nullptr, napi_default, nullptr},
         
 
         
