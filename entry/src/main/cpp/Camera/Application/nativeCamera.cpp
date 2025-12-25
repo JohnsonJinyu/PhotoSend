@@ -11,7 +11,7 @@
 #include <string>
 // NAPI头文件：ArkTS与C++交互的核心接口（定义数据类型、函数调用规则）
 #include <napi/native_api.h>
-#include "../Core/Device/cameraDevice.h"
+#include "../Core/Device/NapiDeviceInterface.h"
 #include "Camera/CameraDownloadKit/camera_download.h"
 #include "../Core/Media/ExifProcessor.h"
 #include "napi/native_api.h"
@@ -20,7 +20,7 @@
 #include <gphoto2/gphoto2-widget.h>
 #include <hilog/log.h>
 #include "Camera/native_common.h"
-#include "../Core/Device/cameraDevice.h"
+#include "../Core/Device/NapiDeviceInterface.h"
 #include "../Core/Config/camera_config.h"
 #include "Camera/camera_preview.h"
 #include "../Core/Capture/camera_capture.h"
@@ -88,7 +88,7 @@ static napi_value Init(napi_env env, napi_value exports) {
         {"GetAvailableCameras", nullptr, GetAvailableCameras, nullptr, nullptr, nullptr, napi_default, nullptr},
         {"SetGPhotoLibDirs", nullptr, SetGPhotoLibDirs, nullptr, nullptr, nullptr, napi_default, nullptr},
         {"ConnectCamera", nullptr, ConnectCamera, nullptr, nullptr, nullptr, napi_default, nullptr},
-        {"Disconnect", nullptr, Disconnect, nullptr, nullptr, nullptr, napi_default, nullptr},
+        {"DisconnectCamera", nullptr, DisconnectCamera, nullptr, nullptr, nullptr, napi_default, nullptr},
         {"IsCameraConnected", nullptr, IsCameraConnectedNapi, nullptr, nullptr, nullptr, napi_default, nullptr},
         {"TakePhoto", nullptr, TakePhoto, nullptr, nullptr, nullptr, napi_default, nullptr},
         {"DownloadPhoto", nullptr, DownloadPhoto, nullptr, nullptr, nullptr, napi_default, nullptr},

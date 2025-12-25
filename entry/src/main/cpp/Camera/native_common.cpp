@@ -63,6 +63,10 @@ napi_value CreateNapiString(napi_env env, const char *str) {
  * @param info NAPI回调信息（包含ArkTS传入的参数）
  * @return napi_value 返回true给ArkTS，标识路径已接收
  */
+
+
+/*
+已经转移到NapiDeviceInterface中 毕竟是和设备相关的
 napi_value SetGPhotoLibDirs(napi_env env, napi_callback_info info) {
     size_t argc = 1;    // 期望接收1个参数（动态库路径字符串）
     napi_value args[1]; // 存储ArkTS传入的参数
@@ -89,6 +93,7 @@ napi_value SetGPhotoLibDirs(napi_env env, napi_callback_info info) {
 
     return result;
 }
+*/
 
 
 

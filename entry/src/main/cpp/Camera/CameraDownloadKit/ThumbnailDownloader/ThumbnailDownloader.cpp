@@ -12,7 +12,7 @@
 #include <chrono>
 #include <thread>
 
-#define LOG_DOMAIN 0x0005
+#define LOG_DOMAIN 0x0008
 #define LOG_TAG "ThumbnailDownloader"
 
 ThumbnailDownloader::ThumbnailDownloader() 
