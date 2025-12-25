@@ -7,7 +7,7 @@
 #include "ltdl.h"
 #include "native_common.h"
 #include "camera_config.h"
-#include "Camera/camera_download.h"
+#include "Camera/CameraDownloadKit/camera_download.h"
 
 #include "hilog/log.h"
 #include "native_common.h"

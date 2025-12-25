@@ -4,7 +4,7 @@
 // Node APIs are not fully supported. To solve the compilation error of the interface cannot be found,
 // please include "napi/native_api.h".
 // C++ 层需要实现的核心功能：获取缩略图列表和下载选中照片
-#include "Camera/camera_download.h"
+#include "camera_download.h"
 #include "Camera/native_common.h"
 #include "gphoto2/gphoto2-list.h"
 #include "gphoto2/gphoto2-port-result.h"

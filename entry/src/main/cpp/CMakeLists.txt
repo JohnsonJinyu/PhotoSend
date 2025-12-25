@@ -36,8 +36,8 @@ Camera/camera_device.cpp Camera/camera_device.h
 Camera/camera_preview.cpp Camera/camera_preview.h
 Camera/camera_config.cpp Camera/camera_config.h
 Camera/camera_capture.cpp Camera/camera_capture.h
-Camera/camera_download.cpp Camera/camera_download.h
-Camera/exif_reader.h Camera/exif_reader.cpp)
+Camera/CameraDownloadKit/camera_download.cpp Camera/CameraDownloadKit/camera_download.h
+Camera/exif_reader.h Camera/exif_reader.cpp Camera/CameraDownloadKit/PhotoScanner/PhotoScanner.h Camera/CameraDownloadKit/PhotoScanner/PhotoScanner.cpp Camera/CameraDownloadKit/ThumbnailDownloader/ThumbnailDownloader.h Camera/CameraDownloadKit/ThumbnailDownloader/ThumbnailDownloader.cpp Camera/CameraDownloadKit/PhotoDownloader/PhotoDownloader.cpp Camera/CameraDownloadKit/PhotoDownloader/PhotoDownloader.h)
 
 # 7. 链接所有库（关键修改：链接动态库，补充缺失的依赖）
 target_link_libraries(entry PUBLIC
