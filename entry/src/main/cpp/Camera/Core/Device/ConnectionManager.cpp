@@ -8,10 +8,11 @@
 #include "Camera/Core/Types/CameraTypes.h"
 #include <hilog/log.h>
 #include <ltdl.h>
+#include "Camera/CameraDownloadKit/camera_download.h"
 #include <cstring>
 
 // 本模块的日志配置
-#define LOG_DOMAIN 0x0003
+#define LOG_DOMAIN 0x0003   
 #define LOG_TAG "ConnectionManager"
 
 ConnectionManager::ConnectionManager() 
@@ -89,6 +90,23 @@ bool ConnectionManager::connect(const std::string& model, const std::string& pat
                  "相机连接成功: %{public}s @ %{public}s", 
                  model.c_str(), path.c_str());
     
+    // 关键：连接成功后，设置全局变量并初始化下载模块
+    if (camera_ && context_) {
+        // 设置全局相机对象（如果你的其他模块还需要使用全局变量）
+        extern Camera* g_camera;  // 声明外部全局变量
+        extern GPContext* g_context;
+        extern bool g_connected;
+        
+        g_camera = camera_;
+        g_context = context_;
+        g_connected = true;
+        
+        // 初始化CameraDownloadKit模块
+        InitCameraDownloadModules();
+        OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, 
+                     "CameraDownloadKit模块已初始化");
+    }
+    
     return true;
 }
 
@@ -98,6 +116,9 @@ bool ConnectionManager::disconnect() {
     }
     
     OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "断开相机连接");
+    
+    // 关键：先清理下载模块
+    CleanupCameraDownloadModules();
     
     if (camera_) {
         gp_camera_exit(camera_, context_);

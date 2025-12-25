@@ -86,9 +86,17 @@ extern void InitThumbnailSemaphore();
  */
 extern void CleanupThumbnailSemaphore();
 
+
+extern void InitCameraDownloadModules();
+
+extern void CleanupCameraDownloadModules();
+
 /**
  * @brief 相机断开连接
  */
 extern napi_value DisconnectCamera(napi_env env, napi_callback_info info);
+
+
+
 
 #endif // PHOTOSEND_CAMERA_DOWNLOAD_H
