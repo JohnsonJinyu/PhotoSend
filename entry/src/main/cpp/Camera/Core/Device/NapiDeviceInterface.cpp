@@ -95,6 +95,10 @@ napi_value SetGPhotoLibDirs(napi_env env, napi_callback_info info) {
     char camDir[256] = {0};
     napi_get_value_string_utf8(env, args[0], camDir, sizeof(camDir) - 1, nullptr);
     
+    // 1. 更新全局变量（保持向后兼容）
+    g_camLibDir = camDir;
+    
+    // 2. 通过设备管理器设置驱动路径
     auto& deviceManager = CameraDeviceManager::getInstance();
     deviceManager.setDriverPath(camDir);
     

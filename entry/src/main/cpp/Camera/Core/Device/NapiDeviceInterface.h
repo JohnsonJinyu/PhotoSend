@@ -8,6 +8,11 @@
 #define NAPI_DEVICE_INTERFACE_H
 
 #include <napi/native_api.h>
+#include <string>
+
+// 声明全局变量（extern表示"在其他文件中定义"，供外部引用）
+extern std::string g_camLibDir;  // 注意：去掉static，否则无法跨文件共享
+
 
 // NAPI接口函数声明
 napi_value GetAvailableCameras(napi_env env, napi_callback_info info);

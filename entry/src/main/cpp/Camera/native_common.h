@@ -37,8 +37,7 @@ struct ConfigItem {
     int intValue; // 用于GP_WIDGET_TOGGLE类型的当前值
 };
 
-// 声明全局变量（extern表示"在其他文件中定义"，供外部引用）
-extern std::string g_camLibDir;  // 注意：去掉static，否则无法跨文件共享
+
 
 
 
