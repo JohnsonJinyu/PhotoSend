@@ -11,19 +11,19 @@
 #include <string>
 // NAPI头文件：ArkTS与C++交互的核心接口（定义数据类型、函数调用规则）
 #include <napi/native_api.h>
-#include "Camera/camera_device.h"
+#include "../Core/Device/cameraDevice.h"
 #include "Camera/CameraDownloadKit/camera_download.h"
-#include "Camera/exif_reader.h"
+#include "../Core/Media/ExifProcessor.h"
 #include "napi/native_api.h"
 #include <gphoto2/gphoto2.h>
 #include <gphoto2/gphoto2-camera.h>
 #include <gphoto2/gphoto2-widget.h>
 #include <hilog/log.h>
 #include "Camera/native_common.h"
-#include "Camera/camera_device.h"
-#include "Camera/camera_config.h"
+#include "../Core/Device/cameraDevice.h"
+#include "../Core/Config/camera_config.h"
 #include "Camera/camera_preview.h"
-#include "Camera/camera_capture.h"
+#include "../Core/Capture/camera_capture.h"
 
 // ###########################################################################
 //  宏定义：日志配置（固定格式，方便定位日志来源）

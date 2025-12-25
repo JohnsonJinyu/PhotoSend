@@ -8,7 +8,7 @@
 #include <napi/native_api.h>
 #include "hilog/log.h"
 #include "libraw/libraw_const.h"
-#include "exif_reader.h"
+#include "ExifProcessor.h"
 #include <libexif/exif-data.h>
 #include <libexif/exif-loader.h>
 #include <cstring>

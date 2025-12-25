@@ -5,12 +5,12 @@
 // please include "napi/native_api.h".
 
 #include "ltdl.h"
-#include "native_common.h"
-#include "camera_config.h"
+#include "Camera/native_common.h"
+#include "Camera/Core/Config/camera_config.h"
 #include "Camera/CameraDownloadKit/camera_download.h"
 
 #include "hilog/log.h"
-#include "native_common.h"
+#include "Camera/native_common.h"
 #include <thread>
 
 #define LOG_DOMAIN 0x0003      // 日志域（自定义标识，区分不同模块日志）
