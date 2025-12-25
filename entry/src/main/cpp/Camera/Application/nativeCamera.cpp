@@ -12,48 +12,24 @@
 // NAPI头文件：ArkTS与C++交互的核心接口（定义数据类型、函数调用规则）
 #include <napi/native_api.h>
 #include "Camera/camera_device.h"
-#include "CameraDownloadKit/camera_download.h"
+#include "Camera/CameraDownloadKit/camera_download.h"
 #include "Camera/exif_reader.h"
 #include "napi/native_api.h"
-// libgphoto2头文件：相机操作核心接口（相机对象、文件、配置、端口管理）
 #include <gphoto2/gphoto2.h>
 #include <gphoto2/gphoto2-camera.h>
-#include <gphoto2/gphoto2-file.h>
 #include <gphoto2/gphoto2-widget.h>
-// ltdl头文件：动态库加载器（加载相机驱动、端口模块）
-#include <ltdl.h>
-// HarmonyOS日志头文件：打印调试信息
 #include <hilog/log.h>
-
-// 自定义的头文件部分
-#include "native_common.h"
-#include "camera_device.h"
-#include "camera_config.h"
-#include "camera_preview.h"
-#include "camera_capture.h"
+#include "Camera/native_common.h"
+#include "Camera/camera_device.h"
+#include "Camera/camera_config.h"
+#include "Camera/camera_preview.h"
+#include "Camera/camera_capture.h"
 
 // ###########################################################################
 //  宏定义：日志配置（固定格式，方便定位日志来源）
 // ###########################################################################
 #define LOG_DOMAIN 0x0001      // 日志域（自定义标识，区分不同模块日志）
 #define LOG_TAG "NativeCamera" // 日志标签（日志中显示的模块名）
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -93,13 +69,6 @@ static napi_value Disconnect(napi_env env, napi_callback_info info) {
 
 
 
-
-
-
-
-
-
-
 // ###########################################################################
 // NAPI模块注册：将C++函数映射为ArkTS可调用的接口（关键步骤）
 // ###########################################################################
@@ -129,23 +98,22 @@ static napi_value Init(napi_env env, napi_value exports) {
         {"GetCameraConfig", nullptr, GetCameraConfig, nullptr, nullptr, nullptr, napi_default, nullptr},
         {"GetParamOptions", nullptr, GetParamOptions, nullptr, nullptr, nullptr, napi_default, nullptr},
         {"RegisterParamCallback", nullptr, RegisterParamCallback, nullptr, nullptr, nullptr, napi_default, nullptr},
-       
+
         {"GetPhotoTotalCount", nullptr, GetPhotoTotalCount, nullptr, nullptr, nullptr, napi_default, nullptr},
         {"DownloadSingleThumbnail", nullptr, DownloadSingleThumbnail, nullptr, nullptr, nullptr, napi_default, nullptr},
         {"GetPhotoMetaList", nullptr, GetPhotoMetaList, nullptr, nullptr, nullptr, napi_default, nullptr},
         {"ClearPhotoCache", nullptr, ClearPhotoCacheNapi, nullptr, nullptr, nullptr, napi_default, nullptr},
         {"GetImageOrientationNapi", nullptr, GetImageOrientationNapi, nullptr, nullptr, nullptr, napi_default, nullptr},
         {"GetImageExifInfoNapi", nullptr, GetImageExifInfoNapi, nullptr, nullptr, nullptr, napi_default, nullptr},
-        {"GetRawImageOrientationNapi", nullptr, GetRawImageOrientationNapi, nullptr, nullptr, nullptr, napi_default, nullptr},
+        {"GetRawImageOrientationNapi", nullptr, GetRawImageOrientationNapi, nullptr, nullptr, nullptr, napi_default,
+         nullptr},
         {"GetRawImageExifInfoNapi", nullptr, GetRawImageExifInfoNapi, nullptr, nullptr, nullptr, napi_default, nullptr},
         {"StartAsyncScan", nullptr, StartAsyncScan, nullptr, nullptr, nullptr, napi_default, nullptr},
         {"IsScanComplete", nullptr, IsScanComplete, nullptr, nullptr, nullptr, napi_default, nullptr},
         {"GetScanProgress", nullptr, GetScanProgress, nullptr, nullptr, nullptr, napi_default, nullptr},
         {"DisconnectCamera", nullptr, DisconnectCamera, nullptr, nullptr, nullptr, napi_default, nullptr},
-        
 
-        
-        
+
     };
 
     // 将接口映射表挂载到exports对象（ArkTS侧通过import获取这些函数）
