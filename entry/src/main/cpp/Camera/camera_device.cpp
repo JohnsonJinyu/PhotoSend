@@ -11,11 +11,16 @@
 
 #include "hilog/log.h"
 #include "native_common.h"
+#include <thread>
 
 #define LOG_DOMAIN 0x0003      // 日志域（自定义标识，区分不同模块日志）
 #define LOG_TAG "Camera_device" // 日志标签（日志中显示的模块名）
 
 
+
+static bool g_isScanning = false;
+static bool g_scanCancelled = false;
+static std::thread g_scanThread;
 
 
 // ###########################################################################
@@ -468,7 +473,7 @@ bool InternalDisconnectCamera() {
     }
     
     // 清理照片缓存
-    ClearPhotoCache();
+    //ClearPhotoCache();
     
     // 原有的断开连接逻辑
     if (g_camera) {
@@ -498,3 +503,4 @@ napi_value DisconnectCamera(napi_env env, napi_callback_info info) {
     napi_get_boolean(env, success, &result);
     return result;
 }
+
