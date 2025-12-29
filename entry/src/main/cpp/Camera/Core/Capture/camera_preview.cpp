@@ -4,11 +4,12 @@
 #include "Camera/Common/native_common.h"
 #include <pthread.h>
 #include <gphoto2/gphoto2.h>
+#include <Camera/Common/Constants.h>
 #include <unistd.h>
 
 // 日志配置
-#define LOG_DOMAIN 0X0003
-#define LOG_TAG "Nikon_Camera_Preview"
+#define LOG_DOMAIN ModuleLogs::CameraPreview.domain
+#define LOG_TAG ModuleLogs::CameraPreview.tag
 
 // 全局状态与线程锁
 static pthread_mutex_t g_camera_mutex = PTHREAD_MUTEX_INITIALIZER;

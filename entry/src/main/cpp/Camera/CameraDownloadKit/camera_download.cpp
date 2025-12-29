@@ -10,12 +10,13 @@
 #include "Camera/CameraDownloadKit/PhotoDownloader/PhotoDownloader.h"
 #include "../Common/native_common.h"
 #include <hilog/log.h>
+#include <Camera/Common/Constants.h>
 #include <memory>
 #include <thread>
 #include <condition_variable>
 
-#define LOG_DOMAIN 0x0005
-#define LOG_TAG "Camera_Download"
+#define LOG_DOMAIN ModuleLogs::Camera_download.domain
+#define LOG_TAG ModuleLogs::Camera_download.tag
 
 // 全局模块实例
 static std::unique_ptr<PhotoScanner> g_photoScanner;

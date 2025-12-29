@@ -5,6 +5,7 @@
 // please include "napi/native_api.h".
 
 #include "ConnectionManager.h"
+#include "Camera/Common/Constants.h"
 #include "Camera/Core/Types/CameraTypes.h"
 #include <hilog/log.h>
 #include <ltdl.h>
@@ -12,8 +13,8 @@
 #include <cstring>
 
 // 本模块的日志配置
-#define LOG_DOMAIN 0x0003   
-#define LOG_TAG "ConnectionManager"
+#define LOG_DOMAIN ModuleLogs::ConnectionManager.domain
+#define LOG_TAG ModuleLogs::ConnectionManager.tag
 
 ConnectionManager::ConnectionManager() 
     : camera_(nullptr), context_(nullptr), isConnected_(false) {

@@ -14,9 +14,11 @@
 #include <cstring>
 #include <fstream>
 #include <set>
+#include <Camera/Common/Constants.h>
 
-#define LOG_DOMAIN 0x0005
-#define LOG_TAG "PhotoScanner"
+
+#define LOG_DOMAIN ModuleLogs::PhotoScanner.domain
+#define LOG_TAG ModuleLogs::PhotoScanner.tag
 
 // 支持的图片格式
 static const std::set<std::string> PHOTO_EXTENSIONS = {

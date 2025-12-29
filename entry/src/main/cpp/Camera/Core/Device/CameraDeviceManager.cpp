@@ -5,14 +5,15 @@
 // please include "napi/native_api.h".
 
 #include "CameraDeviceManager.h"
+#include "Camera/Common/Constants.h"
 #include <hilog/log.h>
 
 // 本模块的日志配置
-#define LOG_DOMAIN 0x0005
-#define LOG_TAG "DeviceManager"
+#define LOG_DOMAIN ModuleLogs::CameraDeviceManager.domain
+#define LOG_TAG ModuleLogs::CameraDeviceManager.tag
 
 CameraDeviceManager::CameraDeviceManager() 
-    : connectionManager_(ConnectionManager::getInstance()),  // 引用单例
+    : connectionManager_(ConnectionManager::getInstance()),  // 引用单例M
       deviceScanner_() {
     OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "CameraDeviceManager初始化");
 }

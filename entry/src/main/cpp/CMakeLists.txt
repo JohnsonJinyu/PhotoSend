@@ -44,7 +44,7 @@ Camera/Core/Types/CameraTypes.h
 Camera/Core/Device/ConnectionManager.cpp Camera/Core/Device/ConnectionManager.h
 Camera/Core/Device/DeviceScanner.cpp Camera/Core/Device/DeviceScanner.h
 Camera/Core/Device/CameraDeviceManager.cpp Camera/Core/Device/CameraDeviceManager.h
-Camera/Core/Device/NapiDeviceInterface.cpp Camera/Core/Device/NapiDeviceInterface.h)
+Camera/Core/Device/NapiDeviceInterface.cpp Camera/Core/Device/NapiDeviceInterface.h Camera/Common/Constants.h)
 
 # 7. 链接所有库（关键修改：链接动态库，补充缺失的依赖）
 target_link_libraries(entry PUBLIC

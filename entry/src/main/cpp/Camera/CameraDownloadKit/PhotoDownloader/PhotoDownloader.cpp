@@ -10,10 +10,11 @@
 #include "gphoto2/gphoto2-port-result.h"
 #include <hilog/log.h>
 #include <fstream>
+#include <Camera/Common/Constants.h>
 #include <memory>
 
-#define LOG_DOMAIN 0x0005
-#define LOG_TAG "PhotoDownloader"
+#define LOG_DOMAIN ModuleLogs::PhotoDownloader.domain
+#define LOG_TAG ModuleLogs::PhotoDownloader.tag
 
 // 进度回调函数实现
 static unsigned int ProgressStartCallback(GPContext *context, float target, const char *text, void *data) {

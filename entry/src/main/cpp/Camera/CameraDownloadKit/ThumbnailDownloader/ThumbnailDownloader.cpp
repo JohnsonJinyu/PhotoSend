@@ -6,14 +6,16 @@
 
 #include "ThumbnailDownloader.h"
 #include "Camera/CameraDownloadKit/camera_download.h"
-#include "../../Common/native_common.h"
+#include "Camera/Common/native_common.h"
 #include "gphoto2/gphoto2-port-result.h"
 #include <hilog/log.h>
 #include <chrono>
 #include <thread>
+#include <Camera/Common/Constants.h>
 
-#define LOG_DOMAIN 0x0008
-#define LOG_TAG "ThumbnailDownloader"
+
+#define LOG_DOMAIN ModuleLogs::ThumbnailDownloader.domain
+#define LOG_TAG ModuleLogs::ThumbnailDownloader.tag
 
 ThumbnailDownloader::ThumbnailDownloader() 
     : camera_(nullptr)

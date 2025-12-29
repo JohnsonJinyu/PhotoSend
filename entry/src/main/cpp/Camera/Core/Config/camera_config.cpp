@@ -9,11 +9,14 @@
 #include <unistd.h>
 #include <vector>
 #include <napi/native_api.h>
+#include "Camera/Common/Constants.h"
 #include "hilog/log.h"
 #include "camera_config.h"
 #include <Camera/Core/Device/NapiDeviceInterface.h>
-#define LOG_DOMAIN 0x0002       // 日志域（自定义标识，区分不同模块日志）
-#define LOG_TAG "Camera_Config" // 日志标签（日志中显示的模块名）
+
+
+#define LOG_DOMAIN ModuleLogs::CameraConfig.domain      // 日志域（自定义标识，区分不同模块日志）
+#define LOG_TAG ModuleLogs::CameraConfig.tag            // 日志标签（日志中显示的模块名）
 
 
 

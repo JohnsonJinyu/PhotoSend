@@ -5,13 +5,14 @@
 // please include "napi/native_api.h".
 
 #include "DeviceScanner.h"
+#include "Camera/Common/Constants.h"
 #include <hilog/log.h>
 #include <ltdl.h>
 #include <gphoto2/gphoto2.h>
 
 // 本模块的日志配置
-#define LOG_DOMAIN 0x0004
-#define LOG_TAG "DeviceScanner"
+#define LOG_DOMAIN ModuleLogs::DeviceScanner.domain
+#define LOG_TAG ModuleLogs::DeviceScanner.tag
 
 std::vector<CameraDeviceInfo> DeviceScanner::scanAvailableCameras() {
     std::vector<CameraDeviceInfo> cameras;

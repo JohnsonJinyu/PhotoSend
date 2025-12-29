@@ -13,10 +13,11 @@
 #include <libexif/exif-loader.h>
 #include <cstring>
 #include <string>
+#include <Camera/Common/Constants.h>
 #include <libraw/libraw.h>
 
-#define LOG_DOMAIN 0x0006       // 日志域（自定义标识，区分不同模块日志）
-#define LOG_TAG "exif_reader" // 日志标签（日志中显示的模块名）
+#define LOG_DOMAIN ModuleLogs::ExifReader.domain       // 日志域（自定义标识，区分不同模块日志）
+#define LOG_TAG ModuleLogs::ExifReader.tag     // 日志标签（日志中显示的模块名）
 
 /**
  * @brief 内部函数：读取图片的EXIF方向信息

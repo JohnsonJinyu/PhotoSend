@@ -8,22 +8,22 @@
 #include "../Core/Device/NapiDeviceInterface.h"
 #include "Camera/CameraDownloadKit/camera_download.h"
 #include "../Core/Media/ExifProcessor.h"
+#include "Camera/Common/Constants.h"
 #include "napi/native_api.h"
-#include <gphoto2/gphoto2.h>
-#include <gphoto2/gphoto2-camera.h>
-#include <gphoto2/gphoto2-widget.h>
 #include <hilog/log.h>
+#include <Camera//Common/Constants.h>
 #include "../Common/native_common.h"
 #include "../Core/Device/NapiDeviceInterface.h"
 #include "../Core/Config/camera_config.h"
 #include "../Core/Capture/camera_preview.h"
 #include "../Core/Capture/camera_capture.h"
 
+
 // ###########################################################################
 //  宏定义：日志配置（固定格式，方便定位日志来源）
 // ###########################################################################
-#define LOG_DOMAIN 0x0001      // 日志域（自定义标识，区分不同模块日志）
-#define LOG_TAG "NativeCamera" // 日志标签（日志中显示的模块名）
+#define LOG_DOMAIN ModuleLogs::NativeCameraBridge.domain      // 日志域（自定义标识，区分不同模块日志）
+#define LOG_TAG ModuleLogs::NativeCameraBridge.tag// 日志标签（日志中显示的模块名）
 
 
 

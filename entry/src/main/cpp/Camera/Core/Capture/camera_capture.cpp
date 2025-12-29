@@ -7,7 +7,9 @@
 #include "gphoto2/gphoto2-camera.h"
 #include <napi/native_api.h>
 #include <hilog/log.h>
+#include <Camera/Common/Constants.h>
 #include "../../Common/native_common.h"
+
 
 
 // ###########################################################################

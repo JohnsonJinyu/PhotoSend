@@ -7,10 +7,11 @@
 #include "NapiDeviceInterface.h"
 #include "Camera/Core/Device/CameraDeviceManager.h"
 #include <hilog/log.h>
+#include <Camera/Common/Constants.h>
 
 // 本模块的日志配置
-#define LOG_DOMAIN 0x0006
-#define LOG_TAG "NapiDeviceInterface"
+#define LOG_DOMAIN ModuleLogs::NapiDeviceInterface.domain
+#define LOG_TAG ModuleLogs::NapiDeviceInterface.tag
 
 // 辅助函数：创建NAPI字符串
 static napi_value CreateNapiString(napi_env env, const char* str) {
