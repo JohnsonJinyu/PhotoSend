@@ -12,8 +12,6 @@
 #include <mutex>
 #include <atomic>
 #include <thread>
-#include <condition_variable>
-#include <set>
 
 // libgphoto2头文件
 #include <gphoto2/gphoto2.h>

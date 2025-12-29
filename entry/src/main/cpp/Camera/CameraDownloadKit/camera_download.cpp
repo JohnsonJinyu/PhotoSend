@@ -8,7 +8,7 @@
 #include <Camera/CameraDownloadKit/PhotoScanner/PhotoScanner.h>
 #include "Camera/CameraDownloadKit/ThumbnailDownloader/ThumbnailDownloader.h"
 #include "Camera/CameraDownloadKit/PhotoDownloader/PhotoDownloader.h"
-#include "Camera/native_common.h"
+#include "../Common/native_common.h"
 #include <hilog/log.h>
 #include <memory>
 #include <thread>

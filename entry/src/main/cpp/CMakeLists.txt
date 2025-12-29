@@ -30,9 +30,9 @@ link_directories(
 
 # 6. 业务 Native 库（保持不变）
 add_library(entry SHARED
-Camera/Application/nativeCamera.cpp Camera/Application/nativeCamera.h
-Camera/native_common.cpp Camera/native_common.h
-Camera/camera_preview.cpp Camera/camera_preview.h
+Camera/Bridge/nativeCameraBridge.cpp Camera/Bridge/nativeCameraBridge.h
+Camera/Common/native_common.cpp Camera/Common/native_common.h
+Camera/Core/Capture/camera_preview.cpp Camera/Core/Capture/camera_preview.h
 Camera/Core/Config/camera_config.cpp Camera/Core/Config/camera_config.h
 Camera/Core/Capture/camera_capture.cpp Camera/Core/Capture/camera_capture.h
 Camera/CameraDownloadKit/camera_download.cpp Camera/CameraDownloadKit/camera_download.h

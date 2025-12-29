@@ -4,12 +4,6 @@
 // ###########################################################################
 // 头文件引入：依赖库的核心接口定义
 // ###########################################################################
-// 基础内存/字符串操作库
-#include <cstddef>
-#include <cstdlib>
-#include <cstring>
-#include <string>
-// NAPI头文件：ArkTS与C++交互的核心接口（定义数据类型、函数调用规则）
 #include <napi/native_api.h>
 #include "../Core/Device/NapiDeviceInterface.h"
 #include "Camera/CameraDownloadKit/camera_download.h"
@@ -19,10 +13,10 @@
 #include <gphoto2/gphoto2-camera.h>
 #include <gphoto2/gphoto2-widget.h>
 #include <hilog/log.h>
-#include "Camera/native_common.h"
+#include "../Common/native_common.h"
 #include "../Core/Device/NapiDeviceInterface.h"
 #include "../Core/Config/camera_config.h"
-#include "Camera/camera_preview.h"
+#include "../Core/Capture/camera_preview.h"
 #include "../Core/Capture/camera_capture.h"
 
 // ###########################################################################
@@ -32,39 +26,6 @@
 #define LOG_TAG "NativeCamera" // 日志标签（日志中显示的模块名）
 
 
-
-
-// ###########################################################################
-//  NAPI接口：断开相机连接（暴露给ArkTS调用）
-// ###########################################################################
-/**
- * @brief ArkTS层调用此函数，断开相机连接并释放所有资源
- * @param env NAPI环境
- * @param info NAPI回调信息
- * @return napi_value 返回true给ArkTS，标识已断开
- */
-static napi_value Disconnect(napi_env env, napi_callback_info info) {
-    // 若相机对象存在，先结束会话并释放
-    if (g_camera) {
-        // gp_camera_exit：通知相机结束连接（关闭端口、清理会话）
-        gp_camera_exit(g_camera, g_context);
-        // gp_camera_unref：释放相机对象（引用计数为0时自动销毁）
-        gp_camera_unref(g_camera);
-        g_camera = nullptr; // 指针置空，避免悬空
-    }
-    // 若上下文对象存在，释放上下文
-    if (g_context) {
-        gp_context_unref(g_context); // 释放上下文
-        g_context = nullptr;         // 指针置空
-    }
-    // 更新连接状态为未连接
-    g_connected = false;
-
-    // 返回true给ArkTS
-    napi_value result;
-    napi_get_boolean(env, true, &result);
-    return result;
-}
 
 
 
@@ -105,13 +66,11 @@ static napi_value Init(napi_env env, napi_value exports) {
         {"ClearPhotoCache", nullptr, ClearPhotoCacheNapi, nullptr, nullptr, nullptr, napi_default, nullptr},
         {"GetImageOrientationNapi", nullptr, GetImageOrientationNapi, nullptr, nullptr, nullptr, napi_default, nullptr},
         {"GetImageExifInfoNapi", nullptr, GetImageExifInfoNapi, nullptr, nullptr, nullptr, napi_default, nullptr},
-        {"GetRawImageOrientationNapi", nullptr, GetRawImageOrientationNapi, nullptr, nullptr, nullptr, napi_default,
-         nullptr},
+        {"GetRawImageOrientationNapi", nullptr, GetRawImageOrientationNapi, nullptr, nullptr, nullptr, napi_default,nullptr},
         {"GetRawImageExifInfoNapi", nullptr, GetRawImageExifInfoNapi, nullptr, nullptr, nullptr, napi_default, nullptr},
         {"StartAsyncScan", nullptr, StartAsyncScan, nullptr, nullptr, nullptr, napi_default, nullptr},
         {"IsScanComplete", nullptr, IsScanComplete, nullptr, nullptr, nullptr, napi_default, nullptr},
         {"GetScanProgress", nullptr, GetScanProgress, nullptr, nullptr, nullptr, napi_default, nullptr},
-        {"DisconnectCamera", nullptr, DisconnectCamera, nullptr, nullptr, nullptr, napi_default, nullptr},
 
 
     };

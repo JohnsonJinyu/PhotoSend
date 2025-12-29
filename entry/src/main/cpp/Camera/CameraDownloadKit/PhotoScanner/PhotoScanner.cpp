@@ -6,13 +6,14 @@
 
 #include "PhotoScanner.h"
 #include "Camera/CameraDownloadKit/camera_download.h"
-#include "Camera/native_common.h"
+#include "../../Common/native_common.h"
 #include "gphoto2/gphoto2-list.h"
 #include "gphoto2/gphoto2-port-result.h"
 #include <hilog/log.h>
 #include <algorithm>
 #include <cstring>
 #include <fstream>
+#include <set>
 
 #define LOG_DOMAIN 0x0005
 #define LOG_TAG "PhotoScanner"

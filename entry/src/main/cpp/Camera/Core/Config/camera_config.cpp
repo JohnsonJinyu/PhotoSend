@@ -4,7 +4,7 @@
 // Node APIs are not fully supported. To solve the compilation error of the interface cannot be found,
 // please include "napi/native_api.h".
 
-#include "Camera/native_common.h"
+#include "../../Common/native_common.h"
 #include <map>
 #include <unistd.h>
 #include <vector>

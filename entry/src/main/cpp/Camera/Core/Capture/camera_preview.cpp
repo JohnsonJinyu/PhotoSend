@@ -1,7 +1,7 @@
 // camera_preview.cpp
 #include <napi/native_api.h>
 #include "hilog/log.h"
-#include "native_common.h"
+#include "Camera/Common/native_common.h"
 #include <pthread.h>
 #include <gphoto2/gphoto2.h>
 #include <unistd.h>

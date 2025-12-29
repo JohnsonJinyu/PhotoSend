@@ -6,7 +6,7 @@
 
 #ifndef PHOTOSEND_CAMERA_CONFIG_H
 #define PHOTOSEND_CAMERA_CONFIG_H
-#include "Camera/native_common.h"
+#include "../../Common/native_common.h"
 #include <napi/native_api.h>
 #include <vector>
 

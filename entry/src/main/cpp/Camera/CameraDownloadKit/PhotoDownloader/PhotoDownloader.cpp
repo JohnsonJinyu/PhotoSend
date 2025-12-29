@@ -6,7 +6,7 @@
 
 #include "PhotoDownloader.h"
 #include "Camera/CameraDownloadKit/camera_download.h"
-#include "Camera/native_common.h"
+#include "../../Common/native_common.h"
 #include "gphoto2/gphoto2-port-result.h"
 #include <hilog/log.h>
 #include <fstream>
