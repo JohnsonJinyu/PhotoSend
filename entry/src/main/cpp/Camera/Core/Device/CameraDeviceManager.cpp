@@ -57,7 +57,7 @@ bool CameraDeviceManager::connectCamera(const std::string& model, const std::str
     std::lock_guard<std::mutex> lock(connectionMutex_);
     
     OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, 
-                 "通用连接相机: model=%s, path=%s", model.c_str(), path.c_str());
+                 "通用连接相机: model=%{public}s, path=%{public}s", model.c_str(), path.c_str());
     
     return connectionManager_.connect(model, path);
 }
@@ -75,7 +75,7 @@ bool CameraDeviceManager::connectCameraAPMode(const std::string& model,
     std::lock_guard<std::mutex> lock(connectionMutex_);
     
     OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, 
-                 "AP模式连接相机: model=%s, ip=%s, port=%d", 
+                 "AP模式连接相机: model=%{public}s, ip=%{public}s, port=%{public}d", 
                  model.c_str(), ip.c_str(), port);
     
     // 设置PTP/IP配置
@@ -100,11 +100,11 @@ bool CameraDeviceManager::connectCameraAPMode(const std::string& model,
     
     if (result) {
         OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, 
-                     "AP模式连接成功: %s @ %s:%d", 
+                     "AP模式连接成功: %{public}s @ %{public}s:%{public}d", 
                      model.c_str(), ip.c_str(), port);
     } else {
         OH_LOG_Print(LOG_APP, LOG_ERROR, LOG_DOMAIN, LOG_TAG, 
-                     "AP模式连接失败: %s", connectionManager_.getLastError().c_str());
+                     "AP模式连接失败: %{public}s", connectionManager_.getLastError().c_str());
     }
     
     return result;
@@ -120,7 +120,7 @@ bool CameraDeviceManager::quickConnectNikon(const std::string& model) {
     std::lock_guard<std::mutex> lock(connectionMutex_);
     
     OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, 
-                 "快速连接尼康相机: model=%s", model.c_str());
+                 "快速连接尼康相机: model=%{public}s", model.c_str());
     
     // 尼康相机在AP模式下的默认设置
     const std::string defaultIp = "192.168.1.1";
@@ -165,7 +165,7 @@ std::vector<CameraDeviceInfo> CameraDeviceManager::scanCameras() {
     auto cameras = deviceScanner_.scanAvailableCameras();
     
     OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, 
-                 "扫描完成，找到 %d 台相机", (int)cameras.size());
+                 "扫描完成，找到 %{public}d 台相机", (int)cameras.size());
     
     return cameras;
 }
@@ -178,7 +178,7 @@ void CameraDeviceManager::setDriverPath(const std::string& path) {
     std::lock_guard<std::mutex> lock(connectionMutex_);
     
     OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, 
-                 "设置驱动路径: %s", path.c_str());
+                 "设置驱动路径: %{public}s", path.c_str());
     
     connectionManager_.setDriverPath(path);
     deviceScanner_.setDriverPath(path);
