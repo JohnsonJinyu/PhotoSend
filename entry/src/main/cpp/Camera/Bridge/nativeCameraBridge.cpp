@@ -1,4 +1,4 @@
-// native_camera.cpp
+// nativeCameraBridge.cpp
 // 主接口实现（调用其他模块）
 
 // ###########################################################################
@@ -11,51 +11,50 @@
 #include "Camera/Common/Constants.h"
 #include "napi/native_api.h"
 #include <hilog/log.h>
-#include <Camera//Common/Constants.h>
+#include <Camera/Common/Constants.h>
 #include "../Common/native_common.h"
 #include "../Core/Device/NapiDeviceInterface.h"
 #include "../Core/Config/camera_config.h"
 #include "../Core/Capture/camera_preview.h"
 #include "../Core/Capture/camera_capture.h"
 
-
 // ###########################################################################
 //  宏定义：日志配置（固定格式，方便定位日志来源）
 // ###########################################################################
-#define LOG_DOMAIN ModuleLogs::NativeCameraBridge.domain      // 日志域（自定义标识，区分不同模块日志）
-#define LOG_TAG ModuleLogs::NativeCameraBridge.tag// 日志标签（日志中显示的模块名）
-
-
-
-
-
+#define LOG_DOMAIN ModuleLogs::NativeCameraBridge.domain
+#define LOG_TAG ModuleLogs::NativeCameraBridge.tag
 
 // ###########################################################################
 // NAPI模块注册：将C++函数映射为ArkTS可调用的接口（关键步骤）
 // ###########################################################################
-// EXTERN_C_START/EXTERN_C_END：确保函数按C语言规则编译（避免C++名称修饰）
-// （NAPI框架依赖C语言函数名查找接口，C++会修改函数名，导致找不到）
 EXTERN_C_START
 /**
  * @brief 模块初始化函数：so库被加载时，NAPI框架自动调用此函数
- * @param env NAPI环境
- * @param exports ArkTS侧的"module.exports"对象（用于挂载接口）
- * @return napi_value 返回挂载好接口的exports对象
  */
 static napi_value Init(napi_env env, napi_value exports) {
     // napi_property_descriptor：NAPI结构体，定义"ArkTS函数名→C++函数"的映射关系
     napi_property_descriptor api_list[] = {
-        // 格式：{ArkTS侧函数名, 无, C++侧函数名, 无, 无, 无, 默认行为, 无}
+        // 设备管理接口
         {"GetAvailableCameras", nullptr, GetAvailableCameras, nullptr, nullptr, nullptr, napi_default, nullptr},
         {"SetGPhotoLibDirs", nullptr, SetGPhotoLibDirs, nullptr, nullptr, nullptr, napi_default, nullptr},
+        
+        // 连接接口（增强版）
         {"ConnectCamera", nullptr, ConnectCamera, nullptr, nullptr, nullptr, napi_default, nullptr},
+        {"ConnectCameraAPMode", nullptr, ConnectCameraAPMode, nullptr, nullptr, nullptr, napi_default, nullptr},
+        {"QuickConnectNikon", nullptr, QuickConnectNikon, nullptr, nullptr, nullptr, napi_default, nullptr},
         {"DisconnectCamera", nullptr, DisconnectCamera, nullptr, nullptr, nullptr, napi_default, nullptr},
         {"IsCameraConnected", nullptr, IsCameraConnectedNapi, nullptr, nullptr, nullptr, napi_default, nullptr},
+        
+        // 连接状态查询接口
+        {"GetConnectionStatusInfo", nullptr, GetConnectionStatusInfo, nullptr, nullptr, nullptr, napi_default, nullptr},
+        {"QuickConnectionTest", nullptr, QuickConnectionTest, nullptr, nullptr, nullptr, napi_default, nullptr},
+        
+        // 原有其他接口（保持兼容）
         {"TakePhoto", nullptr, TakePhoto, nullptr, nullptr, nullptr, napi_default, nullptr},
         {"DownloadPhoto", nullptr, DownloadPhoto, nullptr, nullptr, nullptr, napi_default, nullptr},
         {"SetCameraParameter", nullptr, SetCameraParameter, nullptr, nullptr, nullptr, napi_default, nullptr},
         {"GetPreview", nullptr, GetPreviewNapi, nullptr, nullptr, nullptr, napi_default, nullptr},
-        {"GetCameraStatus", nullptr, GetCameraStatus, nullptr, nullptr, nullptr, napi_default, nullptr}, // 新增这行
+        {"GetCameraStatus", nullptr, GetCameraStatus, nullptr, nullptr, nullptr, napi_default, nullptr},
         {"GetCameraConfig", nullptr, GetCameraConfig, nullptr, nullptr, nullptr, napi_default, nullptr},
         {"GetParamOptions", nullptr, GetParamOptions, nullptr, nullptr, nullptr, napi_default, nullptr},
         {"RegisterParamCallback", nullptr, RegisterParamCallback, nullptr, nullptr, nullptr, napi_default, nullptr},
@@ -71,23 +70,22 @@ static napi_value Init(napi_env env, napi_value exports) {
         {"StartAsyncScan", nullptr, StartAsyncScan, nullptr, nullptr, nullptr, napi_default, nullptr},
         {"IsScanComplete", nullptr, IsScanComplete, nullptr, nullptr, nullptr, napi_default, nullptr},
         {"GetScanProgress", nullptr, GetScanProgress, nullptr, nullptr, nullptr, napi_default, nullptr},
-
-
     };
 
     // 将接口映射表挂载到exports对象（ArkTS侧通过import获取这些函数）
-    napi_define_properties(env,                                    // NAPI环境
-                           exports,                                // 目标对象（module.exports）
-                           sizeof(api_list) / sizeof(api_list[0]), // 接口数量（自动计算，避免硬编码）
-                           api_list                                // 接口映射表
-    );
+    napi_define_properties(env,
+                           exports,
+                           sizeof(api_list) / sizeof(api_list[0]),
+                           api_list);
 
     // 打印日志：确认模块初始化成功
-    OH_LOG_PrintMsg(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, "InitModule: NativeCamera模块初始化成功");
-    return exports; // 返回exports给NAPI框架
+    OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, 
+                 "NativeCamera模块初始化成功，注册了 %d 个接口",
+                 (int)(sizeof(api_list) / sizeof(api_list[0])));
+    
+    return exports;
 }
 EXTERN_C_END
-
 
 // ###########################################################################
 // NAPI模块信息：定义模块的基本属性（ArkTS侧识别模块的关键）
@@ -102,15 +100,16 @@ static napi_module cameraModule = {
     .reserved = {0},          // 保留字段（必须为0）
 };
 
-
 // ###########################################################################
 // 模块注册入口：so库加载时自动注册NAPI模块
 // ###########################################################################
 /**
- * @brief 构造函数属性（__attribute__((constructor))）：so库被加载时自动执行
- * 作用：将上面定义的cameraModule注册到NAPI框架，让ArkTS能找到模块
+ * @brief 构造函数属性：so库被加载时自动执行，注册模块到NAPI框架
  */
 extern "C" __attribute__((constructor)) void RegisterEntryModule(void) {
     // napi_module_register：NAPI框架函数，注册模块
     napi_module_register(&cameraModule);
+    
+    OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, 
+                 "NativeCamera模块注册成功，支持AP模式连接");
 }
