@@ -19,6 +19,7 @@ export struct CamPhotoPrePage {
   private pageId: number = -1;
   private currentNodeKey: string = '';
 
+
   @State transitioningIndex: number = -1;
   @State isLoading: boolean = true;
   @State errorMsg: string = '';
@@ -113,8 +114,9 @@ export struct CamPhotoPrePage {
         console.log(`扫描进度: ${progress.current}/${progress.total}, 扫描中: ${progress.scanning}, 已缓存: ${progress.cached}`);
 
         // 如果扫描完成且已缓存
-        if (!progress.scanning && progress.cached && progress.count !== undefined) {
-          this.onScanComplete(progress.count);
+        // 如果扫描完成且已缓存，使用 total 作为照片总数
+        if (!progress.scanning && progress.cached && progress.total > 0) {
+          this.onScanComplete(progress.total);
         }
 
         // 如果扫描失败或取消

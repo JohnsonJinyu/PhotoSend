@@ -22,5 +22,4 @@ export interface ScanProgressInfo {
   current: number;
   total: number;
   cached: boolean;
-  count?: number;
 }
