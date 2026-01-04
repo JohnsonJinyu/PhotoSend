@@ -13,6 +13,7 @@
 #include <cstring>
 #include <chrono>
 #include <thread>
+#include <Camera/Common/native_common.h>
 
 // 本模块的日志配置
 #define LOG_DOMAIN ModuleLogs::ConnectionManager.domain
@@ -233,13 +234,15 @@ bool ConnectionManager::connect(const std::string& model, const std::string& pat
     // 11. 关键：连接成功后，初始化下载模块
     if (camera_ && context_) {
         // 设置全局相机对象（供其他模块使用）
-        extern Camera* g_camera;
+        /*extern Camera* g_camera;
         extern GPContext* g_context;
         extern bool g_connected;
         
         g_camera = camera_;
         g_context = context_;
-        g_connected = true;
+        g_connected = true;*/
+        
+        SetCameraInstance(camera_, context_, true);  // 使用统一的接口
         
         // 初始化CameraDownloadKit模块
         InitCameraDownloadModules();
@@ -268,13 +271,15 @@ bool ConnectionManager::disconnect() {
     CleanupCameraDownloadModules();
     
     // 2. 清理全局变量（如果其他模块使用了的话）
-    extern Camera* g_camera;
+    /*extern Camera* g_camera;
     extern GPContext* g_context;
     extern bool g_connected;
     
     g_camera = nullptr;
     g_context = nullptr;
-    g_connected = false;
+    g_connected = false;*/
+    
+    ClearCameraInstance();
     
     // 3. 断开相机连接
     if (camera_) {
