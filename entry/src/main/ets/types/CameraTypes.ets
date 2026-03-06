@@ -1,10 +1,18 @@
 import { image } from "@kit.ImageKit";
 
-export interface ImageInfoWithPixelMap {
+@Observed
+export class ImageInfoWithPixelMap {
   folder: string;
   filename: string;
   pixelMap: image.PixelMap | null;
   thumbnail?: ArrayBuffer;
+  
+  constructor(folder: string, filename: string, pixelMap: image.PixelMap | null = null, thumbnail?: ArrayBuffer) {
+    this.folder = folder;
+    this.filename = filename;
+    this.pixelMap = pixelMap;
+    this.thumbnail = thumbnail;
+  }
 }
 
 export interface PhotoMeta {

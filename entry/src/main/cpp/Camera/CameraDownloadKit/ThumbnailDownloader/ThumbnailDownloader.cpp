@@ -89,6 +89,21 @@ std::vector<uint8_t> ThumbnailDownloader::DownloadSingleThumbnail(
 std::vector<uint8_t> ThumbnailDownloader::InternalDownloadThumbnail(
     const std::string& folder, const std::string& filename) {
     
+    auto startTime = std::chrono::high_resolution_clock::now();
+    
+    // 参数验证
+    if (folder.empty() || filename.empty()) {
+        OH_LOG_Print(LOG_APP, LOG_ERROR, LOG_DOMAIN, LOG_TAG, 
+                   "❌ 参数错误：folder 或 filename 为空");
+        return {};
+    }
+    
+    if (folder.length() > 500) {
+        OH_LOG_Print(LOG_APP, LOG_ERROR, LOG_DOMAIN, LOG_TAG, 
+                   "❌ 参数错误：folder 过长 (%{public}zu 字节)", folder.length());
+        return {};
+    }
+    
     std::vector<uint8_t> thumbnailData;
     
     // 等待信号量（支持超时）
@@ -110,7 +125,7 @@ std::vector<uint8_t> ThumbnailDownloader::InternalDownloadThumbnail(
         int semRet = sem_timedwait(&thumbnailSemaphore_, &ts);
         if (semRet != 0) {
             OH_LOG_Print(LOG_APP, LOG_WARN, LOG_DOMAIN, LOG_TAG, 
-                       "等待缩略图下载信号量超时: %{public}s/%{public}s", 
+                       "等待缩略图下载信号量超时：%{public}s/%{public}s", 
                        folder.c_str(), filename.c_str());
             return thumbnailData;
         }
@@ -119,19 +134,52 @@ std::vector<uint8_t> ThumbnailDownloader::InternalDownloadThumbnail(
     CameraFile *thumbFile = nullptr;
     gp_file_new(&thumbFile);
     
+    auto downloadStartTime = std::chrono::high_resolution_clock::now();
+    
     OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, 
-                "开始下载缩略图: %{public}s/%{public}s", 
+                "开始下载缩略图：%{public}s/%{public}s", 
                 folder.c_str(), filename.c_str());
     
     int ret = GP_OK;
-    try {
-        // 获取缩略图
-        ret = gp_camera_file_get(camera_, folder.c_str(), filename.c_str(), 
-                                GP_FILE_TYPE_PREVIEW, thumbFile, context_);
-    } catch (...) {
-        OH_LOG_PrintMsg(LOG_APP, LOG_ERROR, LOG_DOMAIN, LOG_TAG, 
-                       "下载缩略图异常");
-        ret = GP_ERROR;
+    int retryCount = 0;
+    const int MAX_RETRIES = 3;
+    
+    // 优化：添加重试机制，处理 I/O in progress 错误
+    while (retryCount < MAX_RETRIES) {
+        try {
+            // 优化：直接使用 PREVIEW 类型获取缩略图
+            // 注：libgphoto2 没有 THUMBNAIL 类型，PREVIEW 即为相机提供的缩略图/预览图
+            ret = gp_camera_file_get(camera_, folder.c_str(), filename.c_str(), 
+                                    GP_FILE_TYPE_PREVIEW, thumbFile, context_);
+            
+            // 如果成功，退出循环
+            if (ret == GP_OK) {
+                break;
+            }
+            
+            // 如果是 I/O 错误，等待后重试
+            if (ret == GP_ERROR_IO) {
+                retryCount++;
+                if (retryCount < MAX_RETRIES) {
+                    OH_LOG_Print(LOG_APP, LOG_WARN, LOG_DOMAIN, LOG_TAG, 
+                                "⚠️ 缩略图下载遇到 I/O 错误，%{public}d 秒后重试 (%{public}d/%{public}d): %{public}s",
+                                retryCount, retryCount, MAX_RETRIES, gp_result_as_string(ret));
+                                
+                    // 等待 1 秒后重试
+                    std::this_thread::sleep_for(std::chrono::seconds(1));
+                    continue;
+                }
+            }
+            
+            // 其他错误直接退出
+            break;
+            
+        } catch (...) {
+            OH_LOG_PrintMsg(LOG_APP, LOG_ERROR, LOG_DOMAIN, LOG_TAG, 
+                           "下载缩略图异常");
+            ret = GP_ERROR;
+            break;
+        }
     }
     
     // 释放信号量
@@ -152,15 +200,27 @@ std::vector<uint8_t> ThumbnailDownloader::InternalDownloadThumbnail(
     gp_file_get_data_and_size(thumbFile, &thumbData, &thumbSize);
     
     if (thumbData && thumbSize > 0) {
-        // 复制数据到vector
+        // 优化：如果图片过大，进行简单的尺寸检查和日志记录
+        if (thumbSize > 500 * 1024) {  // 大于 500KB
+            OH_LOG_Print(LOG_APP, LOG_WARN, LOG_DOMAIN, LOG_TAG, 
+                        "⚠️ 缩略图尺寸过大：%{public}lu bytes，建议检查相机设置", thumbSize);
+        }
+            
+        // 复制数据到 vector
         thumbnailData.assign(thumbData, thumbData + thumbSize);
-        
+            
+        // 计算耗时
+        auto endTime = std::chrono::high_resolution_clock::now();
+        auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime);
+        auto downloadDuration = std::chrono::duration_cast<std::chrono::milliseconds>(
+            endTime - downloadStartTime);
+            
         OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, 
-                    "缩略图下载成功: %{public}s, 大小: %{public}lu", 
-                    filename.c_str(), thumbSize);
+                    "✅ 缩略图下载成功：%{public}s, 大小：%{public}lu bytes, 总耗时：%{public}lld ms, 下载耗时：%{public}lld ms", 
+                    filename.c_str(), thumbSize, duration.count(), downloadDuration.count());
     } else {
         OH_LOG_PrintMsg(LOG_APP, LOG_WARN, LOG_DOMAIN, LOG_TAG, 
-                       "缩略图数据为空");
+                       "❌ 缩略图数据为空");
     }
     
     gp_file_unref(thumbFile);

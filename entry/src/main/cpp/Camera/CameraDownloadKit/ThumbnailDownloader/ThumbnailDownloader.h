@@ -34,28 +34,28 @@ public:
 
     /**
      * @brief 初始化下载器
-     * @param camera libgphoto2相机对象
-     * @param context libgphoto2上下文对象
+     * @param camera libgphoto2 相机对象
+     * @param context libgphoto2 上下文对象
      */
     void Init(Camera* camera, GPContext* context);
-
+    
     /**
      * @brief 清理资源
      */
     void Cleanup();
-
+    
     /**
      * @brief 初始化信号量
      * @param maxConcurrent 最大并发数
      * @return 是否初始化成功
      */
-    bool InitSemaphore(int maxConcurrent = 2);
-
+    bool InitSemaphore(int maxConcurrent = 5);  // 优化：默认并发数从 2 提升到 5
+    
     /**
      * @brief 清理信号量
      */
     void CleanupSemaphore();
-
+    
     /**
      * @brief 下载单张缩略图
      * @param folder 照片所在文件夹
@@ -64,7 +64,7 @@ public:
      */
     std::vector<uint8_t> DownloadSingleThumbnail(const std::string& folder, 
                                                 const std::string& filename);
-
+    
     /**
      * @brief 设置超时时间
      * @param timeoutMs 超时时间（毫秒）
@@ -79,13 +79,13 @@ private:
                                                   const std::string& filename);
 
 private:
-    Camera* camera_;               // libgphoto2相机对象
-    GPContext* context_;           // libgphoto2上下文对象
+    Camera* camera_;               // libgphoto2 相机对象
+    GPContext* context_;           // libgphoto2 上下文对象
     sem_t thumbnailSemaphore_;     // 缩略图下载信号量
     std::atomic<bool> semaphoreInitialized_; // 信号量是否已初始化
     std::atomic<int> timeoutMs_;   // 等待信号量的超时时间（毫秒）
     
-    static const int DEFAULT_TIMEOUT_MS = 1000; // 默认超时1秒
+    static const int DEFAULT_TIMEOUT_MS = 3000; // 优化：超时时间从 1 秒增加到 3 秒
 };
 
 #endif // THUMBNAIL_DOWNLOADER_H

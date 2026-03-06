@@ -3,7 +3,7 @@ import { RectInfoInPx } from '../../utils/animation/ComponentAttrUtils';
 import { AnimationProperties } from '../../CustomTransition/AnimationProperties';
 import { MyNodeController, getMyNode, deleteMyNode } from '../../NodeContainer/CustomComponent';
 import { CustomTransition } from '../../CustomTransition/CustomNavigationUtils';
-import { ImageInfoWithPixelMap } from './CamPhotoPrePage';
+import { ImageInfoWithPixelMap } from '../../types/CameraTypes';
 import { common, UIAbility } from '@kit.AbilityKit';
 import { ErrorEvent, MessageEvent, worker } from '@kit.ArkTS';
 import { CamConnectionManager } from '../../utils/tools/CamConnectManager';
@@ -44,8 +44,6 @@ interface DownloadTaskMessage {
   tempFilePath: string;
 }
 
-
-// 定义Builder
 @Builder
 export function BigImagePageBuilder() {
   BigImagePage();
@@ -69,7 +67,7 @@ export struct BigImagePage {
   private prePageDoFinishTransition: () => void = () => {};
   private cardItemInfo: RectInfoInPx = new RectInfoInPx();
   private params: BigImageParams = {
-    imageInfo: { folder: '', filename: '', pixelMap: null, thumbnail: new ArrayBuffer(0) },
+    imageInfo: new ImageInfoWithPixelMap('', '', null, new ArrayBuffer(0)),
     cardItemInfo: new RectInfoInPx(),
     uniqueKey: '',
     doDefaultTransition: () => {}

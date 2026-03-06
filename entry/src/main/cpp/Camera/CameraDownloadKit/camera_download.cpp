@@ -179,7 +179,7 @@ napi_value DownloadSingleThumbnail(napi_env env, napi_callback_info info) {
     napi_status status = napi_get_cb_info(env, info, &argc, args, &thisArg, nullptr);
     if (status != napi_ok || argc < 3) {
         OH_LOG_PrintMsg(LOG_APP, LOG_ERROR, LOG_DOMAIN, LOG_TAG, 
-                       "DownloadSingleThumbnail 参数错误");
+                       "DownloadSingleThumbnail 参数错误：需要 folder, filename, callback");
         return nullptr;
     }
     
@@ -192,11 +192,27 @@ napi_value DownloadSingleThumbnail(napi_env env, napi_callback_info info) {
         return nullptr;
     }
     
-    // 3. 获取参数
-    char folder[256] = {0};
+    // 3. 获取参数 - 优化：增加缓冲区大小到 512 字节
+    char folder[512] = {0};
     char filename[256] = {0};
-    napi_get_value_string_utf8(env, args[0], folder, sizeof(folder), nullptr);
-    napi_get_value_string_utf8(env, args[1], filename, sizeof(filename), nullptr);
+    
+    status = napi_get_value_string_utf8(env, args[0], folder, sizeof(folder), nullptr);
+    if (status != napi_ok) {
+        OH_LOG_PrintMsg(LOG_APP, LOG_ERROR, LOG_DOMAIN, LOG_TAG, 
+                       "获取 folder 参数失败");
+        return nullptr;
+    }
+    
+    status = napi_get_value_string_utf8(env, args[1], filename, sizeof(filename), nullptr);
+    if (status != napi_ok) {
+        OH_LOG_PrintMsg(LOG_APP, LOG_ERROR, LOG_DOMAIN, LOG_TAG, 
+                       "获取 filename 参数失败");
+        return nullptr;
+    }
+    
+    OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, 
+                "DownloadSingleThumbnail 收到参数：folder='%{public}s', filename='%{public}s'", 
+                folder, filename);
     
     // 4. 创建异步任务数据
     struct AsyncThumbnailTaskData {
@@ -228,10 +244,15 @@ napi_value DownloadSingleThumbnail(napi_env env, napi_callback_info info) {
     auto executeWork = [](napi_env env, void* data) {
         AsyncThumbnailTaskData* taskData = static_cast<AsyncThumbnailTaskData*>(data);
         
+        OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, 
+                    "🔍 后台线程开始下载：folder='%{public}s', filename='%{public}s'",
+                    taskData->folder.c_str(), taskData->filename.c_str());
+        
         try {
             if (!g_thumbnailDownloader) {
                 taskData->errorMsg = "缩略图下载器未初始化";
                 taskData->success = false;
+                OH_LOG_PrintMsg(LOG_APP, LOG_ERROR, LOG_DOMAIN, LOG_TAG, "缩略图下载器未初始化");
                 return;
             }
             
@@ -239,49 +260,66 @@ napi_value DownloadSingleThumbnail(napi_env env, napi_callback_info info) {
                 taskData->folder, taskData->filename);
             taskData->success = !taskData->thumbnailData.empty();
             
+            OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, 
+                        "下载完成：success=%{public}d, size=%{public}zu",
+                        taskData->success ? 1 : 0, taskData->thumbnailData.size());
+            
             if (!taskData->success) {
                 taskData->errorMsg = "下载缩略图失败";
+                OH_LOG_PrintMsg(LOG_APP, LOG_ERROR, LOG_DOMAIN, LOG_TAG, "下载缩略图失败");
             }
         } catch (const std::exception& e) {
             taskData->errorMsg = e.what();
             taskData->success = false;
+            OH_LOG_Print(LOG_APP, LOG_ERROR, LOG_DOMAIN, LOG_TAG, "异常：%{public}s", e.what());
         } catch (...) {
             taskData->errorMsg = "未知异常";
             taskData->success = false;
+            OH_LOG_PrintMsg(LOG_APP, LOG_ERROR, LOG_DOMAIN, LOG_TAG, "未知异常");
         }
     };
     
     // 完成函数（在主线程执行）
     auto completeWork = [](napi_env env, napi_status status, void* data) {
         AsyncThumbnailTaskData* taskData = static_cast<AsyncThumbnailTaskData*>(data);
-        
+            
+        OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, 
+                    "📬 缩略图下载完成回调：folder='%{public}s', filename='%{public}s', success=%{public}d, size=%{public}zu",
+                    taskData->folder.c_str(), taskData->filename.c_str(), 
+                    taskData->success ? 1 : 0, taskData->thumbnailData.size());
+            
         napi_value callback;
         napi_get_reference_value(env, taskData->callback, &callback);
-        
+            
         napi_value args[2];
         if (taskData->success) {
-            // 创建Buffer返回缩略图数据
+            // 创建 Buffer 返回缩略图数据
             void* bufferData = nullptr;
             napi_value buffer;
-            
+                
             napi_create_buffer_copy(env, taskData->thumbnailData.size(),
                                    taskData->thumbnailData.data(),
                                    &bufferData, &buffer);
-            
-            napi_get_null(env, &args[0]); // 错误为null
+                
+            napi_get_null(env, &args[0]); // 错误为 null
             args[1] = buffer;
+                
+            OH_LOG_Print(LOG_APP, LOG_INFO, LOG_DOMAIN, LOG_TAG, 
+                        "✅ 回调：返回缩略图数据，大小=%{public}zu bytes", taskData->thumbnailData.size());
         } else {
             // 返回错误
+            OH_LOG_Print(LOG_APP, LOG_ERROR, LOG_DOMAIN, LOG_TAG, 
+                        "❌ 回调：返回错误 - %{public}s", taskData->errorMsg.c_str());
             napi_create_string_utf8(env, taskData->errorMsg.c_str(), 
                                    NAPI_AUTO_LENGTH, &args[0]);
             napi_get_null(env, &args[1]);
         }
-        
+            
         // 调用回调函数
         napi_value global;
         napi_get_global(env, &global);
         napi_make_callback(env, nullptr, global, callback, 2, args, nullptr);
-        
+            
         // 清理资源
         napi_delete_reference(env, taskData->callback);
         delete taskData;

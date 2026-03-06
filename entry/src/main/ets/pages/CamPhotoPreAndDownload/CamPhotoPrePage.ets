@@ -19,7 +19,6 @@ export struct CamPhotoPrePage {
   private pageId: number = -1;
   private currentNodeKey: string = '';
 
-
   @State transitioningIndex: number = -1;
   @State isLoading: boolean = true;
   @State errorMsg: string = '';
@@ -51,8 +50,9 @@ export struct CamPhotoPrePage {
 
   private scanTimer: number = 0;
   private activeThumbnailDownloads: number = 0;
-  private maxConcurrentThumbnails: number = 2;
+  private maxConcurrentThumbnails: number = 5;  // 优化：并发数从 2 提升到 5，与 C++ 层信号量一致
   private thumbnailQueue: number[] = [];
+  private thumbnailCache: Map<number, image.PixelMap> = new Map();  // 新增：缩略图缓存
 
   private camManager: CamConnectionManager | null = null;
   private loadMoreLock: boolean = false;
@@ -129,21 +129,6 @@ export struct CamPhotoPrePage {
     }, 500);
   }
 
-  // 新增方法：扫描完成处理
-  private onScanComplete(totalCount: number): void {
-    if (this.scanTimer > 0) {
-      clearInterval(this.scanTimer);
-      this.scanTimer = 0;
-    }
-
-    console.log(`扫描完成，照片总数: ${totalCount}`);
-    this.totalCount = totalCount;
-    this.isLoading = false;
-
-    // 加载第一页数据
-    this.loadPhotoMetaList(0);
-  }
-
   // 新增方法：扫描失败处理
   private onScanFailed(): void {
     if (this.scanTimer > 0) {
@@ -153,6 +138,43 @@ export struct CamPhotoPrePage {
 
     this.errorMsg = '扫描照片失败，请重试';
     this.isLoading = false;
+  }
+
+  // 新增方法：批量加载多页数据
+  private async loadMultiplePages(startPage: number): Promise<void> {
+    console.log(`🔥🔥 TEST: loadMultiplePages 被调用了！🔥🔥`);
+    
+    const maxPages = Math.ceil(this.totalCount / this.pageSize);
+    const targetPages = Math.min(5, maxPages);  // 最多加载 5 页 (100 张)
+    
+    console.log(`🔄 开始批量加载：从第${startPage}页开始，目标加载${targetPages}页，totalCount=${this.totalCount}`);
+    
+    for (let page = startPage; page < targetPages; page++) {
+      console.log(`👉 准备加载第${page + 1}页`);
+      await this.loadPhotoMetaList(page);
+      console.log(`✅ 第${page + 1}页加载完成`);
+      
+      // 短暂延迟，避免阻塞 UI
+      await new Promise<void>((resolve) => setTimeout(resolve, 50));
+    }
+    
+    console.log(`🎉 批量加载完成，当前总照片数：${this.imageInfos.length}`);
+  }
+
+  // 新增方法：扫描完成处理
+  private onScanComplete(totalCount: number): void {
+    if (this.scanTimer > 0) {
+      clearInterval(this.scanTimer);
+      this.scanTimer = 0;
+    }
+  
+    console.log(`🎉 扫描完成，照片总数：${totalCount}`);
+    this.totalCount = totalCount;
+    this.isLoading = false;
+  
+    // 优化：批量加载多页数据
+    console.log(`🚀 开始调用 loadMultiplePages`);
+    this.loadMultiplePages(0);
   }
 
   // 修改加载照片元信息列表
@@ -174,11 +196,7 @@ export struct CamPhotoPrePage {
         const newImageInfos: ImageInfoWithPixelMap[] = [];
         for (let i = 0; i < photoMetas.length; i++) {
           const meta = photoMetas[i];
-          const item: ImageInfoWithPixelMap = {
-            folder: meta.folder,
-            filename: meta.filename,
-            pixelMap: null
-          };
+          const item = new ImageInfoWithPixelMap(meta.folder, meta.filename, null);
           newImageInfos.push(item);
         }
 
@@ -194,9 +212,13 @@ export struct CamPhotoPrePage {
         this.imageInfos = allImageInfos;
         this.currentPage = pageIndex;
         this.hasMore = photoMetas.length === this.pageSize;
-
-        // 预加载第一屏的缩略图（最多3张）
-        this.preloadFirstScreenThumbnails(pageIndex);
+        
+        console.log(`📊 当前总照片数：${this.imageInfos.length}, hasMore=${this.hasMore}`);
+                
+        // 优化：延迟预加载，确保响应式更新完成
+        setTimeout(() => {
+          this.preloadFirstScreenThumbnails(pageIndex);
+        }, 100);
       }
     } catch (error) {
       const err = error as Error;
@@ -212,8 +234,10 @@ export struct CamPhotoPrePage {
   // 新增方法：预加载第一屏缩略图
   private preloadFirstScreenThumbnails(pageIndex: number): void {
     const startIndex = pageIndex * this.pageSize;
-    const endIndex = Math.min(startIndex + 3, this.imageInfos.length); // 只预加载3张
-
+    // 优化：预加载第一屏 + 下一屏，共 40 张 (原来只预加载 3 张)
+    const endIndex = Math.min(startIndex + 40, this.imageInfos.length);
+  
+    console.log(`预加载缩略图：从${startIndex}到${endIndex}, 共${endIndex - startIndex}张`);
     for (let i = startIndex; i < endIndex; i++) {
       if (!this.imageInfos[i].pixelMap) {
         this.loadSingleThumbnailWithConcurrency(i);
@@ -221,48 +245,69 @@ export struct CamPhotoPrePage {
     }
   }
 
-  // 修改缩略图加载，添加并发控制
-  private loadSingleThumbnailWithConcurrency(index: number): void {
+  // 修改缩略图加载，添加并发控制和缓存
+  private async loadSingleThumbnailWithConcurrency(index: number): Promise<void> {
     if (index < 0 || index >= this.imageInfos.length) return;
 
     const imageInfo = this.imageInfos[index];
     if (!imageInfo || imageInfo.pixelMap) return;
 
-    // 如果正在下载的数量达到上限，加入队列
-    if (this.activeThumbnailDownloads >= this.maxConcurrentThumbnails) {
+    // 优化：先检查缓存
+    if (this.thumbnailCache.has(index)) {
+      console.log(`✅ 使用缓存的缩略图：index=${index}`);
+      const cachedPixelMap = this.thumbnailCache.get(index)!;
+      this.updateImageInfoWithPixelMap(index, imageInfo, cachedPixelMap);
+      return;
+    }
+
+    // 优化：降低并发数到 1，避免相机 I/O 冲突
+    if (this.activeThumbnailDownloads >= 1) {
       if (!this.thumbnailQueue.includes(index)) {
         this.thumbnailQueue.push(index);
+        console.log(`⏳ 缩略图加入队列：index=${index}, 队列长度=${this.thumbnailQueue.length}`);
       }
       return;
     }
 
     this.activeThumbnailDownloads++;
-    this.loadSingleThumbnail(index).then(() => {
+    const startTime = Date.now();
+    console.log(`🚀 开始下载缩略图：index=${index}, 文件=${imageInfo.filename}`);
+    
+    try {
+      await this.loadSingleThumbnail(index);
+      const duration = Date.now() - startTime;
+      console.log(`✅ 缩略图加载完成：index=${index}, 耗时=${duration}ms`);
+    } catch (error) {
+      console.error(`❌ 缩略图加载失败：index=${index}, error=${(error as Error).message}`);
+    } finally {
       this.activeThumbnailDownloads--;
 
       // 处理队列中的下一个
-      if (this.thumbnailQueue.length > 0 && this.activeThumbnailDownloads < this.maxConcurrentThumbnails) {
+      if (this.thumbnailQueue.length > 0 && this.activeThumbnailDownloads < 1) {
         const nextIndex = this.thumbnailQueue.shift();
         if (nextIndex !== undefined) {
           this.loadSingleThumbnailWithConcurrency(nextIndex);
         }
       }
-    });
+    }
   }
 
-  // 修改原有的loadSingleThumbnail方法，只负责单个加载
+  // 修改原有的 loadSingleThumbnail 方法，只负责单个加载
   private async loadSingleThumbnail(index: number): Promise<void> {
     if (index < 0 || index >= this.imageInfos.length) return;
-
+  
     const imageInfo = this.imageInfos[index];
     if (!imageInfo || imageInfo.pixelMap) return;
-
+  
+    console.log(`📡 [${index}] 准备调用 nativeCamera.DownloadSingleThumbnail`);
+    
     try {
       const thumbnailBuffer = await new Promise<ArrayBuffer>((resolve, reject) => {
         nativeCamera.DownloadSingleThumbnail(
           imageInfo.folder,
           imageInfo.filename,
           (err: string | null, buffer: ArrayBuffer) => {
+            console.log(`📡 [${index}] 回调执行，err=${err}, buffer.size=${buffer ? buffer.byteLength : 'null'}`);
             if (err) {
               reject(new Error(err));
             } else {
@@ -271,24 +316,37 @@ export struct CamPhotoPrePage {
           }
         );
       });
-
+  
+      console.log(`📦 [${index}] 收到数据大小：${thumbnailBuffer.byteLength} bytes`);
+      
       if (thumbnailBuffer && thumbnailBuffer.byteLength > 0) {
+        console.log(`🔄 [${index}] 开始解码 PixelMap`);
         const pixelMap = await this.convertArrayBufferToPixelMap(thumbnailBuffer, imageInfo.filename);
-
-        const updatedImageInfo: ImageInfoWithPixelMap = {
-          folder: imageInfo.folder,
-          filename: imageInfo.filename,
-          pixelMap: pixelMap,
-          thumbnail: thumbnailBuffer
-        };
-
-        this.imageInfos[index] = updatedImageInfo;
-        this.imageInfos = this.imageInfos.slice();
+        console.log(`✅ [${index}] PixelMap 解码成功`);
+          
+        // 优化：缓存 pixelMap
+        this.thumbnailCache.set(index, pixelMap);
+          
+        this.updateImageInfoWithPixelMap(index, imageInfo, pixelMap);
+      } else {
+        console.error(`❌ [${index}] 缩略图数据为空或无效`);
       }
     } catch (error) {
       const err = error as Error;
-      console.error(`加载缩略图失败: ${err.message}, 文件: ${imageInfo.filename}`);
+      console.error(`❌ [${index}] 加载缩略图失败：${err.message}, 文件：${imageInfo.filename}`);
+      // 优化：不抛出错误，避免中断后续处理
+      this.activeThumbnailDownloads--;
+      return;
     }
+  }
+  
+  // 新增辅助方法：更新 ImageInfo 并触发 UI 刷新
+  private updateImageInfoWithPixelMap(index: number, imageInfo: ImageInfoWithPixelMap, pixelMap: image.PixelMap): void {
+    // 优化：直接修改 pixelMap 属性，@Observed 会自动触发刷新
+    this.imageInfos[index].pixelMap = pixelMap;
+    this.imageInfos[index].thumbnail = undefined;
+    
+    console.log(`✅ Grid 已更新：index=${index}, 文件=${imageInfo.filename}`);
   }
 
   // 修改滚动事件处理
@@ -350,6 +408,11 @@ export struct CamPhotoPrePage {
     if (typeof nativeCamera.ClearPhotoCache === 'function') {
       nativeCamera.ClearPhotoCache();
     }
+    
+    // 优化：清空缩略图缓存
+    this.thumbnailCache.clear();
+    this.thumbnailQueue = [];
+    this.activeThumbnailDownloads = 0;
 
     // 重置数据
     this.imageInfos = [];
@@ -551,14 +614,14 @@ export struct CamPhotoPrePage {
       .padding({ left: 16, top: 10, bottom: 5 })
       .width('100%')
 
-      // 使用ForEach，因为Grid有自己的虚拟滚动
+      // 使用 ForEach，因为 Grid 有自己的虚拟滚动
       Grid() {
         ForEach(this.imageInfos, (item: ImageInfoWithPixelMap, index: number) => {
           GridItem() {
             this.buildGridItem(item, index)
           }
           .aspectRatio(1)
-        }, (item: ImageInfoWithPixelMap) => `${item.folder}-${item.filename}`)
+        }, (item: ImageInfoWithPixelMap, index: number) => `${index}-${item.folder}-${item.filename}`)
       }
       .columnsTemplate('1fr 1fr 1fr 1fr')
       .columnsGap(2)
@@ -593,7 +656,7 @@ export struct CamPhotoPrePage {
       // 图片组件
       Column() {
         if (item.pixelMap) {
-          // 已加载缩略图
+          // 已加载缩略图 - 强制重新渲染
           Image(item.pixelMap)
             .width('100%')
             .height('100%')
