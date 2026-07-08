@@ -1,0 +1,285 @@
+03-13 22:25:49.297   41127-41127   A00001/com.lin...eCameraBridge  com.lingyu.photosend  I     NativeCamera模块注册成功，支持AP模式连接
+03-13 22:25:49.297   41127-41127   A00001/com.lin...eCameraBridge  com.lingyu.photosend  I     NativeCamera模块初始化成功，注册了 <private> 个接口
+03-13 22:25:49.307   41127-41127   A00000/com.lin...osend/testTag  com.lingyu.photosend  I     API 20获取的nativeLibraryDir: /data/storage/el1/bundle/libs/arm64
+03-13 22:25:49.307   41127-41127   A00009/com.lin...ectionManager  com.lingyu.photosend  I     ConnectionManager初始化完成，默认超时时间：<private>ms
+03-13 22:25:49.307   41127-41127   A00008/com.lin...DeviceManager  com.lingyu.photosend  I     CameraDeviceManager初始化完成
+03-13 22:25:49.307   41127-41127   A00008/com.lin...DeviceManager  com.lingyu.photosend  I     设置驱动路径: /data/storage/el1/bundle/libs/arm64
+03-13 22:25:49.307   41127-41127   A00009/com.lin...ectionManager  com.lingyu.photosend  I     设置驱动路径: /data/storage/el1/bundle/libs/arm64
+03-13 22:25:49.307   41127-41127   A00010/com.lin...DeviceScanner  com.lingyu.photosend  I     设置扫描器驱动路径: /data/storage/el1/bundle/libs/arm64
+03-13 22:25:49.307   41127-41127   A00011/com.lin...viceInterface  com.lingyu.photosend  I     设置驱动路径: /data/storage/el1/bundle/libs/arm64
+03-13 22:25:49.307   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  W     ⚠️  单例 instance 为 null，重新创建 CamConnectionManager 实例
+03-13 22:25:49.308   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  W     ⚠️  开始创建 Worker，当前时间=1773411949307
+03-13 22:25:49.308   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     连接检测Worker初始化成功
+03-13 22:25:49.308   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     主线程初始化 CamConnectionManager 单例成功
+03-13 22:25:49.308   41127-41127   A00000/com.lin...osend/testTag  com.lingyu.photosend  I     Ability onCreate
+03-13 22:25:49.324   41127-41343   A00001/com.lin...eCameraBridge  com.lingyu.photosend  I     NativeCamera模块初始化成功，注册了 <private> 个接口
+03-13 22:25:49.324   41127-41127   A00000/com.lin...osend/testTag  com.lingyu.photosend  I     Ability onWindowStageCreate
+03-13 22:25:49.326   41127-41127   A00000/com.ling...EntryAbility  com.lingyu.photosend  I     the width is 1276  2848  98  undefined
+03-13 22:25:49.333   41127-41127   A00000/com.lin...osend/testTag  com.lingyu.photosend  I     Ability onForeground
+03-13 22:25:49.363   41127-41127   A00000/com.lin...osend/testTag  com.lingyu.photosend  I     Succeeded in loading the content.
+03-13 22:25:49.364   41127-41127   A00000/com.ling...EntryAbility  com.lingyu.photosend  I     on windowSizeChange, the width is 1276, the height is 2848
+03-13 22:25:49.364   41127-41127   A00000/com.ling...EntryAbility  com.lingyu.photosend  I     on avoidAreaChange, the top avoid area height is 133
+03-13 22:25:49.364   41127-41127   A00000/com.ling...EntryAbility  com.lingyu.photosend  I     on avoidAreaChange, the navigation indicator height is 98
+03-13 22:25:49.374   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpConnectionManager PTP 相机连接管理器初始化
+03-13 22:25:49.407   41127-41127   A00201/com.lin...reateLocalDir  com.lingyu.photosend  I     使用已保存的目录路径：/storage/Users/currentUser/Download/com.lingyu.photosend
+03-13 22:25:49.407   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     获取到应用专属目录：/storage/Users/currentUser/Download/com.lingyu.photosend
+03-13 22:25:49.407   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpConnectionManager 设置默认相机：192.168.1.1:15740
+03-13 22:25:49.407   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpConnectionManager 添加监听器，当前监听器数量：1
+03-13 22:25:49.407   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     HomePage 收到连接状态更新：state=false, message=未连接相机
+03-13 22:25:49.407   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpConnectionManager ==========================================
+03-13 22:25:49.407   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpConnectionManager 【PTP/IP】App 启动 - 开始自动检测并连接相机
+03-13 22:25:49.407   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpConnectionManager ==========================================
+03-13 22:25:49.407   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpConnectionManager 连接状态更新：未连接, 正在检测相机...
+03-13 22:25:49.407   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     HomePage 收到连接状态更新：state=false, message=正在检测相机...
+03-13 22:25:49.407   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpConnectionManager 【PTP/IP】开始连接相机：192.168.1.1:15740
+03-13 22:25:49.407   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpConnectionManager 【PTP/IP】使用纯 ArkTS 实现，不依赖 libgphoto2
+03-13 22:25:49.407   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     CameraUtils 【PTP/IP】CameraUtils - 开始连接相机：192.168.1.1:15740
+03-13 22:25:49.407   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     CameraUtils 【PTP/IP】使用纯 ArkTS 的 PTP/IP 协议，端口 15740
+03-13 22:25:49.407   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpClient ==========================================
+03-13 22:25:49.407   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpClient 【PtpClient】开始连接相机：192.168.1.1:15740
+03-13 22:25:49.407   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpClient 【PtpClient】使用 PTP/IP 协议 (CIPA DC-X005-2005)
+03-13 22:25:49.407   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpClient ==========================================
+03-13 22:25:49.407   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpClient 【PtpClient】步骤 1: 建立 TCP Socket 连接...
+03-13 22:25:49.407   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpConnectionManager 
+                                                                                               ==========================================
+03-13 22:25:49.407   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpConnectionManager 【PtpConnectionManager】开始连接 PTP/IP 设备：192.168.1.1:15740
+03-13 22:25:49.408   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpConnectionManager 使用 HarmonyOS NetworkKit TCP Socket
+03-13 22:25:49.408   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpConnectionManager ==========================================
+03-13 22:25:49.408   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpConnectionManager [STEP 1] 创建 TCP Socket...
+03-13 22:25:49.441   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpConnectionManager ✅【STEP 1 成功】TCP Socket 创建成功
+03-13 22:25:49.441   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpConnectionManager [STEP 2] 开始 TCP 连接到 192.168.1.1:15740...
+03-13 22:25:49.441   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpConnectionManager [STEP 2] 调用 connectToHost...
+03-13 22:25:49.441   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpConnectionManager [connectToHost] 构建连接参数：IP=192.168.1.1, Port=15740
+03-13 22:25:49.441   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpConnectionManager [connectToHost] NetAddress: {"address":"192.168.1.1","port":15740}
+03-13 22:25:49.441   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpConnectionManager [connectToHost] TCPConnectOptions: {"address":{"address":"192.168.1.1","port":15740}}
+03-13 22:25:49.441   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpConnectionManager [connectToHost] 调用 tcpSocket.connect...
+03-13 22:25:49.467   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpConnectionManager ✅【connectToHost】TCP 连接成功
+03-13 22:25:49.467   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpConnectionManager ✅【STEP 2 成功】TCP 连接建立成功！状态：1
+03-13 22:25:49.467   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpConnectionManager [STEP 2 完成] 设置 connectionState = Connected
+03-13 22:25:49.467   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpConnectionManager 
+                                                                                               [STEP 3] 等待相机准备就绪...
+03-13 22:25:49.467   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpConnectionManager [STEP 3] 开始休眠 200ms
+03-13 22:25:49.668   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpConnectionManager ✅【STEP 3 完成】相机已准备就绪，继续 STEP 4
+03-13 22:25:49.669   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpConnectionManager 
+                                                                                               ==========================================
+03-13 22:25:49.669   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpConnectionManager [STEP 4] PTP/IP 握手：发送 Init_Command_Request...
+03-13 22:25:49.669   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpConnectionManager [STEP 4] 当前连接状态：2
+03-13 22:25:49.669   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpConnectionManager [STEP 4] TCP Socket 状态：正常
+03-13 22:25:49.669   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpConnectionManager [STEP 4] 调用 sendInitCommandRequest()
+03-13 22:25:49.669   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpConnectionManager [sendInitCommandRequest] ✅ 开始构造 Init_Command_Request 包（模拟智能设备）...
+03-13 22:25:49.669   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpConnectionManager [sendInitCommandRequest] 发送 Init_Command_Request 包，总长度：34 字节
+03-13 22:25:49.669   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpConnectionManager [sendInitCommandRequest] 开始发送数据...
+03-13 22:25:49.669   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpConnectionManager [writeData] 准备发送 34 字节
+03-13 22:25:49.670   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpConnectionManager ✅【writeData】数据发送成功
+03-13 22:25:49.670   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpConnectionManager [sendInitCommandRequest] ✅ 数据发送成功，等待 Init_Command_Ack...
+03-13 22:25:49.670   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpConnectionManager [sendInitCommandRequest] 开始读取响应...
+03-13 22:25:49.670   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpConnectionManager [sendInitCommandRequest] 第一步：读取包头（8字节）...
+03-13 22:25:49.670   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpConnectionManager [readBytes] 开始读取 8 字节，当前缓存 0 字节...
+03-13 22:25:49.670   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpConnectionManager [readBytes] 已订阅 message 事件，等待数据...
+03-13 22:25:49.689   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpConnectionManager [readBytes] ✅ 成功读取 8 字节，剩余缓存 48 字节
+03-13 22:25:49.689   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpConnectionManager [sendInitCommandRequest] 包头解析：length=56, type=2
+03-13 22:25:49.689   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpConnectionManager [sendInitCommandRequest] 第二步：读取包体（48字节）...
+03-13 22:25:49.689   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpConnectionManager [readBytes] ✅ 直接从缓存读取 48 字节，剩余缓存 0 字节
+03-13 22:25:49.689   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpConnectionManager [sendInitCommandRequest] ✅ 完整 Init_Command_Ack 包接收：56 字节
+03-13 22:25:49.689   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpConnectionManager ✅【sendInitCommandRequest】收到 Init_Command_Ack，握手成功！
+03-13 22:25:49.689   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpConnectionManager ✅ Nikon ZF 相机已接受连接
+03-13 22:25:49.689   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpConnectionManager 【sendInitCommandRequest】Connection Number(偏移8)=1
+03-13 22:25:49.689   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpConnectionManager 【sendInitCommandRequest】相机返回的 Connection Number: 1
+03-13 22:25:49.689   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpConnectionManager ✅【sendInitCommandRequest】握手完成，Connection Number=1
+03-13 22:25:49.689   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpConnectionManager 【sendInitCommandRequest】命令连接已稳定；OpenSession 将使用本地固定 PTP Session ID，事件连接将使用 Connection Number
+03-13 22:25:49.689   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpConnectionManager [STEP 4 返回] sendInitCommandRequest 结果：成功 ✅
+03-13 22:25:49.689   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpConnectionManager ✅【STEP 4 成功】PTP/IP 握手完成，相机已接受连接
+03-13 22:25:49.689   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpConnectionManager 
+                                                                                               ✅【PtpConnectionManager】TCP 命令连接阶段完成
+03-13 22:25:49.689   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpConnectionManager [connect] 跳过初始事件连接，先保持命令连接稳定；待 OpenSession 成功后再尝试建立事件连接
+03-13 22:25:49.689   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpConnectionManager 
+                                                                                               ✅【PtpConnectionManager】握手完成，准备打开 PTP 会话
+03-13 22:25:49.689   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpConnectionManager ==========================================
+03-13 22:25:49.689   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpClient 【PtpClient】connect() 返回，结果：成功
+03-13 22:25:49.689   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpClient ✅ 【PtpClient】TCP 连接成功：192.168.1.1:15740
+03-13 22:25:49.689   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpClient 【PtpClient】步骤 2: 打开 PTP 会话...
+03-13 22:25:49.689   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpClient 【PtpClient】准备调用 openSession(1)，握手 Connection Number=1...
+03-13 22:25:49.689   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpConnectionManager 【PtpConnectionManager】==========================================
+03-13 22:25:49.689   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpConnectionManager 【PtpConnectionManager】打开 PTP 会话 (ID=1)
+03-13 22:25:49.689   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpConnectionManager 【PtpConnectionManager】==========================================
+03-13 22:25:49.689   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpConnectionManager 【PtpConnectionManager】发送 OpenSession 命令 (0x1002)...
+03-13 22:25:49.689   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpConnectionManager [writeData] 准备发送 22 字节
+03-13 22:25:49.690   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpConnectionManager ✅【writeData】数据发送成功
+03-13 22:25:49.690   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpConnectionManager [readResponse] 开始读取响应...
+03-13 22:25:49.690   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpConnectionManager [readResponse] 读取 8 字节 PTP/IP 包头...
+03-13 22:25:49.690   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpConnectionManager [readBytes] 开始读取 8 字节，当前缓存 0 字节...
+03-13 22:25:49.690   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpConnectionManager [readBytes] 已订阅 message 事件，等待数据...
+03-13 22:25:54.691   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  E     PtpConnectionManager [readBytes] ❌ 读取超时：期望8字节，当前缓存0字节
+03-13 22:25:54.743   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  W     PtpConnectionManager ⚠️ 【PtpConnectionManager】首次 OpenSession 未收到响应，尝试先建立事件连接后重试：{}
+03-13 22:25:54.743   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpConnectionManager 【connectEventConnection】开始建立事件连接...
+03-13 22:25:54.743   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpConnectionManager [connectEventConnection] 连接到 192.168.1.1:15741
+03-13 22:25:54.743   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpConnectionManager [connectEventConnection] 等待 500ms 确保命令连接稳定...
+03-13 22:25:55.278   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  W     PtpConnectionManager ⚠️【connectEventToHost】事件连接仍在建立中，等待 800ms 后继续：{"code":2301115,"message":"Operation in progress"}
+03-13 22:25:56.078   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpConnectionManager ✅【connectEventConnection】事件连接建立成功
+03-13 22:25:56.078   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpConnectionManager [sendInitEventRequest] 发送 Init_Event_Request...
+03-13 22:25:56.078   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpConnectionManager [sendInitEventRequest] 发送 Init_Event_Request 包，长度：12 字节，Connection Number=1
+03-13 22:25:56.079   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpConnectionManager [writeDataToEventSocket] 准备发送 0 字节
+03-13 22:25:56.081   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  E     PtpConnectionManager ❌【writeDataToEventSocket】写入数据错误：{"code":2301107,"message":"Socket not connected"}
+03-13 22:25:56.081   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  W     PtpConnectionManager ⚠️【waitForEventSocketWritable】事件 Socket 尚未就绪（尝试 1/4），400ms 后重试：{"code":2301107,"message":"Socket not connected"}
+03-13 22:25:56.482   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpConnectionManager [writeDataToEventSocket] 准备发送 0 字节
+03-13 22:25:56.483   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  E     PtpConnectionManager ❌【writeDataToEventSocket】写入数据错误：{"code":2301107,"message":"Socket not connected"}
+03-13 22:25:56.483   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  W     PtpConnectionManager ⚠️【waitForEventSocketWritable】事件 Socket 尚未就绪（尝试 2/4），800ms 后重试：{"code":2301107,"message":"Socket not connected"}
+03-13 22:25:57.284   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpConnectionManager [writeDataToEventSocket] 准备发送 0 字节
+03-13 22:25:57.289   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  E     PtpConnectionManager ❌【writeDataToEventSocket】写入数据错误：{"code":2301107,"message":"Socket not connected"}
+03-13 22:25:57.289   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  W     PtpConnectionManager ⚠️【waitForEventSocketWritable】事件 Socket 尚未就绪（尝试 3/4），1200ms 后重试：{"code":2301107,"message":"Socket not connected"}
+03-13 22:25:58.490   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpConnectionManager [writeDataToEventSocket] 准备发送 0 字节
+03-13 22:25:58.492   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  E     PtpConnectionManager ❌【writeDataToEventSocket】写入数据错误：{"code":2301107,"message":"Socket not connected"}
+03-13 22:25:58.493   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  W     PtpConnectionManager ⚠️【waitForEventSocketWritable】事件 Socket 尚未就绪（尝试 4/4），1600ms 后重试：{"code":2301107,"message":"Socket not connected"}
+03-13 22:26:00.094   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  E     PtpConnectionManager ❌【sendInitEventRequest】事件 Socket 长时间不可写，放弃初始化
+03-13 22:26:00.094   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  W     PtpConnectionManager ⚠️【connectEventConnection】事件连接已尝试建立，但 Init_Event_Request 未完成
+03-13 22:26:00.095   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  W     PtpConnectionManager ⚠️ 【PtpConnectionManager】事件连接未真正就绪，仍继续执行 OpenSession 重试以收集兼容性结果
+03-13 22:26:00.095   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpConnectionManager 【PtpConnectionManager】发送 OpenSession 命令 (0x1002)...
+03-13 22:26:00.095   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpConnectionManager [writeData] 准备发送 22 字节
+03-13 22:26:00.097   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpConnectionManager ✅【writeData】数据发送成功
+03-13 22:26:00.097   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpConnectionManager [readResponse] 开始读取响应...
+03-13 22:26:00.097   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpConnectionManager [readResponse] 读取 8 字节 PTP/IP 包头...
+03-13 22:26:00.097   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpConnectionManager [readBytes] 开始读取 8 字节，当前缓存 0 字节...
+03-13 22:26:00.097   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpConnectionManager [readBytes] 已订阅 message 事件，等待数据...
+03-13 22:26:05.098   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  E     PtpConnectionManager [readBytes] ❌ 读取超时：期望8字节，当前缓存0字节
+03-13 22:26:05.099   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  E     PtpConnectionManager ❌ 【PtpConnectionManager】打开会话异常：{}
+03-13 22:26:05.099   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpClient 【PtpClient】openSession 返回，结果：失败
+03-13 22:26:05.099   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  E     PtpClient ❌ 【PtpClient】PTP 会话打开失败
+03-13 22:26:05.099   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpConnectionManager 断开 PTP/IP 连接
+03-13 22:26:05.105   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpConnectionManager 连接已断开
+03-13 22:26:05.105   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  E     CameraUtils ❌ 【PTP/IP】CameraUtils - 相机连接失败
+03-13 22:26:05.105   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  E     PtpConnectionManager ❌【PTP/IP】相机连接失败
+03-13 22:26:05.105   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  W     PtpConnectionManager ⚠️【PTP/IP】自动检测失败：未检测到相机
+03-13 22:26:05.105   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpConnectionManager 连接状态更新：未连接, 未检测到相机
+03-13 22:26:05.105   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     HomePage 收到连接状态更新：state=false, message=未检测到相机
+03-13 22:26:05.107   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpConnectionManager 【PTP/IP】启动自动重连机制...
+03-13 22:26:05.107   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpConnectionManager 启动自动重连，间隔：3000ms
+03-13 22:26:05.107   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     HomePage 自动检测结果：{"state":false,"message":"未检测到相机","status":"disconnected"}
+03-13 22:26:08.108   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpConnectionManager 尝试自动重连...
+03-13 22:26:08.108   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpConnectionManager ==========================================
+03-13 22:26:08.108   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpConnectionManager 【PTP/IP】用户手动连接相机
+03-13 22:26:08.108   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpConnectionManager 目标：192.168.1.1:15740
+03-13 22:26:08.108   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpConnectionManager ==========================================
+03-13 22:26:08.108   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpConnectionManager 连接状态更新：未连接, 正在连接相机...
+03-13 22:26:08.109   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     HomePage 收到连接状态更新：state=false, message=正在连接相机...
+03-13 22:26:08.110   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpConnectionManager 停止自动重连
+03-13 22:26:08.110   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpConnectionManager 【PTP/IP】尝试连接：192.168.1.1:15740
+03-13 22:26:08.110   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpConnectionManager 【PTP/IP】开始连接相机：192.168.1.1:15740
+03-13 22:26:08.110   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpConnectionManager 【PTP/IP】使用纯 ArkTS 实现，不依赖 libgphoto2
+03-13 22:26:08.110   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     CameraUtils 【PTP/IP】CameraUtils - 开始连接相机：192.168.1.1:15740
+03-13 22:26:08.110   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     CameraUtils 【PTP/IP】使用纯 ArkTS 的 PTP/IP 协议，端口 15740
+03-13 22:26:08.110   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpClient ==========================================
+03-13 22:26:08.110   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpClient 【PtpClient】开始连接相机：192.168.1.1:15740
+03-13 22:26:08.110   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpClient 【PtpClient】使用 PTP/IP 协议 (CIPA DC-X005-2005)
+03-13 22:26:08.110   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpClient ==========================================
+03-13 22:26:08.110   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpClient 【PtpClient】步骤 1: 建立 TCP Socket 连接...
+03-13 22:26:08.110   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpConnectionManager 
+                                                                                               ==========================================
+03-13 22:26:08.111   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpConnectionManager 【PtpConnectionManager】开始连接 PTP/IP 设备：192.168.1.1:15740
+03-13 22:26:08.111   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpConnectionManager 使用 HarmonyOS NetworkKit TCP Socket
+03-13 22:26:08.111   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpConnectionManager ==========================================
+03-13 22:26:08.111   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpConnectionManager [STEP 1] 创建 TCP Socket...
+03-13 22:26:08.111   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpConnectionManager ✅【STEP 1 成功】TCP Socket 创建成功
+03-13 22:26:08.111   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpConnectionManager [STEP 2] 开始 TCP 连接到 192.168.1.1:15740...
+03-13 22:26:08.111   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpConnectionManager [STEP 2] 调用 connectToHost...
+03-13 22:26:08.111   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpConnectionManager [connectToHost] 构建连接参数：IP=192.168.1.1, Port=15740
+03-13 22:26:08.112   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpConnectionManager [connectToHost] NetAddress: {"address":"192.168.1.1","port":15740}
+03-13 22:26:08.112   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpConnectionManager [connectToHost] TCPConnectOptions: {"address":{"address":"192.168.1.1","port":15740}}
+03-13 22:26:08.112   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpConnectionManager [connectToHost] 调用 tcpSocket.connect...
+03-13 22:26:08.145   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpConnectionManager ✅【connectToHost】TCP 连接成功
+03-13 22:26:08.146   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpConnectionManager ✅【STEP 2 成功】TCP 连接建立成功！状态：1
+03-13 22:26:08.146   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpConnectionManager [STEP 2 完成] 设置 connectionState = Connected
+03-13 22:26:08.146   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpConnectionManager 
+                                                                                               [STEP 3] 等待相机准备就绪...
+03-13 22:26:08.146   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpConnectionManager [STEP 3] 开始休眠 200ms
+03-13 22:26:08.347   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpConnectionManager ✅【STEP 3 完成】相机已准备就绪，继续 STEP 4
+03-13 22:26:08.347   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpConnectionManager 
+                                                                                               ==========================================
+03-13 22:26:08.347   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpConnectionManager [STEP 4] PTP/IP 握手：发送 Init_Command_Request...
+03-13 22:26:08.347   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpConnectionManager [STEP 4] 当前连接状态：2
+03-13 22:26:08.348   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpConnectionManager [STEP 4] TCP Socket 状态：正常
+03-13 22:26:08.348   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpConnectionManager [STEP 4] 调用 sendInitCommandRequest()
+03-13 22:26:08.348   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpConnectionManager [sendInitCommandRequest] ✅ 开始构造 Init_Command_Request 包（模拟智能设备）...
+03-13 22:26:08.348   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpConnectionManager [sendInitCommandRequest] 发送 Init_Command_Request 包，总长度：34 字节
+03-13 22:26:08.348   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpConnectionManager [sendInitCommandRequest] 开始发送数据...
+03-13 22:26:08.349   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpConnectionManager [writeData] 准备发送 34 字节
+03-13 22:26:08.352   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpConnectionManager ✅【writeData】数据发送成功
+03-13 22:26:08.352   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpConnectionManager [sendInitCommandRequest] ✅ 数据发送成功，等待 Init_Command_Ack...
+03-13 22:26:08.352   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpConnectionManager [sendInitCommandRequest] 开始读取响应...
+03-13 22:26:08.352   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpConnectionManager [sendInitCommandRequest] 第一步：读取包头（8字节）...
+03-13 22:26:08.353   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpConnectionManager [readBytes] 开始读取 8 字节，当前缓存 0 字节...
+03-13 22:26:08.353   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpConnectionManager [readBytes] 已订阅 message 事件，等待数据...
+03-13 22:26:08.378   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpConnectionManager [readBytes] ✅ 成功读取 8 字节，剩余缓存 48 字节
+03-13 22:26:08.378   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpConnectionManager [sendInitCommandRequest] 包头解析：length=56, type=2
+03-13 22:26:08.378   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpConnectionManager [sendInitCommandRequest] 第二步：读取包体（48字节）...
+03-13 22:26:08.378   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpConnectionManager [readBytes] ✅ 直接从缓存读取 48 字节，剩余缓存 0 字节
+03-13 22:26:08.378   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpConnectionManager [sendInitCommandRequest] ✅ 完整 Init_Command_Ack 包接收：56 字节
+03-13 22:26:08.378   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpConnectionManager ✅【sendInitCommandRequest】收到 Init_Command_Ack，握手成功！
+03-13 22:26:08.378   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpConnectionManager ✅ Nikon ZF 相机已接受连接
+03-13 22:26:08.378   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpConnectionManager 【sendInitCommandRequest】Connection Number(偏移8)=2
+03-13 22:26:08.378   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpConnectionManager 【sendInitCommandRequest】相机返回的 Connection Number: 2
+03-13 22:26:08.378   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpConnectionManager ✅【sendInitCommandRequest】握手完成，Connection Number=2
+03-13 22:26:08.378   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpConnectionManager 【sendInitCommandRequest】命令连接已稳定；OpenSession 将使用本地固定 PTP Session ID，事件连接将使用 Connection Number
+03-13 22:26:08.378   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpConnectionManager [STEP 4 返回] sendInitCommandRequest 结果：成功 ✅
+03-13 22:26:08.378   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpConnectionManager ✅【STEP 4 成功】PTP/IP 握手完成，相机已接受连接
+03-13 22:26:08.378   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpConnectionManager 
+                                                                                               ✅【PtpConnectionManager】TCP 命令连接阶段完成
+03-13 22:26:08.378   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpConnectionManager [connect] 跳过初始事件连接，先保持命令连接稳定；待 OpenSession 成功后再尝试建立事件连接
+03-13 22:26:08.378   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpConnectionManager 
+                                                                                               ✅【PtpConnectionManager】握手完成，准备打开 PTP 会话
+03-13 22:26:08.378   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpConnectionManager ==========================================
+03-13 22:26:08.378   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpClient 【PtpClient】connect() 返回，结果：成功
+03-13 22:26:08.378   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpClient ✅ 【PtpClient】TCP 连接成功：192.168.1.1:15740
+03-13 22:26:08.378   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpClient 【PtpClient】步骤 2: 打开 PTP 会话...
+03-13 22:26:08.378   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpClient 【PtpClient】准备调用 openSession(1)，握手 Connection Number=2...
+03-13 22:26:08.378   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpConnectionManager 【PtpConnectionManager】==========================================
+03-13 22:26:08.378   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpConnectionManager 【PtpConnectionManager】打开 PTP 会话 (ID=1)
+03-13 22:26:08.378   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpConnectionManager 【PtpConnectionManager】==========================================
+03-13 22:26:08.379   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpConnectionManager 【PtpConnectionManager】发送 OpenSession 命令 (0x1002)...
+03-13 22:26:08.379   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpConnectionManager [writeData] 准备发送 22 字节
+03-13 22:26:08.380   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpConnectionManager ✅【writeData】数据发送成功
+03-13 22:26:08.380   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpConnectionManager [readResponse] 开始读取响应...
+03-13 22:26:08.380   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpConnectionManager [readResponse] 读取 8 字节 PTP/IP 包头...
+03-13 22:26:08.380   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpConnectionManager [readBytes] 开始读取 8 字节，当前缓存 0 字节...
+03-13 22:26:08.380   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpConnectionManager [readBytes] 已订阅 message 事件，等待数据...
+03-13 22:26:13.381   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  E     PtpConnectionManager [readBytes] ❌ 读取超时：期望8字节，当前缓存0字节
+03-13 22:26:13.382   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  W     PtpConnectionManager ⚠️ 【PtpConnectionManager】首次 OpenSession 未收到响应，尝试先建立事件连接后重试：{}
+03-13 22:26:13.382   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpConnectionManager 【connectEventConnection】开始建立事件连接...
+03-13 22:26:13.383   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpConnectionManager [connectEventConnection] 连接到 192.168.1.1:15741
+03-13 22:26:13.383   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpConnectionManager [connectEventConnection] 等待 500ms 确保命令连接稳定...
+03-13 22:26:13.924   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  W     PtpConnectionManager ⚠️【connectEventToHost】事件连接仍在建立中，等待 800ms 后继续：{"code":2301115,"message":"Operation in progress"}
+03-13 22:26:14.725   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpConnectionManager ✅【connectEventConnection】事件连接建立成功
+03-13 22:26:14.725   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpConnectionManager [sendInitEventRequest] 发送 Init_Event_Request...
+03-13 22:26:14.726   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpConnectionManager [sendInitEventRequest] 发送 Init_Event_Request 包，长度：12 字节，Connection Number=2
+03-13 22:26:14.726   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpConnectionManager [writeDataToEventSocket] 准备发送 0 字节
+03-13 22:26:14.728   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  E     PtpConnectionManager ❌【writeDataToEventSocket】写入数据错误：{"code":2301107,"message":"Socket not connected"}
+03-13 22:26:14.728   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  W     PtpConnectionManager ⚠️【waitForEventSocketWritable】事件 Socket 尚未就绪（尝试 1/4），400ms 后重试：{"code":2301107,"message":"Socket not connected"}
+03-13 22:26:15.128   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpConnectionManager [writeDataToEventSocket] 准备发送 0 字节
+03-13 22:26:15.130   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  E     PtpConnectionManager ❌【writeDataToEventSocket】写入数据错误：{"code":2301107,"message":"Socket not connected"}
+03-13 22:26:15.130   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  W     PtpConnectionManager ⚠️【waitForEventSocketWritable】事件 Socket 尚未就绪（尝试 2/4），800ms 后重试：{"code":2301107,"message":"Socket not connected"}
+03-13 22:26:15.931   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpConnectionManager [writeDataToEventSocket] 准备发送 0 字节
+03-13 22:26:15.933   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  E     PtpConnectionManager ❌【writeDataToEventSocket】写入数据错误：{"code":2301107,"message":"Socket not connected"}
+03-13 22:26:15.933   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  W     PtpConnectionManager ⚠️【waitForEventSocketWritable】事件 Socket 尚未就绪（尝试 3/4），1200ms 后重试：{"code":2301107,"message":"Socket not connected"}
+03-13 22:26:17.136   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpConnectionManager [writeDataToEventSocket] 准备发送 0 字节
+03-13 22:26:17.138   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  E     PtpConnectionManager ❌【writeDataToEventSocket】写入数据错误：{"code":2301107,"message":"Socket not connected"}
+03-13 22:26:17.139   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  W     PtpConnectionManager ⚠️【waitForEventSocketWritable】事件 Socket 尚未就绪（尝试 4/4），1600ms 后重试：{"code":2301107,"message":"Socket not connected"}
+03-13 22:26:18.740   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  E     PtpConnectionManager ❌【sendInitEventRequest】事件 Socket 长时间不可写，放弃初始化
+03-13 22:26:18.741   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  W     PtpConnectionManager ⚠️【connectEventConnection】事件连接已尝试建立，但 Init_Event_Request 未完成
+03-13 22:26:18.741   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  W     PtpConnectionManager ⚠️ 【PtpConnectionManager】事件连接未真正就绪，仍继续执行 OpenSession 重试以收集兼容性结果
+03-13 22:26:18.741   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpConnectionManager 【PtpConnectionManager】发送 OpenSession 命令 (0x1002)...
+03-13 22:26:18.741   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpConnectionManager [writeData] 准备发送 22 字节
+03-13 22:26:18.746   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpConnectionManager ✅【writeData】数据发送成功
+03-13 22:26:18.746   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpConnectionManager [readResponse] 开始读取响应...
+03-13 22:26:18.746   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpConnectionManager [readResponse] 读取 8 字节 PTP/IP 包头...
+03-13 22:26:18.747   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpConnectionManager [readBytes] 开始读取 8 字节，当前缓存 0 字节...
+03-13 22:26:18.747   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpConnectionManager [readBytes] 已订阅 message 事件，等待数据...
+03-13 22:26:23.748   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  E     PtpConnectionManager [readBytes] ❌ 读取超时：期望8字节，当前缓存0字节
+03-13 22:26:23.749   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  E     PtpConnectionManager ❌ 【PtpConnectionManager】打开会话异常：{}
+03-13 22:26:23.750   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpClient 【PtpClient】openSession 返回，结果：失败
+03-13 22:26:23.750   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  E     PtpClient ❌ 【PtpClient】PTP 会话打开失败
+03-13 22:26:23.750   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpConnectionManager 断开 PTP/IP 连接
+03-13 22:26:23.755   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpConnectionManager 连接已断开
+03-13 22:26:23.756   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  E     CameraUtils ❌ 【PTP/IP】CameraUtils - 相机连接失败
+03-13 22:26:23.756   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  E     PtpConnectionManager ❌【PTP/IP】相机连接失败
+03-13 22:26:23.756   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  E     PtpConnectionManager ❌【PTP/IP】手动连接失败：连接失败：相机无响应
+03-13 22:26:23.756   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     PtpConnectionManager 连接状态更新：未连接, 连接失败：相机无响应
+03-13 22:26:23.756   41127-41127   A03D00/com.lin...otosend/JSAPP  com.lingyu.photosend  I     HomePage 收到连接状态更新：state=false, message=连接失败：相机无响应

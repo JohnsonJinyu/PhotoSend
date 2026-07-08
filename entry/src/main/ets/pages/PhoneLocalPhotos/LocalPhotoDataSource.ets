@@ -124,9 +124,9 @@ export class LocalPhotoDataSource implements IDataSource{
 
           try {
             exifInfo = ExifReader.getExifInfo(filePath);
-            console.log(`文件 ${fileName} 的EXIF信息: ${JSON.stringify(exifInfo)}`);
+            console.log(`[LocalAlbum EXIF] 文件 ${fileName} 的EXIF信息: ${JSON.stringify(exifInfo)}`);
           } catch (error) {
-            console.warn(`读取 ${fileName} 的EXIF信息失败:`, error);
+            console.warn(`[LocalAlbum EXIF] 读取 ${fileName} 的EXIF信息失败:`, error);
             exifInfo = {
               orientation: 1,
               width: 0,

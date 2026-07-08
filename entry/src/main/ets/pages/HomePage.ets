@@ -1,4 +1,4 @@
-//HomePage.ets
+// HomePage.ets
 
 import { CameraPage } from './CameraPage/CameraPage';
 import { PhoneLocalPhotos } from './PhoneLocalPhotos/PhoneLocalPhotos';
@@ -7,6 +7,7 @@ import { AnimateCallback, CustomTransition } from '../CustomTransition/CustomNav
 import { CreateLocalDirUtil } from '../utils/tools/CreateLocalDir';
 import { common } from '@kit.AbilityKit';
 import dataPreferences from '@ohos.data.preferences';
+import { PtpConnectionManager } from '../utils/PtpConnectionManager';
 
 const TAG: string = 'HomePage';
 const DOMAIN = 0x00201;
@@ -20,6 +21,10 @@ struct HomePage {
   @State currentIndex: number = 0;
   @State appStoragePath: string = ''; // 存储目录路径
   @Provide('pageStack') pageStack: NavPathStack = new NavPathStack();
+  
+  // 相机连接状态
+  @State cameraConnected: boolean = false;
+  @State connectionMessage: string = '正在检测相机...';
 
   // 用于下面的创建目录
   private context = this.getUIContext().getHostContext() as common.UIAbilityContext;
@@ -43,16 +48,29 @@ struct HomePage {
   }
 
   async aboutToAppear(): Promise<void> {
-
-    // 创建download下的目录
     try {
-      // 调用工具类获取目录路径（首次创建，后续直接读取）
+      // 1. 创建 download 下的目录
       this.appStoragePath = await CreateLocalDirUtil.createOrGetDir(this.context);
       console.log(`获取到应用专属目录：${this.appStoragePath}`);
 
-      // 后续逻辑：加载目录下的图片（示例）
-    } catch (error) {
-      console.error(`获取目录失败：${JSON.stringify(error)}`);
+      // 2. 设置默认相机 IP
+      PtpConnectionManager.setDefaultCamera('192.168.1.1', 15740);
+      PtpConnectionManager.setAutoReconnect(false);
+      console.info(TAG, '已关闭自动重连，使用最小会话实验模式进行启动检测');
+
+      // 3. 添加连接状态监听器
+      PtpConnectionManager.addListener((state: boolean, message: string) => {
+        console.info(TAG, `收到连接状态更新：state=${state}, message=${message}`);
+        this.cameraConnected = state;
+        this.connectionMessage = message;
+      });
+        
+      // 4. 启动自动检测连接（使用 PTP/IP）
+      const result = await PtpConnectionManager.autoDetectAndConnect();
+      console.info(TAG, `自动检测结果：${JSON.stringify(result)}`);
+        
+    } catch {
+      console.error(`初始化失败`);
     }
   }
 
@@ -60,6 +78,35 @@ struct HomePage {
     // 根容器：Navigation
     Navigation(this.pageStack) {
       Column() {
+        
+        // 顶部连接状态栏
+        Row() {
+          Text(this.cameraConnected ? '✓ 已连接' : '✗ 未连接')
+            .fontSize(14)
+            .fontColor(this.cameraConnected ? '#007DFF' : '#999999')
+            .margin({ right: 8 })
+          
+          Blank()
+          
+          Text(this.connectionMessage)
+            .fontSize(14)
+            .fontColor('#666666')
+          
+          Blank()
+          
+          // 未连接时显示连接按钮
+          if (!this.cameraConnected) {
+            Button('手动连接')
+              .fontSize(12)
+              .backgroundColor('#007DFF')
+              .onClick(async () => {
+                await this.handleManualConnect();
+              })
+          }
+        }
+        .width('100%')
+        .padding({ left: 16, right: 16, top: 8, bottom: 8 })
+        .backgroundColor('#F5F5F5')
 
         Tabs({ controller: this.tabsController, barPosition: BarPosition.End }) {
           TabContent() {
@@ -141,7 +188,7 @@ struct HomePage {
 
   }
 
-  // 自定义底部Tab样式（增加内边距避免贴边）
+  // 自定义底部 Tab 样式（增加内边距避免贴边）
   @Builder
   buildTabBar(title: string, icon: Resource, index: number) {
     Column({ space: 4 }) {
@@ -155,7 +202,15 @@ struct HomePage {
     }
     .width('100%')
     .height(56)
-    //.padding({ top: 8, bottom: 8 }) // Tab项内部增加内边距
     .justifyContent(FlexAlign.Center);
+  }
+  
+  // 处理手动连接按钮点击
+  private async handleManualConnect(): Promise<void> {
+    console.info(TAG, '用户点击手动连接按钮');
+    this.connectionMessage = '正在连接...';
+    
+    const result = await PtpConnectionManager.manualConnect();
+    console.info(TAG, `手动连接结果：${JSON.stringify(result)}`);
   }
 }
